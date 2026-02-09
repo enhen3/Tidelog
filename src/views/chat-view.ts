@@ -1793,7 +1793,12 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
         );
 
         const avatar = wrapper.createDiv('ai-flow-message-avatar');
-        setIcon(avatar, type === 'user' ? 'user' : 'sparkles');
+        if (type === 'user') {
+            // Captain silhouette with hat
+            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C9.8 2 8 3.5 8 5.2c0 .5.1 1 .4 1.4L6 7.5c-.3.2-.3.6 0 .8l6 4 6-4c.3-.2.3-.6 0-.8l-2.4-.9c.3-.4.4-.9.4-1.4C16 3.5 14.2 2 12 2z" opacity="0.9"/><circle cx="12" cy="13.5" r="3.5"/><path d="M18.5 21c0-3.6-2.9-6.5-6.5-6.5S5.5 17.4 5.5 21" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>`;
+        } else {
+            setIcon(avatar, 'dailot-helm');
+        }
 
         const content = wrapper.createDiv('ai-flow-message-content');
 
