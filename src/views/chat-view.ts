@@ -1794,8 +1794,16 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
 
         const avatar = wrapper.createDiv('ai-flow-message-avatar');
         if (type === 'user') {
-            // Captain bust — peaked cap with brim, face, shoulders
-            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7.5" rx="4" ry="3.8"/><path d="M6.5 8.5h11" stroke-width="1.8"/><path d="M8 7c0-2.2 1.8-4 4-4s4 1.8 4 4" fill="currentColor" opacity="0.25" stroke="none"/><path d="M8 7c0-2.2 1.8-4 4-4s4 1.8 4 4"/><circle cx="12" cy="13" r="2.8"/><path d="M5 22c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke-width="1.6"/></svg>`;
+            // Captain — wide peaked cap, visor brim, face, uniform shoulders
+            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 9h16" stroke-width="2.2"/>
+<path d="M7 9V6.5c0-2 2.2-3.5 5-3.5s5 1.5 5 3.5V9" fill="currentColor" opacity="0.2" stroke="none"/>
+<path d="M7 9V6.5c0-2 2.2-3.5 5-3.5s5 1.5 5 3.5V9"/>
+<circle cx="12" cy="5" r="0.8" fill="currentColor" stroke="none"/>
+<circle cx="12" cy="14" r="3" stroke-width="1.6"/>
+<path d="M6 23c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke-width="1.8"/>
+<path d="M9 20h6" stroke-width="1"/>
+</svg>`;
         } else {
             // Ship's wheel — same style as header helm
             avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6.5" stroke-width="1.8"/><line x1="12" y1="5.5" x2="12" y2="2"/><circle cx="12" cy="2" r="1" fill="currentColor" stroke="none"/><line x1="12" y1="18.5" x2="12" y2="22"/><circle cx="12" cy="22" r="1" fill="currentColor" stroke="none"/><line x1="5.5" y1="12" x2="2" y2="12"/><circle cx="2" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="18.5" y1="12" x2="22" y2="12"/><circle cx="22" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="7.4" y1="7.4" x2="4.9" y2="4.9"/><circle cx="4.9" cy="4.9" r="1" fill="currentColor" stroke="none"/><line x1="16.6" y1="16.6" x2="19.1" y2="19.1"/><circle cx="19.1" cy="19.1" r="1" fill="currentColor" stroke="none"/><line x1="7.4" y1="16.6" x2="4.9" y2="19.1"/><circle cx="4.9" cy="19.1" r="1" fill="currentColor" stroke="none"/><line x1="16.6" y1="7.4" x2="19.1" y2="4.9"/><circle cx="19.1" cy="4.9" r="1" fill="currentColor" stroke="none"/></svg>`;
