@@ -36,16 +36,19 @@ export class KanbanService {
 
     /**
      * Get the kanban board file path for a given week
+     * (Shares the same file as the weekly plan — no "-Board" suffix)
      */
     getWeeklyBoardPath(date?: Date): string {
         const effectiveDate = this.getEffectiveDate(date);
         const year = effectiveDate.format('YYYY');
         const week = effectiveDate.format('ww');
-        return `${this.settings.planFolder}/Weekly/${year}-W${week}-Board.md`;
+        return `${this.settings.planFolder}/Weekly/${year}-W${week}.md`;
     }
 
     /**
-     * Ensure the weekly kanban board exists; create if missing
+     * Ensure the weekly kanban board exists; create if missing.
+     * If the file already exists (e.g. created by vault-manager) but lacks
+     * kanban day-columns, append them so both systems can share one file.
      */
     async ensureWeeklyBoard(date?: Date): Promise<TFile> {
         const path = this.getWeeklyBoardPath(date);
@@ -60,6 +63,14 @@ export class KanbanService {
                 await this.app.vault.createFolder(folder);
             }
             file = await this.app.vault.create(path, content);
+        } else if (file instanceof TFile) {
+            // File exists — check if kanban columns are present
+            const content = await this.app.vault.read(file);
+            if (!content.includes('## Backlog') && !content.includes('## ✅ Completed')) {
+                // Append kanban columns to the existing weekly plan
+                const kanbanSections = this.generateKanbanColumns(date);
+                await this.app.vault.modify(file, content.trimEnd() + '\n\n' + kanbanSections);
+            }
         }
 
         return file as TFile;
@@ -92,6 +103,29 @@ export class KanbanService {
         lines.push('%% kanban:settings');
         lines.push('{"kanban-plugin":"basic"}');
         lines.push('%%');
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Generate only the kanban day-column sections (for appending to existing files)
+     */
+    private generateKanbanColumns(date?: Date): string {
+        const effectiveDate = this.getEffectiveDate(date);
+        const weekRef = `${effectiveDate.format('YYYY')}-W${effectiveDate.format('ww')}`;
+
+        const lines: string[] = [
+            `## Backlog (${weekRef} 重点)`,
+            '',
+        ];
+
+        for (const day of DAY_COLUMNS) {
+            lines.push(`## ${DAY_LABELS[day]} (${day})`);
+            lines.push('');
+        }
+
+        lines.push('## ✅ Completed');
+        lines.push('');
 
         return lines.join('\n');
     }
