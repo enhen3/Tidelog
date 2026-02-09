@@ -1794,12 +1794,12 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
 
         const avatar = wrapper.createDiv('ai-flow-message-avatar');
         if (type === 'user') {
-            // Captain's hat — filled silhouette for max visibility at small size
+            // Captain's hat — side-view pirate tricorn, classic silhouette
             avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor">
-<rect x="2" y="16" width="20" height="2.5" rx="0.8"/>
-<path d="M5 16v-2.5c0-1.2.6-2.3 1.8-2.9L12 8l5.2 2.6c1.2.6 1.8 1.7 1.8 2.9V16z" opacity="0.85"/>
-<path d="M9.5 8c0-2.2 1.1-4.5 2.5-6 1.4 1.5 2.5 3.8 2.5 6z" opacity="0.45"/>
-<circle cx="12" cy="13" r="1.5" fill="var(--af-accent,hsl(260,50%,55%))"/>
+<path d="M1 18l5-5h12l5 5z"/>
+<ellipse cx="12" cy="13" rx="7" ry="4" opacity="0.8"/>
+<path d="M9 9c0-2 1.3-4.5 3-6 1.7 1.5 3 4 3 6z" opacity="0.55"/>
+<circle cx="12" cy="12" r="1.2" fill="var(--af-accent,hsl(260,50%,55%))"/>
 </svg>`;
         } else {
             // Ship's wheel — same style as header helm
