@@ -111,7 +111,7 @@ export class ChatView extends ItemView {
             // Debounce to avoid re-render storm
             if (this.refreshTimer) clearTimeout(this.refreshTimer);
             this.refreshTimer = setTimeout(() => {
-                this.switchTab(this.activeTab);
+                this.switchTab(this.activeTab, false);
             }, 500);
         });
         this.registerEvent(this.vaultModifyRef);
@@ -128,7 +128,7 @@ export class ChatView extends ItemView {
         const header = container.createDiv('ai-flow-header');
         const title = header.createDiv('ai-flow-title');
         const iconSpan = title.createSpan('ai-flow-title-icon');
-        iconSpan.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" opacity="0.3"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="18.4" y2="5.6"/></svg>`;
+        iconSpan.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><line x1="12" y1="5" x2="12" y2="1.5"/><circle cx="12" cy="1.5" r="1" fill="currentColor" stroke="none"/><line x1="12" y1="19" x2="12" y2="22.5"/><circle cx="12" cy="22.5" r="1" fill="currentColor" stroke="none"/><line x1="5" y1="12" x2="1.5" y2="12"/><circle cx="1.5" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="19" y1="12" x2="22.5" y2="12"/><circle cx="22.5" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="7.05" y1="7.05" x2="4.55" y2="4.55"/><circle cx="4.55" cy="4.55" r="1" fill="currentColor" stroke="none"/><line x1="16.95" y1="16.95" x2="19.45" y2="19.45"/><circle cx="19.45" cy="19.45" r="1" fill="currentColor" stroke="none"/><line x1="7.05" y1="16.95" x2="4.55" y2="19.45"/><circle cx="4.55" cy="19.45" r="1" fill="currentColor" stroke="none"/><line x1="16.95" y1="7.05" x2="19.45" y2="4.55"/><circle cx="19.45" cy="4.55" r="1" fill="currentColor" stroke="none"/></svg>`;
         title.createSpan({ text: 'Dailot「小舵」' });
     }
 
@@ -183,11 +183,11 @@ export class ChatView extends ItemView {
             });
             btn.createEl('span', { cls: 'af-tab-btn-icon', text: tab.icon });
             btn.createEl('span', { cls: 'af-tab-btn-label', text: tab.label });
-            btn.addEventListener('click', () => this.switchTab(tab.id));
+            btn.addEventListener('click', () => this.switchTab(tab.id, true));
         }
     }
 
-    private switchTab(tab: SidebarTab): void {
+    private switchTab(tab: SidebarTab, animate = false): void {
         this.activeTab = tab;
 
         // Update tab bar active state
@@ -206,6 +206,7 @@ export class ChatView extends ItemView {
             this.chatPanel.style.display = 'none';
             // Build new panel first, THEN remove old to avoid white flash
             const panel = this.tabContentEl.createDiv('af-tab-panel');
+            if (animate) panel.addClass('af-tab-panel-animate');
             const renderDone = (tab === 'kanban')
                 ? this.renderKanbanTab(panel)
                 : this.renderReviewTab(panel);

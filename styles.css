@@ -969,6 +969,9 @@
 	flex: 1;
 	overflow-y: auto;
 	min-height: 0;
+}
+
+.af-tab-panel-animate {
 	animation: af-slideUp 0.3s var(--af-ease) both;
 }
 
