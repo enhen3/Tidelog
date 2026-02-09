@@ -1794,10 +1794,11 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
 
         const avatar = wrapper.createDiv('ai-flow-message-avatar');
         if (type === 'user') {
-            // Captain silhouette with hat
-            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C9.8 2 8 3.5 8 5.2c0 .5.1 1 .4 1.4L6 7.5c-.3.2-.3.6 0 .8l6 4 6-4c.3-.2.3-.6 0-.8l-2.4-.9c.3-.4.4-.9.4-1.4C16 3.5 14.2 2 12 2z" opacity="0.9"/><circle cx="12" cy="13.5" r="3.5"/><path d="M18.5 21c0-3.6-2.9-6.5-6.5-6.5S5.5 17.4 5.5 21" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>`;
+            // Captain bust — peaked cap with brim, face, shoulders
+            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7.5" rx="4" ry="3.8"/><path d="M6.5 8.5h11" stroke-width="1.8"/><path d="M8 7c0-2.2 1.8-4 4-4s4 1.8 4 4" fill="currentColor" opacity="0.25" stroke="none"/><path d="M8 7c0-2.2 1.8-4 4-4s4 1.8 4 4"/><circle cx="12" cy="13" r="2.8"/><path d="M5 22c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke-width="1.6"/></svg>`;
         } else {
-            setIcon(avatar, 'dailot-helm');
+            // Ship's wheel — same style as header helm
+            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6.5" stroke-width="1.8"/><line x1="12" y1="5.5" x2="12" y2="2"/><circle cx="12" cy="2" r="1" fill="currentColor" stroke="none"/><line x1="12" y1="18.5" x2="12" y2="22"/><circle cx="12" cy="22" r="1" fill="currentColor" stroke="none"/><line x1="5.5" y1="12" x2="2" y2="12"/><circle cx="2" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="18.5" y1="12" x2="22" y2="12"/><circle cx="22" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="7.4" y1="7.4" x2="4.9" y2="4.9"/><circle cx="4.9" cy="4.9" r="1" fill="currentColor" stroke="none"/><line x1="16.6" y1="16.6" x2="19.1" y2="19.1"/><circle cx="19.1" cy="19.1" r="1" fill="currentColor" stroke="none"/><line x1="7.4" y1="16.6" x2="4.9" y2="19.1"/><circle cx="4.9" cy="19.1" r="1" fill="currentColor" stroke="none"/><line x1="16.6" y1="7.4" x2="19.1" y2="4.9"/><circle cx="19.1" cy="4.9" r="1" fill="currentColor" stroke="none"/></svg>`;
         }
 
         const content = wrapper.createDiv('ai-flow-message-content');
