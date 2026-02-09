@@ -1,0 +1,1681 @@
+/**
+ * AI Flow Manager — Apple HIG Design System
+ *
+ * Principles: clarity, deference, depth
+ * Typography: SF Pro, -apple-system fallback
+ * Motion: cubic-bezier(0.25, 0.46, 0.45, 0.94)
+ * Radius: 8/12/16/20
+ * Borders: 0.5px hairline
+ */
+
+/* =============================================================================
+   Design Tokens
+   ============================================================================= */
+
+.ai-flow-chat-container {
+	--af-radius-sm: 8px;
+	--af-radius-md: 12px;
+	--af-radius-lg: 16px;
+	--af-radius-xl: 20px;
+	--af-radius-pill: 100px;
+	--af-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	--af-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--af-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+	--af-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+	/* Muted, desaturated palette — premium & restrained */
+	--af-accent: #7C7F9B;
+	--af-accent-light: rgba(124, 127, 155, 0.1);
+	--af-green: #6B9E7E;
+	--af-orange: #C49A6C;
+	--af-red: #C47070;
+	--af-purple: #9088B4;
+	--af-teal: #7BA8B8;
+	--af-gradient-accent: linear-gradient(135deg, #6E6F8E 0%, #8B8DA8 100%);
+	--af-gradient-ai: linear-gradient(135deg, #847F9E 0%, #A199B8 100%);
+	--af-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--af-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+	--af-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* =============================================================================
+   Container
+   ============================================================================= */
+
+.ai-flow-chat-container {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	background-color: var(--background-primary);
+	font-family: var(--af-font);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* =============================================================================
+   Header — frosted glass navigation bar
+   ============================================================================= */
+
+.ai-flow-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 16px;
+	border-bottom: 0.5px solid var(--background-modifier-border);
+	background: color-mix(in srgb, var(--background-secondary) 80%, transparent);
+	backdrop-filter: saturate(180%) blur(20px);
+	-webkit-backdrop-filter: saturate(180%) blur(20px);
+	z-index: 10;
+}
+
+.ai-flow-title {
+	font-family: var(--af-font-display);
+	font-weight: 700;
+	font-size: 16px;
+	letter-spacing: -0.4px;
+	color: var(--text-normal);
+}
+
+.ai-flow-header-buttons {
+	display: flex;
+	gap: 6px;
+}
+
+.ai-flow-mode-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 6px 12px;
+	font-size: 13px;
+	font-weight: 500;
+	letter-spacing: -0.1px;
+	background-color: var(--background-primary);
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-sm);
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.2s var(--af-ease);
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.ai-flow-mode-btn:hover {
+	background-color: var(--af-accent-light);
+	color: var(--af-accent);
+	border-color: color-mix(in srgb, var(--af-accent) 30%, transparent);
+}
+
+.ai-flow-mode-btn:active {
+	transform: scale(0.95);
+	transition-duration: 0.1s;
+}
+
+.ai-flow-mode-btn svg {
+	width: 14px;
+	height: 14px;
+	opacity: 0.65;
+}
+
+.ai-flow-mode-btn:hover svg {
+	opacity: 1;
+}
+
+/* =============================================================================
+   Messages
+   ============================================================================= */
+
+.ai-flow-messages {
+	flex: 1;
+	overflow-y: auto;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	scroll-behavior: smooth;
+}
+
+.ai-flow-message {
+	display: flex;
+	gap: 10px;
+	max-width: 90%;
+	animation: af-slideUp 0.3s var(--af-ease) both;
+}
+
+@keyframes af-slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.ai-flow-message-user {
+	align-self: flex-end;
+	flex-direction: row-reverse;
+}
+
+.ai-flow-message-ai {
+	align-self: flex-start;
+}
+
+/* --- Avatars --- */
+
+.ai-flow-message-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: var(--af-radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.ai-flow-message-user .ai-flow-message-avatar {
+	background: var(--af-gradient-accent);
+	color: white;
+	box-shadow: var(--af-shadow-sm);
+}
+
+.ai-flow-message-ai .ai-flow-message-avatar {
+	background: var(--af-gradient-ai);
+	color: white;
+	box-shadow: var(--af-shadow-sm);
+}
+
+.ai-flow-message-avatar svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* --- Message Bubbles --- */
+
+.ai-flow-message-content {
+	padding: 10px 14px;
+	border-radius: var(--af-radius-lg);
+	font-size: 14px;
+	line-height: 1.6;
+	letter-spacing: -0.1px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+}
+
+.ai-flow-message-user .ai-flow-message-content {
+	background: var(--af-gradient-accent);
+	color: white;
+	border-bottom-right-radius: 4px;
+	box-shadow: var(--af-shadow-sm);
+}
+
+.ai-flow-message-ai .ai-flow-message-content {
+	background-color: var(--background-secondary);
+	color: var(--text-normal);
+	border-bottom-left-radius: 4px;
+	border: 0.5px solid var(--background-modifier-border);
+}
+
+.ai-flow-message-error .ai-flow-message-content {
+	background-color: color-mix(in srgb, var(--af-red) 8%, var(--background-secondary));
+	border-color: color-mix(in srgb, var(--af-red) 20%, transparent);
+}
+
+/* --- Markdown in AI messages --- */
+
+.ai-flow-message-ai .ai-flow-message-content p {
+	margin: 0.4em 0;
+}
+
+.ai-flow-message-ai .ai-flow-message-content p:first-child {
+	margin-top: 0;
+}
+
+.ai-flow-message-ai .ai-flow-message-content p:last-child {
+	margin-bottom: 0;
+}
+
+.ai-flow-message-ai .ai-flow-message-content ul,
+.ai-flow-message-ai .ai-flow-message-content ol {
+	margin: 0.3em 0;
+	padding-left: 1.5em;
+}
+
+.ai-flow-message-ai .ai-flow-message-content li {
+	margin: 0.15em 0;
+}
+
+.ai-flow-message-ai .ai-flow-message-content code {
+	background-color: color-mix(in srgb, var(--background-modifier-border) 50%, var(--background-primary));
+	padding: 0.15em 0.45em;
+	border-radius: 5px;
+	font-size: 0.88em;
+}
+
+.ai-flow-message-ai .ai-flow-message-content hr {
+	border: none;
+	border-top: 0.5px solid var(--background-modifier-border);
+	margin: 0.8em 0;
+}
+
+.ai-flow-message-ai .ai-flow-message-content strong {
+	font-weight: 600;
+	letter-spacing: -0.1px;
+}
+
+.ai-flow-message-ai .ai-flow-message-content em {
+	font-style: italic;
+}
+
+/* =============================================================================
+   Input Area — iMessage-style composer
+   ============================================================================= */
+
+.ai-flow-input-container {
+	padding: 12px 16px 16px;
+	border-top: 0.5px solid var(--background-modifier-border);
+	background: color-mix(in srgb, var(--background-secondary) 80%, transparent);
+	backdrop-filter: saturate(180%) blur(20px);
+	-webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.ai-flow-input {
+	width: 100%;
+	min-height: 44px;
+	max-height: 120px;
+	padding: 10px 14px;
+	font-size: 15px;
+	line-height: 1.5;
+	letter-spacing: -0.1px;
+	background-color: var(--background-primary);
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-md);
+	color: var(--text-normal);
+	resize: none;
+	font-family: var(--af-font);
+	transition: border-color 0.2s var(--af-ease), box-shadow 0.2s var(--af-ease);
+}
+
+.ai-flow-input:focus {
+	outline: none;
+	border-color: var(--af-accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--af-accent) 15%, transparent);
+}
+
+.ai-flow-input::placeholder {
+	color: var(--text-faint);
+}
+
+.ai-flow-input-buttons {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 8px;
+}
+
+.ai-flow-send-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 7px 20px;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: -0.1px;
+	background: var(--af-gradient-accent);
+	color: white;
+	border: none;
+	border-radius: var(--af-radius-md);
+	cursor: pointer;
+	transition: all 0.2s var(--af-ease);
+	box-shadow: var(--af-shadow-sm);
+}
+
+.ai-flow-send-btn:hover:not(:disabled) {
+	transform: scale(1.03);
+	box-shadow: var(--af-shadow-md);
+}
+
+.ai-flow-send-btn:active:not(:disabled) {
+	transform: scale(0.96);
+	transition-duration: 0.1s;
+}
+
+.ai-flow-send-btn:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+/* =============================================================================
+   Multi-Task Input UI — Apple Grouped Table Style
+   ============================================================================= */
+
+.ai-flow-task-input-container {
+	padding: 16px;
+	border-top: 0.5px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	animation: af-slideUp 0.25s var(--af-ease);
+}
+
+.ai-flow-task-input-header {
+	font-family: var(--af-font-display);
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: -0.3px;
+	color: var(--text-normal);
+	margin-bottom: 12px;
+}
+
+.ai-flow-task-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin-bottom: 12px;
+	background-color: var(--background-primary);
+	border-radius: var(--af-radius-md);
+	border: 0.5px solid var(--background-modifier-border);
+	overflow: hidden;
+}
+
+/* --- Main task row --- */
+
+.ai-flow-task-row {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	padding: 0;
+	border-bottom: 0.5px solid var(--background-modifier-border);
+	transition: background-color 0.15s ease;
+}
+
+.ai-flow-task-row:last-child {
+	border-bottom: none;
+}
+
+.ai-flow-task-row:hover {
+	background-color: var(--background-primary-alt);
+}
+
+.ai-flow-task-label {
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--text-faint);
+	width: 36px;
+	text-align: center;
+	flex-shrink: 0;
+	padding: 12px 0 12px 4px;
+}
+
+.ai-flow-task-field {
+	flex: 1;
+	padding: 12px 4px;
+	font-size: 15px;
+	line-height: 1.4;
+	letter-spacing: -0.1px;
+	background: transparent;
+	border: none;
+	color: var(--text-normal);
+	font-family: var(--af-font);
+	outline: none;
+}
+
+.ai-flow-task-field::placeholder {
+	color: var(--text-faint);
+}
+
+/* Task action buttons (sub-task toggle + remove) */
+.ai-flow-task-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding-right: 8px;
+	flex-shrink: 0;
+}
+
+.ai-flow-task-subtask-btn {
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 7px;
+	color: var(--text-faint);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.ai-flow-task-subtask-btn:hover {
+	background-color: var(--af-accent-light);
+	color: var(--af-accent);
+}
+
+.ai-flow-task-subtask-btn.is-expanded {
+	color: var(--af-accent);
+}
+
+.ai-flow-task-subtask-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.ai-flow-task-remove-btn {
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 7px;
+	color: var(--text-faint);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: all 0.15s ease;
+	opacity: 0;
+}
+
+.ai-flow-task-row:hover .ai-flow-task-remove-btn {
+	opacity: 1;
+}
+
+.ai-flow-task-remove-btn:hover {
+	background-color: color-mix(in srgb, var(--af-red) 12%, transparent);
+	color: var(--af-red);
+}
+
+.ai-flow-task-remove-btn svg {
+	width: 13px;
+	height: 13px;
+}
+
+/* --- Sub-task section (indented under main task) --- */
+
+.ai-flow-subtask-container {
+	padding: 0 12px 10px 44px;
+	background-color: var(--background-primary-alt);
+	border-bottom: 0.5px solid var(--background-modifier-border);
+	animation: af-slideUp 0.2s var(--af-ease);
+}
+
+.ai-flow-subtask-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.ai-flow-subtask-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 0;
+}
+
+.ai-flow-subtask-bullet {
+	color: var(--text-faint);
+	font-size: 11px;
+	flex-shrink: 0;
+	width: 14px;
+	text-align: center;
+}
+
+.ai-flow-subtask-field {
+	flex: 1;
+	padding: 6px 8px;
+	font-size: 13px;
+	line-height: 1.4;
+	letter-spacing: -0.1px;
+	background: var(--background-primary);
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-sm);
+	color: var(--text-normal);
+	font-family: var(--af-font);
+	transition: all 0.15s ease;
+}
+
+.ai-flow-subtask-field:focus {
+	outline: none;
+	border-color: var(--af-accent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--af-accent) 12%, transparent);
+}
+
+.ai-flow-subtask-field::placeholder {
+	color: var(--text-faint);
+}
+
+.ai-flow-subtask-remove-btn {
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 5px;
+	color: var(--text-faint);
+	cursor: pointer;
+	flex-shrink: 0;
+	opacity: 0;
+	transition: all 0.15s ease;
+}
+
+.ai-flow-subtask-row:hover .ai-flow-subtask-remove-btn {
+	opacity: 1;
+}
+
+.ai-flow-subtask-remove-btn:hover {
+	background-color: color-mix(in srgb, var(--af-red) 12%, transparent);
+	color: var(--af-red);
+}
+
+.ai-flow-subtask-remove-btn svg {
+	width: 11px;
+	height: 11px;
+}
+
+.ai-flow-subtask-add-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 5px 8px;
+	margin-top: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--text-faint);
+	background: none;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.ai-flow-subtask-add-btn:hover {
+	color: var(--af-accent);
+	background-color: var(--af-accent-light);
+}
+
+.ai-flow-subtask-add-btn svg {
+	width: 12px;
+	height: 12px;
+}
+
+/* --- Bottom action buttons --- */
+
+.ai-flow-task-add-btn {
+	width: 100%;
+	padding: 10px;
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: -0.1px;
+	background: var(--background-primary);
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-md);
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.2s var(--af-ease);
+	margin-bottom: 10px;
+}
+
+.ai-flow-task-add-btn:hover {
+	border-color: var(--af-accent);
+	color: var(--af-accent);
+	background-color: var(--af-accent-light);
+	transform: scale(1.01);
+}
+
+.ai-flow-task-add-btn:active {
+	transform: scale(0.98);
+}
+
+.ai-flow-task-submit-btn {
+	width: 100%;
+	padding: 12px;
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: -0.2px;
+	background: var(--af-gradient-accent);
+	color: white;
+	border: none;
+	border-radius: var(--af-radius-md);
+	cursor: pointer;
+	transition: all 0.2s var(--af-ease);
+	box-shadow: var(--af-shadow-sm);
+}
+
+.ai-flow-task-submit-btn:hover {
+	transform: scale(1.02);
+	box-shadow: var(--af-shadow-md);
+}
+
+.ai-flow-task-submit-btn:active {
+	transform: scale(0.97);
+}
+
+/* =============================================================================
+   Plan Update Buttons — SF Symbol Action Sheet Style
+   ============================================================================= */
+
+.ai-flow-plan-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 12px;
+}
+
+.ai-flow-plan-option-btn {
+	padding: 10px 14px;
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: -0.1px;
+	background-color: var(--background-primary);
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-md);
+	color: var(--text-normal);
+	cursor: pointer;
+	text-align: left;
+	transition: all 0.2s var(--af-ease);
+}
+
+.ai-flow-plan-option-btn:hover {
+	border-color: var(--af-accent);
+	background-color: var(--af-accent-light);
+	color: var(--af-accent);
+}
+
+.ai-flow-plan-option-btn:active {
+	transform: scale(0.98);
+}
+
+/* =============================================================================
+   Scrollbar — thin & invisible until hover
+   ============================================================================= */
+
+.ai-flow-messages::-webkit-scrollbar {
+	width: 6px;
+}
+
+.ai-flow-messages::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.ai-flow-messages::-webkit-scrollbar-thumb {
+	background-color: transparent;
+	border-radius: 3px;
+	transition: background-color 0.3s;
+}
+
+.ai-flow-messages:hover::-webkit-scrollbar-thumb {
+	background-color: var(--background-modifier-border);
+}
+
+.ai-flow-messages::-webkit-scrollbar-thumb:hover {
+	background-color: var(--text-faint);
+}
+
+/* =============================================================================
+   Insight Buttons — Capsule / Pill Style
+   ============================================================================= */
+
+.ai-flow-insight-buttons {
+	display: flex;
+	gap: 8px;
+	margin-top: 14px;
+	flex-wrap: wrap;
+}
+
+.ai-flow-insight-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 8px 16px;
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-pill);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.25s var(--af-ease);
+	user-select: none;
+}
+
+.ai-flow-insight-btn:hover {
+	background: var(--af-gradient-ai);
+	color: white;
+	border-color: transparent;
+	transform: translateY(-1px);
+	box-shadow: 0 3px 12px color-mix(in srgb, #847F9E 25%, transparent);
+}
+
+.ai-flow-insight-btn:active {
+	transform: translateY(0) scale(0.97);
+}
+
+/* =============================================================================
+   Settings: Evening Question Cards — Grouped List
+   ============================================================================= */
+
+.ai-flow-question-card {
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-md);
+	padding: 14px 16px;
+	margin-bottom: 14px;
+	background: var(--background-primary);
+	transition: border-color 0.2s ease;
+}
+
+.ai-flow-question-card:hover {
+	border-color: color-mix(in srgb, var(--af-accent) 30%, var(--background-modifier-border));
+}
+
+.ai-flow-question-card .setting-item {
+	border-top: none;
+	padding: 5px 0;
+}
+
+.ai-flow-question-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.ai-flow-question-index {
+	font-family: var(--af-font-display);
+	font-weight: 700;
+	font-size: 14px;
+	color: var(--text-normal);
+	width: 28px;
+	height: 28px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--af-accent-light);
+	color: var(--af-accent);
+	border-radius: var(--af-radius-sm);
+}
+
+.ai-flow-badge {
+	display: inline-block;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 2px 10px;
+	border-radius: var(--af-radius-pill);
+	letter-spacing: 0.2px;
+}
+
+.ai-flow-badge-required {
+	background: color-mix(in srgb, var(--af-accent) 12%, transparent);
+	color: var(--af-accent);
+}
+
+.ai-flow-badge-optional {
+	background: color-mix(in srgb, var(--af-green) 12%, transparent);
+	color: var(--af-green);
+}
+
+.ai-flow-badge-disabled {
+	background: color-mix(in srgb, var(--af-red) 8%, transparent);
+	color: var(--text-faint);
+	font-weight: 500;
+}
+
+.ai-flow-question-textarea {
+	width: 100%;
+	min-height: 64px;
+	padding: 10px 12px;
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: var(--af-radius-sm);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-family: var(--af-font);
+	font-size: 13px;
+	line-height: 1.5;
+	resize: vertical;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-flow-question-textarea:focus {
+	border-color: var(--af-accent);
+	outline: none;
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--af-accent) 12%, transparent);
+}
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+
+@media (max-width: 600px) {
+	.ai-flow-header {
+		padding: 10px 12px;
+	}
+
+	.ai-flow-messages {
+		padding: 14px;
+		gap: 10px;
+	}
+
+	.ai-flow-input-container {
+		padding: 10px 12px 14px;
+	}
+
+	.ai-flow-mode-btn span {
+		display: none;
+	}
+
+	.ai-flow-mode-btn {
+		padding: 6px 8px;
+	}
+
+	.ai-flow-message {
+		max-width: 95%;
+	}
+}
+
+/* =============================================================================
+   Tab Bar (inside chat sidebar)
+   ============================================================================= */
+
+.af-tab-bar {
+	display: flex;
+	gap: 6px;
+	padding: 10px 12px 6px;
+	background: var(--background-primary);
+}
+
+.af-tab-btn {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	padding: 8px 6px;
+	border: 1px solid transparent;
+	background: rgba(255, 255, 255, 0.35);
+	color: var(--text-faint);
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	border-radius: 10px;
+	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.theme-dark .af-tab-btn {
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.af-tab-btn:hover {
+	background: rgba(255, 255, 255, 0.55);
+	color: var(--text-muted);
+	transform: translateY(-0.5px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark .af-tab-btn:hover {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.af-tab-btn-active {
+	background: linear-gradient(135deg, hsl(210, 60%, 92%), hsl(260, 50%, 92%));
+	border-color: hsl(230, 40%, 85%);
+	color: var(--text-normal);
+	font-weight: 600;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.theme-dark .af-tab-btn-active {
+	background: linear-gradient(135deg, hsl(210, 30%, 20%), hsl(260, 25%, 22%));
+	border-color: hsl(230, 20%, 32%);
+}
+
+.af-tab-btn-icon {
+	font-size: 14px;
+}
+
+.af-tab-btn-label {
+	font-size: 12px;
+}
+
+.af-tab-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	min-height: 0;
+}
+
+.af-tab-panel {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+	animation: af-slideUp 0.3s var(--af-ease) both;
+}
+
+.af-tab-panel-chat {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	min-height: 0;
+}
+
+/* SOP buttons inside chat panel */
+.af-tab-panel-chat>.ai-flow-header-buttons {
+	display: flex;
+	gap: 6px;
+	padding: 6px 12px;
+	border-bottom: 0.5px solid var(--background-modifier-border);
+}
+
+/* Base kanban container */
+.af-kanban-container {
+	font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* =============================================================================
+   Pyramid Kanban — Sidebar-optimized
+   ============================================================================= */
+
+.af-pyramid {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 12px;
+	overflow-y: auto;
+}
+
+/* --- Shared layer styles --- */
+
+.af-pyramid-layer {
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+.af-pyramid-layer-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 12px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.af-pyramid-layer-icon {
+	font-size: 15px;
+	flex-shrink: 0;
+}
+
+.af-pyramid-layer-title {
+	flex: 1;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* --- Layer Shared: Accent Gradient (all tiers) --- */
+
+.af-pyramid-month,
+.af-pyramid-week,
+.af-pyramid-daily {
+	background: linear-gradient(135deg, hsl(210, 60%, 92%), hsl(260, 50%, 92%));
+	border: 1px solid hsl(230, 40%, 85%);
+}
+
+.theme-dark .af-pyramid-month,
+.theme-dark .af-pyramid-week,
+.theme-dark .af-pyramid-daily {
+	background: linear-gradient(135deg, hsl(210, 30%, 20%), hsl(260, 25%, 22%));
+	border-color: hsl(230, 20%, 32%);
+}
+
+/* --- Header: clickable, uniform hover --- */
+
+.af-pyramid-month-header,
+.af-pyramid-week-header,
+.af-pyramid-daily-header {
+	cursor: pointer;
+	transition: filter 0.15s ease;
+}
+
+.af-pyramid-month-header:hover,
+.af-pyramid-week-header:hover,
+.af-pyramid-daily-header:hover {
+	filter: brightness(1.15);
+}
+
+/* --- Tier body padding (consistent) --- */
+
+.af-pyramid-week-body,
+.af-pyramid-month-detail,
+.af-pyramid-daily-body {
+	padding: 10px 12px;
+}
+
+/* --- Weekly title area (flex for < > nav) --- */
+
+.af-pyramid-week-title-area {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+	cursor: pointer;
+}
+
+.af-pyramid-week-title-area:hover .af-pyramid-layer-title {
+	color: var(--interactive-accent);
+}
+
+/* --- Month summary chips --- */
+
+.af-pyramid-month-summary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	padding: 0 12px 10px;
+}
+
+.af-pyramid-goal-chip {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 100px;
+	background: rgba(255, 255, 255, 0.6);
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--text-normal);
+	white-space: nowrap;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.theme-dark .af-pyramid-goal-chip {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.af-pyramid-goal-done {
+	opacity: 0.5;
+}
+
+.af-pyramid-month-hint {
+	font-size: 12px;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.af-pyramid-month-expanded {
+	border-color: var(--interactive-accent);
+}
+
+/* --- Shared Progress Bar --- */
+
+.af-pyramid-progress-wrap {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.af-pyramid-progress-bar {
+	flex: 1;
+	height: 6px;
+	background: rgba(0, 0, 0, 0.08);
+	border-radius: 100px;
+	overflow: hidden;
+}
+
+.theme-dark .af-pyramid-progress-bar {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.af-pyramid-progress-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	border-radius: 100px;
+	transition: width 0.3s ease;
+}
+
+.af-pyramid-progress-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+/* --- Daily Tasks Grid --- */
+
+.af-pyramid-daily-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 12px;
+}
+
+.af-pyramid-day-col {
+	background: rgba(255, 255, 255, 0.4);
+	border-radius: 10px;
+	padding: 10px;
+	border: 1px solid transparent;
+	transition: all 0.15s ease;
+}
+
+.theme-dark .af-pyramid-day-col {
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.af-pyramid-day-today {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.af-pyramid-day-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+	padding-bottom: 6px;
+	border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: color 0.15s ease;
+}
+
+.theme-dark .af-pyramid-day-header {
+	border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.af-pyramid-day-header:hover {
+	color: var(--interactive-accent);
+}
+
+.af-pyramid-day-label {
+	white-space: nowrap;
+}
+
+.af-pyramid-day-badge {
+	background: rgba(0, 0, 0, 0.06);
+	padding: 2px 8px;
+	border-radius: 100px;
+	font-size: 11px;
+	font-weight: 500;
+}
+
+.theme-dark .af-pyramid-day-badge {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Shared task card --- */
+
+.af-pyramid-task {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 8px 10px;
+	background: rgba(255, 255, 255, 0.5);
+	border-radius: 8px;
+	border: 0.5px solid rgba(0, 0, 0, 0.03);
+	margin-bottom: 4px;
+	transition: all 0.15s ease;
+}
+
+.theme-dark .af-pyramid-task {
+	background: rgba(255, 255, 255, 0.04);
+	border-color: rgba(255, 255, 255, 0.04);
+}
+
+.af-pyramid-task:hover {
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+	transform: translateY(-0.5px);
+}
+
+.af-pyramid-task input[type="checkbox"] {
+	margin-top: 2px;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.af-pyramid-task-text {
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-normal);
+}
+
+.af-pyramid-task-done .af-pyramid-task-text {
+	text-decoration: line-through;
+	opacity: 0.5;
+}
+
+.af-pyramid-task-plain {
+	color: var(--text-muted);
+}
+
+/* --- Shared empty state --- */
+
+.af-pyramid-empty,
+.af-pyramid-empty-day {
+	text-align: center;
+	color: var(--text-faint);
+	font-size: 12px;
+	padding: 12px 0;
+}
+
+.af-pyramid-empty-day {
+	padding: 6px 0;
+}
+
+/* --- Clickable header hover feedback --- */
+
+.af-pyramid-month-header:hover,
+.af-pyramid-daily-header:hover {
+	filter: brightness(1.15);
+}
+
+/* --- Nav & today buttons --- */
+
+.af-pyramid-nav-btn {
+	background: rgba(255, 255, 255, 0.4);
+	border: 0.5px solid rgba(0, 0, 0, 0.06);
+	border-radius: 6px;
+	padding: 2px 8px;
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 16px;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+}
+
+.theme-dark .af-pyramid-nav-btn {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.06);
+}
+
+.af-pyramid-nav-btn:hover {
+	background: var(--interactive-hover);
+	color: var(--text-normal);
+}
+
+.af-pyramid-today-btn {
+	background: rgba(255, 255, 255, 0.4);
+	border: 0.5px solid rgba(0, 0, 0, 0.06);
+	border-radius: 6px;
+	padding: 2px 10px;
+	cursor: pointer;
+	color: var(--interactive-accent);
+	font-size: 11px;
+	font-weight: 600;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+}
+
+.theme-dark .af-pyramid-today-btn {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.06);
+}
+
+.af-pyramid-today-btn:hover {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+/* Compact chips for empty days */
+.af-pyramid-day-compact-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 6px 4px;
+}
+
+.af-pyramid-day-compact-chip {
+	padding: 4px 10px;
+	border-radius: 100px;
+	background: rgba(255, 255, 255, 0.5);
+	border: 0.5px solid rgba(0, 0, 0, 0.04);
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--text-faint);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.theme-dark .af-pyramid-day-compact-chip {
+	background: rgba(255, 255, 255, 0.06);
+	border-color: rgba(255, 255, 255, 0.04);
+}
+
+.af-pyramid-day-compact-chip:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+}
+
+/* =============================================================================
+   Calendar View
+   ============================================================================= */
+
+.af-calendar-container {
+	font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	padding: 20px;
+}
+
+.af-cal-header {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	margin-bottom: 0;
+	padding: 10px 12px;
+}
+
+.af-cal-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text-normal);
+	flex: 1;
+	text-align: center;
+}
+
+.af-cal-nav-btn {
+	background: var(--interactive-normal);
+	border: 0.5px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 4px 14px;
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 20px;
+	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.af-cal-nav-btn:hover {
+	background: var(--interactive-hover);
+	color: var(--text-normal);
+}
+
+.af-cal-legend {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	margin-bottom: 16px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+.af-cal-legend-gradient {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+}
+
+.af-cal-gradient-bar {
+	width: 100px;
+	height: 8px;
+	border-radius: 4px;
+	background: linear-gradient(to right, hsla(0, 55%, 75%, 0.6), hsla(60, 55%, 75%, 0.6), hsla(120, 55%, 75%, 0.6));
+}
+
+.af-cal-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 6px;
+}
+
+.af-cal-weekday {
+	text-align: center;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-muted);
+	padding: 8px 0;
+}
+
+.af-cal-cell {
+	position: relative;
+	border-radius: 8px;
+	border: 0.5px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-height: 36px;
+	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.af-cal-cell-empty {
+	border: none;
+	background: transparent;
+}
+
+.af-cal-cell-clickable {
+	cursor: pointer;
+}
+
+.af-cal-cell-clickable:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transform: scale(1.03);
+}
+
+.af-cal-cell-today {
+	border-color: #7C7F9B;
+	border-width: 2px;
+	box-shadow: 0 0 0 1px rgba(124, 127, 155, 0.2);
+}
+
+.af-cal-date {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.af-cal-dots {
+	display: flex;
+	gap: 3px;
+	margin-top: auto;
+}
+
+.af-cal-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--text-faint);
+}
+
+.af-cal-dot-done {
+	background: #6B9E7E;
+}
+
+.af-cal-status-badge {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	font-size: 10px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.af-cal-status-done {
+	background: rgba(107, 158, 126, 0.2);
+	color: #6B9E7E;
+	font-weight: 700;
+}
+
+/* Review tab — scroll layout */
+.af-review-scroll {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 12px;
+}
+
+/* Calendar section inside review — inherits af-pyramid-layer gradient */
+
+.af-pyramid-review-cal-body {
+	padding: 0 12px 12px;
+}
+
+/* Dashboard cards inherit af-pyramid-layer, add body padding */
+.af-dash-card-body {
+	padding: 10px 12px 12px;
+}
+
+/* Progress card */
+.af-dash-progress-info {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 8px;
+}
+
+.af-dash-progress-number {
+	font-size: 20px;
+	font-weight: 700;
+	color: var(--text-normal);
+}
+
+.af-dash-progress-pct {
+	font-size: 14px;
+	font-weight: 500;
+	color: #6B9E7E;
+}
+
+.af-dash-progress-bar-outer {
+	height: 8px;
+	background: var(--background-modifier-border);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.af-dash-progress-bar-inner {
+	height: 100%;
+	background: linear-gradient(90deg, #6B9E7E, #7BA8B8);
+	border-radius: 4px;
+	transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Emotion chart */
+.af-dash-chart {
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+	height: 80px;
+}
+
+.af-dash-chart-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	height: 100%;
+}
+
+.af-dash-chart-bar-wrap {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: center;
+	width: 100%;
+	position: relative;
+}
+
+.af-dash-chart-bar {
+	width: 60%;
+	border-radius: 4px 4px 0 0;
+	min-height: 4px;
+	transition: height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.af-dash-chart-score {
+	position: absolute;
+	top: -16px;
+	font-size: 10px;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.af-dash-chart-label {
+	font-size: 11px;
+	color: var(--text-faint);
+	margin-top: 4px;
+	font-weight: 500;
+}
+
+.af-dash-chart-label-today {
+	color: #7C7F9B;
+	font-weight: 700;
+}
+
+/* Principle & pattern */
+.af-dash-quote {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--text-normal);
+	border-left: 3px solid #9088B4;
+	padding-left: 12px;
+	margin: 0;
+	font-style: italic;
+}
+
+.af-dash-pattern {
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--text-muted);
+	margin: 6px 0 0;
+}
+
+/* Links */
+.af-dash-card-links .af-dash-link-grid {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.af-dash-link {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 14px;
+	background: var(--background-primary);
+	border-radius: 8px;
+	border: 0.5px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.af-dash-link:hover {
+	background: var(--interactive-hover);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	transform: translateY(-1px);
+}
+
+.af-dash-link-icon {
+	font-size: 16px;
+}
+
+.af-dash-link-label {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+	.af-kanban-grid {
+		flex-direction: column;
+	}
+
+	.af-kanban-column {
+		min-width: auto;
+	}
+}

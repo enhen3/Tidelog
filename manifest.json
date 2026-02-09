@@ -1,0 +1,10 @@
+{
+    "id": "dailot",
+    "name": "Dailot「小舵」",
+    "version": "1.0.0",
+    "minAppVersion": "1.0.0",
+    "description": "AI-guided daily planning and reflection — your personal growth pilot",
+    "author": "enhen3",
+    "authorUrl": "https://github.com/enhen3/dailot",
+    "isDesktopOnly": false
+}
