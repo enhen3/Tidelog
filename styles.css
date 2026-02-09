@@ -68,11 +68,30 @@
 }
 
 .ai-flow-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	font-family: var(--af-font-display);
 	font-weight: 700;
 	font-size: 16px;
 	letter-spacing: -0.4px;
 	color: var(--text-normal);
+}
+
+.ai-flow-title-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	background: linear-gradient(135deg, hsl(210, 60%, 88%), hsl(260, 50%, 88%));
+	color: hsl(230, 50%, 50%);
+}
+
+.ai-flow-title-icon svg {
+	width: 14px;
+	height: 14px;
 }
 
 .ai-flow-header-buttons {

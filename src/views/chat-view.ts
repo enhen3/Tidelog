@@ -127,7 +127,9 @@ export class ChatView extends ItemView {
     private renderHeader(container: HTMLElement): void {
         const header = container.createDiv('ai-flow-header');
         const title = header.createDiv('ai-flow-title');
-        title.setText('Dailot「小舵」');
+        const iconSpan = title.createSpan('ai-flow-title-icon');
+        setIcon(iconSpan, 'compass');
+        title.createSpan({ text: 'Dailot「小舵」' });
     }
 
     /**
@@ -420,7 +422,7 @@ export class ChatView extends ItemView {
         // Task list body (same pattern as weekly/daily)
         const body = layer.createDiv('af-pyramid-month-detail');
         if (goals.length === 0) {
-            body.createDiv({ cls: 'af-pyramid-empty', text: '点击设定月度目标 →' });
+            body.createDiv({ cls: 'af-pyramid-empty', text: '暂无本月目标' });
         } else {
             for (const goal of goals) {
                 const card = body.createDiv({ cls: `af-pyramid-task ${goal.done ? 'af-pyramid-task-done' : ''}` });
