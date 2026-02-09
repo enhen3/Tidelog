@@ -386,7 +386,7 @@ export class ChatView extends ItemView {
         let file: TFile | null = null;
         try {
             const tmpl = this.plugin.templateManager.getMonthlyPlanTemplate(monthRef);
-            file = await this.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, tmpl);
+            file = await this.plugin.vaultManager.getOrCreateMonthlyPlan(targetMonth.toDate(), tmpl);
         } catch { /* skip */ }
 
         if (!file) {
@@ -476,10 +476,10 @@ export class ChatView extends ItemView {
 
         // Read weekly plan
         let file: TFile | null = null;
-        const ed = this.plugin.vaultManager.getEffectiveDate();
+        const ed = this.plugin.vaultManager.getEffectiveDate(targetDate.toDate());
         try {
             const tmpl = this.plugin.templateManager.getWeeklyPlanTemplate(weekRef, ed.format('YYYY-MM'));
-            file = await this.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, tmpl);
+            file = await this.plugin.vaultManager.getOrCreateWeeklyPlan(targetDate.toDate(), tmpl);
         } catch { /* skip */ }
 
         // Click title area to open file
