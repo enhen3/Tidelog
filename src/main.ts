@@ -7,6 +7,7 @@ import {
     Plugin,
     PluginManifest,
     WorkspaceLeaf,
+    addIcon,
 } from 'obsidian';
 
 import { AIFlowSettings, DEFAULT_SETTINGS } from './types';
@@ -62,8 +63,11 @@ export default class AIFlowManagerPlugin extends Plugin {
         this.registerView(CALENDAR_VIEW_TYPE, (leaf) => new CalendarView(leaf, this));
         this.registerView(DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this));
 
+        // Register custom helm icon for ribbon
+        addIcon('dailot-helm', `<circle cx="50" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="6"/><circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" stroke-width="6"/><line x1="50" y1="18" x2="50" y2="4" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="96" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="50" x2="4" y2="50" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="82" y1="50" x2="96" y2="50" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="27.4" y1="27.4" x2="17.5" y2="17.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="72.6" y1="72.6" x2="82.5" y2="82.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="27.4" y1="72.6" x2="17.5" y2="82.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="72.6" y1="27.4" x2="82.5" y2="17.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>`);
+
         // Add ribbon icons
-        this.addRibbonIcon('message-circle', 'Dailot「小舵」', () => {
+        this.addRibbonIcon('dailot-helm', 'Dailot「小舵」', () => {
             this.activateChatView();
         });
 

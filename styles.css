@@ -82,16 +82,13 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 24px;
-	height: 24px;
-	border-radius: 6px;
-	background: linear-gradient(135deg, hsl(210, 60%, 88%), hsl(260, 50%, 88%));
-	color: hsl(230, 50%, 50%);
+	width: 26px;
+	height: 26px;
 }
 
 .ai-flow-title-icon svg {
-	width: 14px;
-	height: 14px;
+	width: 22px;
+	height: 22px;
 }
 
 .ai-flow-header-buttons {
