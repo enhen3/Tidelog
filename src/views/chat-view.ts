@@ -75,7 +75,7 @@ export class ChatView extends ItemView {
     }
 
     getIcon(): string {
-        return 'message-circle';
+        return 'dailot-helm';
     }
 
     async onOpen(): Promise<void> {
