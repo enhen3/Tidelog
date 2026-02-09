@@ -1794,12 +1794,14 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
 
         const avatar = wrapper.createDiv('ai-flow-message-avatar');
         if (type === 'user') {
-            // Captain's hat — side-view pirate tricorn, classic silhouette
+            // Naval officer peaked cap — white dome, visor band, anchor badge
             avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor">
-<path d="M1 18l5-5h12l5 5z"/>
-<ellipse cx="12" cy="13" rx="7" ry="4" opacity="0.8"/>
-<path d="M9 9c0-2 1.3-4.5 3-6 1.7 1.5 3 4 3 6z" opacity="0.55"/>
-<circle cx="12" cy="12" r="1.2" fill="var(--af-accent,hsl(260,50%,55%))"/>
+<ellipse cx="12" cy="17" rx="9.5" ry="2.5" opacity="0.4"/>
+<ellipse cx="12" cy="15.5" rx="9" ry="1.5" opacity="0.9"/>
+<path d="M5.5 15c0-2.5 1-4 2.5-5s3-1.5 4-1.5 2.5.5 4 1.5 2.5 2.5 2.5 5z"/>
+<circle cx="12" cy="12" r="1.8" fill="var(--af-accent,hsl(260,50%,55%))"/>
+<line x1="12" y1="10.5" x2="12" y2="14" stroke="var(--af-accent,hsl(260,50%,55%))" stroke-width="0.7"/>
+<path d="M10.5 13c.4.5 1 .8 1.5.8s1.1-.3 1.5-.8" stroke="var(--af-accent,hsl(260,50%,55%))" stroke-width="0.5" fill="none"/>
 </svg>`;
         } else {
             // Ship's wheel — same style as header helm
