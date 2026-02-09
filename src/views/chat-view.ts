@@ -1794,15 +1794,13 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
 
         const avatar = wrapper.createDiv('ai-flow-message-avatar');
         if (type === 'user') {
-            // Captain — wide peaked cap, visor brim, face, uniform shoulders
+            // Captain's hat — wide brim, crown, anchor emblem
             avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M4 9h16" stroke-width="2.2"/>
-<path d="M7 9V6.5c0-2 2.2-3.5 5-3.5s5 1.5 5 3.5V9" fill="currentColor" opacity="0.2" stroke="none"/>
-<path d="M7 9V6.5c0-2 2.2-3.5 5-3.5s5 1.5 5 3.5V9"/>
-<circle cx="12" cy="5" r="0.8" fill="currentColor" stroke="none"/>
-<circle cx="12" cy="14" r="3" stroke-width="1.6"/>
-<path d="M6 23c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke-width="1.8"/>
-<path d="M9 20h6" stroke-width="1"/>
+<path d="M3 16h18" stroke-width="2"/>
+<path d="M5 16v-1c0-1.2.8-2.2 2-2.7L12 10l5 2.3c1.2.5 2 1.5 2 2.7v1" fill="currentColor" opacity="0.15" stroke="none"/>
+<path d="M5 16v-1c0-1.2.8-2.2 2-2.7L12 10l5 2.3c1.2.5 2 1.5 2 2.7v1"/>
+<path d="M9 10c0-2.5 1.3-5 3-7 1.7 2 3 4.5 3 7"/>
+<circle cx="12" cy="14" r="1" fill="currentColor" stroke="none"/>
 </svg>`;
         } else {
             // Ship's wheel — same style as header helm
