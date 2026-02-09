@@ -128,7 +128,7 @@ export class ChatView extends ItemView {
         const header = container.createDiv('ai-flow-header');
         const title = header.createDiv('ai-flow-title');
         const iconSpan = title.createSpan('ai-flow-title-icon');
-        setIcon(iconSpan, 'compass');
+        iconSpan.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" opacity="0.3"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="18.4" y2="5.6"/></svg>`;
         title.createSpan({ text: 'Dailot「小舵」' });
     }
 
@@ -198,17 +198,23 @@ export class ChatView extends ItemView {
             }
         });
 
-        // Remove non-chat panels (keep chat panel)
-        this.tabContentEl.querySelectorAll('.af-tab-panel:not(.af-tab-panel-chat)').forEach(el => el.remove());
-
         if (tab === 'chat') {
             this.chatPanel.style.display = '';
+            // Remove non-chat panels
+            this.tabContentEl.querySelectorAll('.af-tab-panel:not(.af-tab-panel-chat)').forEach(el => el.remove());
         } else {
             this.chatPanel.style.display = 'none';
+            // Build new panel first, THEN remove old to avoid white flash
             const panel = this.tabContentEl.createDiv('af-tab-panel');
-
-            if (tab === 'kanban') this.renderKanbanTab(panel);
-            else if (tab === 'review') this.renderReviewTab(panel);
+            const renderDone = (tab === 'kanban')
+                ? this.renderKanbanTab(panel)
+                : this.renderReviewTab(panel);
+            renderDone.then(() => {
+                // Remove stale panels (keep the new one and chat)
+                this.tabContentEl.querySelectorAll('.af-tab-panel:not(.af-tab-panel-chat)').forEach(el => {
+                    if (el !== panel) el.remove();
+                });
+            });
         }
     }
 
