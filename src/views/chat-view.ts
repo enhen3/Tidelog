@@ -274,7 +274,14 @@ export class ChatView extends ItemView {
             }
             const numM = line.match(/^(\s*)\d+\.\s+(.+)$/);
             if (numM && numM[2].trim() && isSubstantive(numM[2].trim())) {
-                items.push({ text: numM[2].trim(), done: false, isTask: false, section, indent: calcIndent(numM[1]) });
+                let numText = numM[2].trim();
+                // Handle numbered items with checkbox markers: 1. [x] text / 1. [ ] text
+                const numTaskM = numText.match(/^\[([ x])\]\s*(.+)$/);
+                if (numTaskM) {
+                    items.push({ text: numTaskM[2].trim(), done: numTaskM[1] === 'x', isTask: true, section, indent: calcIndent(numM[1]) });
+                } else {
+                    items.push({ text: numText, done: false, isTask: false, section, indent: calcIndent(numM[1]) });
+                }
                 continue;
             }
             const bulletM = line.match(/^(\s*)- (.+)$/);

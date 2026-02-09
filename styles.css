@@ -1066,12 +1066,15 @@
 	filter: brightness(1.15);
 }
 
-/* --- Tier body padding (consistent) --- */
+/* --- Tier body padding + scrollable overflow --- */
 
 .af-pyramid-week-body,
 .af-pyramid-month-detail,
 .af-pyramid-daily-body {
 	padding: 10px 12px;
+	max-height: 240px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 /* --- Weekly title area (flex for < > nav) --- */
