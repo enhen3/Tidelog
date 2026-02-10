@@ -71,8 +71,7 @@
 	justify-content: space-between;
 	align-items: center;
 	padding: 10px 16px;
-	border-bottom: 1px solid var(--af-border);
-	background: var(--af-surface);
+	background: var(--af-surface-raised);
 	z-index: 10;
 }
 
@@ -906,7 +905,7 @@
 	display: flex;
 	gap: 2px;
 	padding: 3px;
-	margin: 10px 12px 0;
+	margin: 0 12px;
 	background: var(--af-surface-raised);
 	border-radius: 9px;
 	border: 1px solid var(--af-border);
@@ -957,6 +956,7 @@
 	flex-direction: column;
 	overflow: hidden;
 	min-height: 0;
+	border-top: 1px solid var(--af-border);
 }
 
 .af-tab-panel {
