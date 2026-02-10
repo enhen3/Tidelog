@@ -91,10 +91,13 @@
 	height: 22px;
 }
 
+/* --- SOP action buttons: Apple text-button style --- */
+
 .ai-flow-header-buttons {
 	display: flex;
-	gap: 5px;
-	padding: 0 12px 6px;
+	gap: 0;
+	padding: 2px 12px 8px;
+	justify-content: center;
 }
 
 .ai-flow-mode-btn {
@@ -103,40 +106,32 @@
 	align-items: center;
 	justify-content: center;
 	gap: 4px;
-	padding: 5px 4px;
-	font-size: 11px;
-	font-weight: 500;
-	letter-spacing: 0.2px;
-	background: transparent;
-	border: 1px dashed var(--background-modifier-border);
-	border-radius: 8px;
-	color: var(--text-faint);
+	padding: 4px 2px;
+	font-size: 12px;
+	font-weight: 400;
+	background: none;
+	border: none;
+	color: var(--af-accent);
 	cursor: pointer;
-	transition: all 0.2s var(--af-ease);
+	transition: opacity 0.15s ease;
 	user-select: none;
 	-webkit-user-select: none;
+	opacity: 0.75;
 }
 
 .ai-flow-mode-btn:hover {
-	background: var(--background-secondary);
-	border-style: solid;
-	border-color: var(--background-modifier-border);
-	color: var(--text-normal);
-}
-
-.theme-dark .ai-flow-mode-btn:hover {
-	background: rgba(255, 255, 255, 0.06);
+	opacity: 1;
 }
 
 .ai-flow-mode-btn:active {
-	transform: scale(0.95);
-	transition-duration: 0.1s;
+	opacity: 0.5;
+	transition-duration: 0.05s;
 }
 
 .ai-flow-mode-btn svg {
-	width: 14px;
-	height: 14px;
-	opacity: 0.65;
+	width: 13px;
+	height: 13px;
+	opacity: 0.7;
 }
 
 .ai-flow-mode-btn:hover svg {
@@ -898,15 +893,19 @@
 	}
 }
 
-/* =============================================================================
-   Tab Bar (inside chat sidebar)
-   ============================================================================= */
+/* --- Tab bar: iOS Segmented Control style --- */
 
 .af-tab-bar {
 	display: flex;
-	gap: 6px;
-	padding: 10px 12px 6px;
-	background: var(--background-primary);
+	gap: 2px;
+	padding: 3px;
+	margin: 10px 12px 0;
+	background: rgba(118, 118, 128, 0.12);
+	border-radius: 9px;
+}
+
+.theme-dark .af-tab-bar {
+	background: rgba(118, 118, 128, 0.24);
 }
 
 .af-tab-btn {
@@ -914,44 +913,35 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 5px;
-	padding: 8px 6px;
-	border: 1px solid transparent;
-	background: rgba(255, 255, 255, 0.35);
-	color: var(--text-faint);
+	gap: 4px;
+	padding: 6px 4px;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
 	font-size: 12px;
 	font-weight: 500;
 	cursor: pointer;
-	border-radius: 10px;
+	border-radius: 7px;
 	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.theme-dark .af-tab-btn {
-	background: rgba(255, 255, 255, 0.04);
+	position: relative;
+	z-index: 1;
 }
 
 .af-tab-btn:hover {
-	background: rgba(255, 255, 255, 0.55);
-	color: var(--text-muted);
-	transform: translateY(-0.5px);
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.theme-dark .af-tab-btn:hover {
-	background: rgba(255, 255, 255, 0.08);
+	color: var(--text-normal);
 }
 
 .af-tab-btn-active {
-	background: linear-gradient(135deg, hsl(210, 60%, 92%), hsl(260, 50%, 92%));
-	border-color: hsl(230, 40%, 85%);
+	background: var(--background-primary);
 	color: var(--text-normal);
 	font-weight: 600;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+	z-index: 2;
 }
 
 .theme-dark .af-tab-btn-active {
-	background: linear-gradient(135deg, hsl(210, 30%, 20%), hsl(260, 25%, 22%));
-	border-color: hsl(230, 20%, 32%);
+	background: rgba(255, 255, 255, 0.12);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .af-tab-btn-icon {
