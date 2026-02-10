@@ -186,7 +186,8 @@ export class ChatView extends ItemView {
     // =========================================================================
 
     private renderTabBar(container: HTMLElement): void {
-        this.tabBarEl = container.createDiv('af-tab-bar');
+        const tabBarWrap = container.createDiv('af-tab-bar-wrap');
+        this.tabBarEl = tabBarWrap.createDiv('af-tab-bar');
 
         const tabs: { id: SidebarTab; icon: string; label: string }[] = [
             { id: 'chat', icon: '💬', label: 'Dailot Talk' },

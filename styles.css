@@ -901,12 +901,16 @@
 
 /* --- Tab bar: iOS Segmented Control × Brand --- */
 
+.af-tab-bar-wrap {
+	background: var(--af-surface-raised);
+	padding: 8px 12px 8px;
+}
+
 .af-tab-bar {
 	display: flex;
 	gap: 2px;
 	padding: 3px;
-	margin: 0 12px;
-	background: var(--af-surface-raised);
+	background: var(--af-surface);
 	border-radius: 9px;
 	border: 1px solid var(--af-border);
 }
