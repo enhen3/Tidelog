@@ -95,16 +95,14 @@
 
 .ai-flow-header-buttons {
 	display: flex;
-	gap: 0;
+	gap: 16px;
 	padding: 2px 12px 8px;
 	justify-content: center;
 }
 
 .ai-flow-mode-btn {
-	flex: 1;
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
 	gap: 4px;
 	padding: 4px 2px;
 	font-size: 12px;
