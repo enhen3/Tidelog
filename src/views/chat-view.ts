@@ -158,26 +158,26 @@ export class ChatView extends ItemView {
 
         const morningBtn = buttons.createEl('button', {
             cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': '晨间复盘' },
+            attr: { 'aria-label': '起航：规划今日' },
         });
         setIcon(morningBtn, 'sun');
-        morningBtn.createSpan({ text: '晨间' });
+        morningBtn.createSpan({ text: '起航' });
         morningBtn.addEventListener('click', () => this.startSOP('morning'));
 
         const eveningBtn = buttons.createEl('button', {
             cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': '晚间复盘' },
+            attr: { 'aria-label': '靠岸：回顾今天' },
         });
         setIcon(eveningBtn, 'moon');
-        eveningBtn.createSpan({ text: '晚间' });
+        eveningBtn.createSpan({ text: '靠岸' });
         eveningBtn.addEventListener('click', () => this.startSOP('evening'));
 
         const insightBtn = buttons.createEl('button', {
             cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': '洞察分析' },
+            attr: { 'aria-label': '航日志：洞察分析' },
         });
         setIcon(insightBtn, 'lightbulb');
-        insightBtn.createSpan({ text: '洞察' });
+        insightBtn.createSpan({ text: '自由聊' });
         insightBtn.addEventListener('click', () => this.startFreeChat());
     }
 
@@ -189,9 +189,9 @@ export class ChatView extends ItemView {
         this.tabBarEl = container.createDiv('af-tab-bar');
 
         const tabs: { id: SidebarTab; icon: string; label: string }[] = [
-            { id: 'chat', icon: '💬', label: '聊天' },
-            { id: 'kanban', icon: '📋', label: '看板' },
-            { id: 'review', icon: '📊', label: '回顾' },
+            { id: 'chat', icon: '💬', label: '对话' },
+            { id: 'kanban', icon: '📋', label: '目标' },
+            { id: 'review', icon: '📊', label: '仪表盘' },
         ];
 
         for (const tab of tabs) {
@@ -996,9 +996,9 @@ export class ChatView extends ItemView {
 
 我是你的 AI 教练，帮助你建立持续成长的习惯。
 
-**☀️ 晨间** — 对标计划，规划今日任务
-**🌙 晚间** — 回顾一天，记录成就与情绪
-**💡 洞察** — 生成洞察报告，随时聊
+**☀️ 起航** — 对标计划，规划今日任务
+**🌙 靠岸** — 回顾一天，记录成就与情绪
+**💡 自由聊** — 随时聊天，生成洞察报告
 
 点击上方按钮开始，或直接输入你的想法。`);
     }
