@@ -36,8 +36,8 @@
 	--af-gradient-accent: linear-gradient(135deg, var(--af-gold) 0%, #e8d7b0 100%);
 	--af-gradient-ai: linear-gradient(135deg, var(--af-teal) 0%, #7ab5b4 100%);
 	--af-surface: #ffffff;
-	--af-surface-raised: #f5f3ef;
-	--af-surface-card: #faf8f5;
+	--af-surface-raised: #f9f9f9;
+	--af-surface-card: #ffffff;
 	--af-text-primary: #1a1a1a;
 	--af-text-secondary: rgba(26, 26, 26, 0.55);
 	--af-text-tertiary: rgba(26, 26, 26, 0.3);
@@ -1038,18 +1038,10 @@
 
 /* --- Layer Shared: Accent Gradient (all tiers) --- */
 
-.af-pyramid-month {
-	background: linear-gradient(135deg, rgba(222, 200, 154, 0.08), rgba(222, 200, 154, 0.03));
-	border: 1px solid var(--af-border);
-}
-
-.af-pyramid-week {
-	background: linear-gradient(135deg, rgba(95, 161, 160, 0.08), rgba(95, 161, 160, 0.03));
-	border: 1px solid var(--af-border);
-}
-
+.af-pyramid-month,
+.af-pyramid-week,
 .af-pyramid-daily {
-	background: linear-gradient(135deg, rgba(144, 136, 180, 0.08), rgba(144, 136, 180, 0.03));
+	background: var(--af-surface);
 	border: 1px solid var(--af-border);
 }
 
