@@ -93,8 +93,8 @@
 
 .ai-flow-header-buttons {
 	display: flex;
-	gap: 6px;
-	padding: 0 12px 4px;
+	gap: 5px;
+	padding: 0 12px 6px;
 }
 
 .ai-flow-mode-btn {
@@ -102,35 +102,30 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 5px;
-	padding: 8px 6px;
-	font-size: 12.5px;
+	gap: 4px;
+	padding: 5px 4px;
+	font-size: 11px;
 	font-weight: 500;
-	letter-spacing: -0.1px;
-	background: rgba(255, 255, 255, 0.35);
-	border: 1px solid transparent;
-	border-radius: 10px;
-	color: var(--text-muted);
+	letter-spacing: 0.2px;
+	background: transparent;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 8px;
+	color: var(--text-faint);
 	cursor: pointer;
 	transition: all 0.2s var(--af-ease);
 	user-select: none;
 	-webkit-user-select: none;
 }
 
-.theme-dark .ai-flow-mode-btn {
-	background: rgba(255, 255, 255, 0.04);
-}
-
 .ai-flow-mode-btn:hover {
-	background: linear-gradient(135deg, hsl(210, 60%, 92%), hsl(260, 50%, 92%));
+	background: var(--background-secondary);
+	border-style: solid;
+	border-color: var(--background-modifier-border);
 	color: var(--text-normal);
-	border-color: hsl(230, 40%, 85%);
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .theme-dark .ai-flow-mode-btn:hover {
-	background: linear-gradient(135deg, hsl(210, 30%, 20%), hsl(260, 25%, 22%));
-	border-color: hsl(230, 20%, 32%);
+	background: rgba(255, 255, 255, 0.06);
 }
 
 .ai-flow-mode-btn:active {

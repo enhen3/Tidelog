@@ -158,26 +158,26 @@ export class ChatView extends ItemView {
 
         const morningBtn = buttons.createEl('button', {
             cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': '起航：规划今日' },
+            attr: { 'aria-label': 'Plan：规划今日' },
         });
         setIcon(morningBtn, 'sun');
-        morningBtn.createSpan({ text: '起航' });
+        morningBtn.createSpan({ text: 'Plan' });
         morningBtn.addEventListener('click', () => this.startSOP('morning'));
 
         const eveningBtn = buttons.createEl('button', {
             cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': '靠岸：回顾今天' },
+            attr: { 'aria-label': 'Review：回顾今天' },
         });
         setIcon(eveningBtn, 'moon');
-        eveningBtn.createSpan({ text: '靠岸' });
+        eveningBtn.createSpan({ text: 'Review' });
         eveningBtn.addEventListener('click', () => this.startSOP('evening'));
 
         const insightBtn = buttons.createEl('button', {
             cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': '航日志：洞察分析' },
+            attr: { 'aria-label': 'Dailot Talk：自由对话' },
         });
         setIcon(insightBtn, 'lightbulb');
-        insightBtn.createSpan({ text: '自由聊' });
+        insightBtn.createSpan({ text: 'Dailot Talk' });
         insightBtn.addEventListener('click', () => this.startFreeChat());
     }
 
@@ -996,9 +996,9 @@ export class ChatView extends ItemView {
 
 我是你的 AI 教练，帮助你建立持续成长的习惯。
 
-**☀️ 起航** — 对标计划，规划今日任务
-**🌙 靠岸** — 回顾一天，记录成就与情绪
-**💡 自由聊** — 随时聊天，生成洞察报告
+**☀️ Plan** — 对标计划，规划今日任务
+**🌙 Review** — 回顾一天，记录成就与情绪
+**💡 Dailot Talk** — 随时聊天，生成洞察报告
 
 点击上方按钮开始，或直接输入你的想法。`);
     }
