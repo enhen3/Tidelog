@@ -1010,7 +1010,6 @@
 
 .af-pyramid-layer {
 	border-radius: 12px;
-	overflow: hidden;
 }
 
 .af-pyramid-layer-header {
@@ -1546,12 +1545,9 @@
 	padding: 0 12px 12px;
 }
 
-/* Dashboard cards inherit af-pyramid-layer, add body padding + scroll */
+/* Dashboard cards inherit af-pyramid-layer, add body padding */
 .af-dash-card-body {
 	padding: 10px 12px 12px;
-	max-height: 200px;
-	overflow-y: auto;
-	-webkit-overflow-scrolling: touch;
 }
 
 /* Progress card */
