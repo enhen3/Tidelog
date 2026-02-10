@@ -97,7 +97,7 @@
 	display: flex;
 	gap: 16px;
 	padding: 2px 12px 8px;
-	justify-content: center;
+	justify-content: flex-start;
 }
 
 .ai-flow-mode-btn {
