@@ -1546,9 +1546,12 @@
 	padding: 0 12px 12px;
 }
 
-/* Dashboard cards inherit af-pyramid-layer, add body padding */
+/* Dashboard cards inherit af-pyramid-layer, add body padding + scroll */
 .af-dash-card-body {
 	padding: 10px 12px 12px;
+	max-height: 200px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 /* Progress card */
