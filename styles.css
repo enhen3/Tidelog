@@ -59,11 +59,9 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 12px 16px;
+	padding: 10px 16px;
 	border-bottom: 0.5px solid var(--background-modifier-border);
-	background: color-mix(in srgb, var(--background-secondary) 80%, transparent);
-	backdrop-filter: saturate(180%) blur(20px);
-	-webkit-backdrop-filter: saturate(180%) blur(20px);
+	background: var(--background-primary);
 	z-index: 10;
 }
 
@@ -976,12 +974,12 @@
 	min-height: 0;
 }
 
-/* SOP buttons inside chat panel */
+/* SOP buttons inside chat panel — Apple inline actions */
 .af-tab-panel-chat>.ai-flow-header-buttons {
 	display: flex;
-	gap: 6px;
-	padding: 6px 12px;
-	border-bottom: 0.5px solid var(--background-modifier-border);
+	gap: 16px;
+	padding: 6px 16px;
+	background: var(--background-secondary);
 }
 
 /* Base kanban container */
@@ -1005,7 +1003,8 @@
 /* --- Shared layer styles --- */
 
 .af-pyramid-layer {
-	border-radius: 12px;
+	border-radius: 10px;
+	background: var(--background-secondary);
 }
 
 .af-pyramid-layer-header {
@@ -1543,7 +1542,7 @@
 
 /* Dashboard cards inherit af-pyramid-layer, add body padding */
 .af-dash-card-body {
-	padding: 10px 12px 12px;
+	padding: 12px 16px 16px;
 }
 
 /* Progress card */
@@ -1638,10 +1637,9 @@
 	font-size: 14px;
 	line-height: 1.6;
 	color: var(--text-normal);
-	border-left: 3px solid #9088B4;
+	border-left: 3px solid var(--af-purple);
 	padding-left: 12px;
 	margin: 0;
-	font-style: italic;
 }
 
 .af-dash-pattern {

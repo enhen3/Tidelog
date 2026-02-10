@@ -177,7 +177,7 @@ export class ChatView extends ItemView {
             attr: { 'aria-label': 'Dailot Talk：自由对话' },
         });
         setIcon(insightBtn, 'lightbulb');
-        insightBtn.createSpan({ text: 'Dailot Talk' });
+        insightBtn.createSpan({ text: 'Insight' });
         insightBtn.addEventListener('click', () => this.startFreeChat());
     }
 
@@ -189,7 +189,7 @@ export class ChatView extends ItemView {
         this.tabBarEl = container.createDiv('af-tab-bar');
 
         const tabs: { id: SidebarTab; icon: string; label: string }[] = [
-            { id: 'chat', icon: '💬', label: '对话' },
+            { id: 'chat', icon: '💬', label: 'Dailot Talk' },
             { id: 'kanban', icon: '📋', label: '目标' },
             { id: 'review', icon: '📊', label: '仪表盘' },
         ];
@@ -998,7 +998,7 @@ export class ChatView extends ItemView {
 
 **☀️ Plan** — 对标计划，规划今日任务
 **🌙 Review** — 回顾一天，记录成就与情绪
-**💡 Dailot Talk** — 随时聊天，生成洞察报告
+**💡 Insight** — 洞察分析，生成报告
 
 点击上方按钮开始，或直接输入你的想法。`);
     }
