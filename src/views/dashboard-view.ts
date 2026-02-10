@@ -244,7 +244,7 @@ export class DashboardView extends ItemView {
     }
 
     private async getRandomPrinciple(): Promise<string | null> {
-        const path = `${this.plugin.settings.archiveFolder}/Insights/principles.md`;
+        const path = `${this.plugin.settings.archiveFolder}/principles.md`;
         const file = this.app.vault.getAbstractFileByPath(path);
         if (!file || !(file instanceof TFile)) return null;
 
@@ -261,7 +261,7 @@ export class DashboardView extends ItemView {
     }
 
     private async getLatestPattern(): Promise<string | null> {
-        const path = `${this.plugin.settings.archiveFolder}/Insights/patterns.md`;
+        const path = `${this.plugin.settings.archiveFolder}/patterns.md`;
         const file = this.app.vault.getAbstractFileByPath(path);
         if (!file || !(file instanceof TFile)) return null;
 

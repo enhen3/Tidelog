@@ -338,8 +338,8 @@ export class ChatView extends ItemView {
      * Returns the best available score (1-10), or null.
      */
     private parseNoteScores(content: string): number | null {
-        // 1. Try evening emotion section: "### 开心事与情绪" followed by a number
-        const emotionSectionMatch = content.match(/###\s*开心事与情绪[\s\S]*?\n\s*(\d+)/m);
+        // 1. Try evening emotion section: "## 开心事与情绪" or "### 开心事与情绪" followed by a number
+        const emotionSectionMatch = content.match(/#{2,3}\s*开心事与情绪[\s\S]*?\n\s*(\d+)/m);
         if (emotionSectionMatch) {
             const v = parseInt(emotionSectionMatch[1], 10);
             if (v >= 1 && v <= 10) return v;
@@ -889,7 +889,7 @@ export class ChatView extends ItemView {
 
         // Principle section
         let principle: string | null = null;
-        const pPath = `${this.plugin.settings.archiveFolder}/Insights/principles.md`;
+        const pPath = `${this.plugin.settings.archiveFolder}/principles.md`;
         const pFile = this.app.vault.getAbstractFileByPath(pPath);
         if (pFile && pFile instanceof TFile) {
             try {
@@ -902,7 +902,7 @@ export class ChatView extends ItemView {
 
         // Pattern section
         let pattern: string | null = null;
-        const ptPath = `${this.plugin.settings.archiveFolder}/Insights/patterns.md`;
+        const ptPath = `${this.plugin.settings.archiveFolder}/patterns.md`;
         const ptFile = this.app.vault.getAbstractFileByPath(ptPath);
         if (ptFile && ptFile instanceof TFile) {
             try {
