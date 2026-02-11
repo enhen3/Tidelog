@@ -1742,3 +1742,52 @@
 		min-width: auto;
 	}
 }
+
+/* =============================================================================
+   Settings: Custom Provider Preset URL Buttons
+   ============================================================================= */
+
+.ai-flow-preset-urls {
+	display: flex;
+	gap: 6px;
+	margin-top: 6px;
+	flex-wrap: wrap;
+}
+
+.ai-flow-preset-btn {
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: var(--af-radius-pill);
+	border: 1px solid var(--af-border);
+	background: var(--af-surface);
+	color: var(--af-text-secondary);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.ai-flow-preset-btn:hover {
+	background: var(--af-accent-light);
+	color: var(--af-accent);
+	border-color: var(--af-accent);
+}
+
+/* =============================================================================
+   Settings: Compact Collapsible Question Rows
+   ============================================================================= */
+
+.ai-flow-q-detail {
+	border-left: 2px solid var(--af-accent);
+	margin: 0 0 8px 16px;
+	padding: 4px 0 4px 12px;
+	background: var(--af-surface);
+	border-radius: 0 var(--af-radius-sm) var(--af-radius-sm) 0;
+}
+
+.ai-flow-q-detail .setting-item {
+	border-top: none;
+	padding: 4px 0;
+}
+
+.ai-flow-q-disabled {
+	opacity: 0.45;
+}

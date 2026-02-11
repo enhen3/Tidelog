@@ -1,5 +1,6 @@
 /**
  * Settings Tab - Plugin configuration UI
+ * Phase 5: Custom model names, custom provider, streamlined evening questions
  */
 
 import {
@@ -42,6 +43,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
                     .addOption('anthropic', 'Anthropic Claude')
                     .addOption('gemini', 'Google Gemini')
                     .addOption('openai', 'OpenAI')
+                    .addOption('custom', '自定义 (OpenAI 兼容)')
                     .setValue(this.plugin.settings.activeProvider)
                     .onChange(async (value) => {
                         this.plugin.settings.activeProvider = value as AIProviderType;
@@ -158,7 +160,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
             );
 
         // =================================================================
-        // Evening Question Editor
+        // Evening Question Editor (compact)
         // =================================================================
         this.renderEveningQuestions(containerEl);
     }
@@ -170,12 +172,50 @@ export class AIFlowSettingTab extends PluginSettingTab {
         const provider = this.plugin.settings.activeProvider;
         const config = this.plugin.settings.providers[provider];
 
-        // API Key with password toggle
+        // --- Custom provider: Base URL ---
+        if (provider === 'custom') {
+            const urlSetting = new Setting(containerEl)
+                .setName('API Base URL')
+                .setDesc('OpenAI 兼容 API 的基础地址（如 DeepSeek / SiliconFlow / Groq / Ollama）');
+
+            urlSetting.addText((text) => {
+                text.inputEl.style.width = '300px';
+                text
+                    .setPlaceholder('https://api.deepseek.com/v1')
+                    .setValue(config.baseUrl || '')
+                    .onChange(async (value) => {
+                        this.plugin.settings.providers[provider].baseUrl = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+            // Preset URL buttons
+            const presetDesc = urlSetting.descEl;
+            const presetContainer = presetDesc.createDiv('ai-flow-preset-urls');
+            const presets: [string, string][] = [
+                ['DeepSeek', 'https://api.deepseek.com/v1'],
+                ['SiliconFlow', 'https://api.siliconflow.cn/v1'],
+                ['Groq', 'https://api.groq.com/openai/v1'],
+                ['Ollama', 'http://localhost:11434/v1'],
+            ];
+            for (const [label, url] of presets) {
+                const btn = presetContainer.createEl('button', {
+                    cls: 'ai-flow-preset-btn',
+                    text: label,
+                });
+                btn.addEventListener('click', async () => {
+                    this.plugin.settings.providers[provider].baseUrl = url;
+                    await this.plugin.saveSettings();
+                    this.display();
+                });
+            }
+        }
+
+        // --- API Key with password toggle ---
         const apiKeySetting = new Setting(containerEl)
             .setName(`${this.getProviderName(provider)} API Key`)
             .setDesc('输入你的 API 密钥');
 
-        // Use native input with password type
         let apiKeyInput: HTMLInputElement;
         apiKeySetting.addText((text) => {
             apiKeyInput = text.inputEl;
@@ -190,7 +230,6 @@ export class AIFlowSettingTab extends PluginSettingTab {
                 });
         });
 
-        // Toggle visibility button
         apiKeySetting.addExtraButton((button) => {
             button
                 .setIcon('eye-off')
@@ -208,24 +247,44 @@ export class AIFlowSettingTab extends PluginSettingTab {
                 });
         });
 
-        // Model selection
-        new Setting(containerEl)
+        // --- Model selection: dropdown + free text input ---
+        const models = this.getModelsForProvider(provider);
+        const hasPresets = Object.keys(models).length > 0;
+
+        const modelSetting = new Setting(containerEl)
             .setName('模型')
-            .setDesc('选择要使用的模型')
-            .addDropdown((dropdown) => {
-                const models = this.getModelsForProvider(provider);
+            .setDesc(hasPresets ? '选择推荐模型或手动输入模型 ID' : '输入模型 ID');
+
+        if (hasPresets) {
+            modelSetting.addDropdown((dropdown) => {
+                dropdown.addOption('', '— 手动输入 —');
                 for (const [value, name] of Object.entries(models)) {
                     dropdown.addOption(value, name);
                 }
-                dropdown
-                    .setValue(config.model)
-                    .onChange(async (value) => {
+                // If current model is in presets, select it; otherwise leave at manual
+                dropdown.setValue(models[config.model] ? config.model : '');
+                dropdown.onChange(async (value) => {
+                    if (value) {
                         this.plugin.settings.providers[provider].model = value;
                         await this.plugin.saveSettings();
-                    });
+                        this.display();
+                    }
+                });
             });
+        }
 
-        // Test connection button
+        modelSetting.addText((text) => {
+            text.inputEl.style.width = '220px';
+            text
+                .setPlaceholder(this.getModelPlaceholder(provider))
+                .setValue(config.model)
+                .onChange(async (value) => {
+                    this.plugin.settings.providers[provider].model = value;
+                    await this.plugin.saveSettings();
+                });
+        });
+
+        // --- Test connection button ---
         new Setting(containerEl)
             .setName('测试连接')
             .setDesc('验证 API Key 和模型配置是否正确')
@@ -244,7 +303,6 @@ export class AIFlowSettingTab extends PluginSettingTab {
                             if (success) {
                                 new Notice('✅ 连接成功！API Key 有效');
                                 button.setButtonText('✅ 连接成功');
-                                // Reset after 2 seconds
                                 setTimeout(() => {
                                     button.setButtonText('🔗 测试连接');
                                 }, 2000);
@@ -277,12 +335,27 @@ export class AIFlowSettingTab extends PluginSettingTab {
             anthropic: 'Anthropic Claude',
             gemini: 'Google Gemini',
             openai: 'OpenAI',
+            custom: '自定义',
         };
         return names[provider];
     }
 
     /**
-     * Get available models for provider
+     * Get placeholder for model text input
+     */
+    private getModelPlaceholder(provider: AIProviderType): string {
+        const placeholders: Record<AIProviderType, string> = {
+            openrouter: 'anthropic/claude-sonnet-4',
+            anthropic: 'claude-sonnet-4-20250514',
+            gemini: 'gemini-2.0-flash',
+            openai: 'gpt-4o',
+            custom: 'deepseek-chat',
+        };
+        return placeholders[provider];
+    }
+
+    /**
+     * Get recommended models for provider (empty for custom)
      */
     private getModelsForProvider(provider: AIProviderType): Record<string, string> {
         switch (provider) {
@@ -315,22 +388,19 @@ export class AIFlowSettingTab extends PluginSettingTab {
                     'gpt-4o-mini': 'GPT-4o Mini',
                     'gpt-4-turbo': 'GPT-4 Turbo',
                 };
+            case 'custom':
+                // No presets — user types the model ID
+                return {};
             default:
                 return {};
         }
     }
 
     /**
-     * Render the evening question editor
+     * Render the evening question editor — compact collapsible rows
      */
     private renderEveningQuestions(containerEl: HTMLElement): void {
         containerEl.createEl('h2', { text: '晚间复盘问题配置' });
-
-        // Description
-        const descEl = containerEl.createEl('p', {
-            cls: 'setting-item-description',
-        });
-        descEl.setText('自定义晚间复盘的问题内容。你可以修改问题文字、切换必问/选问、启用/禁用单个问题。');
 
         // Reset button
         new Setting(containerEl)
@@ -347,86 +417,101 @@ export class AIFlowSettingTab extends PluginSettingTab {
                     })
             );
 
-        // Render each question
+        // Compact question list
         const questions = this.plugin.settings.eveningQuestions;
 
         questions.forEach((question, index) => {
-            // Question card container
-            const cardEl = containerEl.createDiv('ai-flow-question-card');
-
-            // Header with index and type badge
-            const headerEl = cardEl.createDiv('ai-flow-question-header');
+            // --- Collapsed row: [toggle] #N sectionName [badge] [expand] ---
             const badge = question.required ? '必问' : '选问';
             const badgeCls = question.required ? 'ai-flow-badge-required' : 'ai-flow-badge-optional';
-            headerEl.createSpan({
-                text: `#${index + 1}`,
-                cls: 'ai-flow-question-index',
-            });
-            headerEl.createSpan({
-                text: badge,
-                cls: `ai-flow-badge ${badgeCls}`,
-            });
-            if (!question.enabled) {
-                headerEl.createSpan({
-                    text: '(已禁用)',
-                    cls: 'ai-flow-badge ai-flow-badge-disabled',
-                });
-            }
+            const label = `#${index + 1} ${question.sectionName}`;
 
-            // Section name
-            new Setting(cardEl)
-                .setName('日记章节名')
-                .setDesc('对应日记中的 section 标题')
-                .addText((text) =>
-                    text
-                        .setValue(question.sectionName)
-                        .onChange(async (value) => {
-                            this.plugin.settings.eveningQuestions[index].sectionName = value;
-                            await this.plugin.saveSettings();
-                        })
-                );
-
-            // Initial message (textarea)
-            const messageSetting = new Setting(cardEl)
-                .setName('提问内容')
-                .setDesc('AI 向用户展示的问题文字（支持 \\n 换行）');
-
-            const textareaEl = messageSetting.controlEl.createEl('textarea', {
-                cls: 'ai-flow-question-textarea',
-            });
-            textareaEl.value = question.initialMessage;
-            textareaEl.rows = 3;
-            textareaEl.addEventListener('change', async () => {
-                this.plugin.settings.eveningQuestions[index].initialMessage = textareaEl.value;
-                await this.plugin.saveSettings();
-            });
-
-            // Toggles row
-            new Setting(cardEl)
-                .setName('必问')
-                .setDesc('必问题不可跳过')
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(question.required)
-                        .onChange(async (value) => {
-                            this.plugin.settings.eveningQuestions[index].required = value;
-                            await this.plugin.saveSettings();
-                            this.display();
-                        })
-                );
-
-            new Setting(cardEl)
-                .setName('启用')
-                .setDesc('禁用后此问题不会出现在复盘流程中')
+            const rowSetting = new Setting(containerEl)
+                .setName(label)
+                .addExtraButton((btn) => {
+                    btn.setIcon('chevron-down')
+                        .setTooltip('展开编辑')
+                        .onClick(() => {
+                            // Toggle detail panel
+                            const detailEl = rowSetting.settingEl.nextElementSibling;
+                            if (detailEl && detailEl.hasClass('ai-flow-q-detail')) {
+                                detailEl.remove();
+                                btn.setIcon('chevron-down');
+                            } else {
+                                this.renderQuestionDetail(rowSetting.settingEl, question, index);
+                                btn.setIcon('chevron-up');
+                            }
+                        });
+                })
                 .addToggle((toggle) =>
                     toggle
                         .setValue(question.enabled)
                         .onChange(async (value) => {
                             this.plugin.settings.eveningQuestions[index].enabled = value;
                             await this.plugin.saveSettings();
-                            this.display();
                         })
                 );
+
+            // Add badge to the name element
+            const nameEl = rowSetting.nameEl;
+            nameEl.createSpan({
+                text: ` ${badge}`,
+                cls: `ai-flow-badge ${badgeCls}`,
+            });
+
+            // Dim disabled items
+            if (!question.enabled) {
+                rowSetting.settingEl.addClass('ai-flow-q-disabled');
+            }
         });
+    }
+
+    /**
+     * Render expanded detail panel for a question (inserted after the row)
+     */
+    private renderQuestionDetail(afterEl: HTMLElement, question: EveningQuestionConfig, index: number): void {
+        const detailEl = document.createElement('div');
+        detailEl.addClass('ai-flow-q-detail');
+        afterEl.after(detailEl);
+
+        // Section name
+        new Setting(detailEl)
+            .setName('日记章节名')
+            .addText((text) =>
+                text
+                    .setValue(question.sectionName)
+                    .onChange(async (value) => {
+                        this.plugin.settings.eveningQuestions[index].sectionName = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        // Question text (textarea)
+        const messageSetting = new Setting(detailEl)
+            .setName('提问内容');
+
+        const textareaEl = messageSetting.controlEl.createEl('textarea', {
+            cls: 'ai-flow-question-textarea',
+        });
+        textareaEl.value = question.initialMessage;
+        textareaEl.rows = 3;
+        textareaEl.addEventListener('change', async () => {
+            this.plugin.settings.eveningQuestions[index].initialMessage = textareaEl.value;
+            await this.plugin.saveSettings();
+        });
+
+        // Required toggle
+        new Setting(detailEl)
+            .setName('必问')
+            .setDesc('必问题不可跳过')
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(question.required)
+                    .onChange(async (value) => {
+                        this.plugin.settings.eveningQuestions[index].required = value;
+                        await this.plugin.saveSettings();
+                        this.display();
+                    })
+            );
     }
 }

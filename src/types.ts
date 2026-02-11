@@ -6,12 +6,13 @@
 // Plugin Settings
 // =============================================================================
 
-export type AIProviderType = 'openrouter' | 'anthropic' | 'gemini' | 'openai';
+export type AIProviderType = 'openrouter' | 'anthropic' | 'gemini' | 'openai' | 'custom';
 
 export interface ProviderConfig {
     apiKey: string;
     model: string;
     enabled: boolean;
+    baseUrl?: string;
 }
 
 export interface AIFlowSettings {
@@ -22,6 +23,7 @@ export interface AIFlowSettings {
         anthropic: ProviderConfig;
         gemini: ProviderConfig;
         openai: ProviderConfig;
+        custom: ProviderConfig;
     };
 
     // Date Logic
@@ -140,6 +142,12 @@ export const DEFAULT_SETTINGS: AIFlowSettings = {
             apiKey: '',
             model: 'gpt-4o',
             enabled: false,
+        },
+        custom: {
+            apiKey: '',
+            model: '',
+            enabled: false,
+            baseUrl: 'https://api.deepseek.com/v1',
         },
     },
     dayBoundaryHour: 6,
