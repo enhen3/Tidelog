@@ -67,6 +67,17 @@ export class EveningSOP {
     }
 
     /**
+     * Public progress info for the UI progress bar
+     */
+    getProgressInfo(): { current: number; total: number; currentLabel: string } {
+        const flow = this.questionFlow.length > 0 ? this.questionFlow : this.buildQuestionFlow();
+        const total = flow.length;
+        const current = this.currentQuestionIndex;
+        const currentLabel = current < total ? flow[current].sectionName : '完成';
+        return { current, total, currentLabel };
+    }
+
+    /**
      * Start the evening SOP
      */
     async start(
@@ -196,7 +207,11 @@ ${this.questionFlow[0].initialMessage}`;
     ): Promise<void> {
         const currentQuestion = this.questionFlow[this.currentQuestionIndex];
         const userProfile = context.userProfileContent;
-        const systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + currentQuestion.prompt;
+        const todayPlan = context.todayPlanContent;
+        let systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + currentQuestion.prompt;
+        if (todayPlan) {
+            systemPrompt += `\n\n用户今日的晨间计划：\n${todayPlan}\n\n请在回复中参考用户的计划内容，给出针对性的反馈。`;
+        }
 
         // Generate AI response for follow-up or transition
         try {

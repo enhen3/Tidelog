@@ -116,7 +116,7 @@ LIMIT 7
     /**
      * Get a random principle from principles.md
      */
-    private async getRandomPrinciple(): Promise<string> {
+    async getRandomPrinciple(): Promise<string> {
         try {
             const path = `${this.settings.archiveFolder}/principles.md`;
             const file = this.app.vault.getAbstractFileByPath(path);
@@ -143,7 +143,7 @@ LIMIT 7
     /**
      * Get the latest pattern from patterns.md
      */
-    private async getLatestPattern(): Promise<string> {
+    async getLatestPattern(): Promise<string> {
         try {
             const path = `${this.settings.archiveFolder}/patterns.md`;
             const file = this.app.vault.getAbstractFileByPath(path);

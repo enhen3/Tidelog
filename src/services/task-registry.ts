@@ -9,9 +9,14 @@ import { AIFlowSettings } from '../types';
 // Types
 // =============================================================================
 
+export interface SubTaskItem {
+    text: string;
+    done: boolean;
+}
+
 export interface TaskItem {
     text: string;
-    subtasks: string[];
+    subtasks: SubTaskItem[];
     done: boolean;
     source: 'morning' | 'evening' | 'manual';
 }
@@ -66,7 +71,10 @@ export class TaskRegistryService {
             // Sub-task: (2+ spaces)- [ ] text
             const subMatch = line.match(/^\s{2,}- \[([ x])\] (.+)$/);
             if (subMatch && tasks.length > 0) {
-                tasks[tasks.length - 1].subtasks.push(subMatch[2].trim());
+                tasks[tasks.length - 1].subtasks.push({
+                    text: subMatch[2].trim(),
+                    done: subMatch[1] === 'x',
+                });
             }
         }
 
@@ -82,7 +90,8 @@ export class TaskRegistryService {
             const checkbox = task.done ? '[x]' : '[ ]';
             lines.push(`- ${checkbox} ${task.text}`);
             for (const sub of task.subtasks) {
-                lines.push(`  - [ ] ${sub}`);
+                const subCheckbox = sub.done ? '[x]' : '[ ]';
+                lines.push(`  - ${subCheckbox} ${sub.text}`);
             }
         }
         return lines.join('\n');

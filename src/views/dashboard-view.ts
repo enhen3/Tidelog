@@ -244,35 +244,10 @@ export class DashboardView extends ItemView {
     }
 
     private async getRandomPrinciple(): Promise<string | null> {
-        const path = `${this.plugin.settings.archiveFolder}/principles.md`;
-        const file = this.app.vault.getAbstractFileByPath(path);
-        if (!file || !(file instanceof TFile)) return null;
-
-        try {
-            const content = await this.app.vault.read(file);
-            const lines = content.split('\n')
-                .filter(l => l.startsWith('- '))
-                .map(l => l.substring(2).trim());
-            if (lines.length === 0) return null;
-            return lines[Math.floor(Math.random() * lines.length)];
-        } catch {
-            return null;
-        }
+        return (await this.plugin.dashboardService.getRandomPrinciple()) || null;
     }
 
     private async getLatestPattern(): Promise<string | null> {
-        const path = `${this.plugin.settings.archiveFolder}/patterns.md`;
-        const file = this.app.vault.getAbstractFileByPath(path);
-        if (!file || !(file instanceof TFile)) return null;
-
-        try {
-            const content = await this.app.vault.read(file);
-            const lines = content.split('\n')
-                .filter(l => l.startsWith('- '))
-                .map(l => l.substring(2).trim());
-            return lines.length > 0 ? lines[lines.length - 1] : null;
-        } catch {
-            return null;
-        }
+        return (await this.plugin.dashboardService.getLatestPattern()) || null;
     }
 }
