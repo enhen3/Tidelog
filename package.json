@@ -1,13 +1,13 @@
 {
-    "name": "dailot",
+    "name": "tidelog",
     "version": "1.0.0",
-    "description": "Dailot — AI-guided daily planning and reflection for Obsidian",
+    "description": "TideLog — AI-guided daily planning and reflection for Obsidian",
     "main": "main.js",
     "type": "module",
     "scripts": {
         "dev": "node esbuild.config.mjs",
         "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run deploy",
-        "deploy": "cp main.js styles.css manifest.json /Users/haoyangs/Obsidian_test_vault/.obsidian/plugins/dailot/ && cp main.js styles.css manifest.json /Users/haoyangs/Obsidian_test_vault/.obsidian/plugins/ai-flow-manager/ && echo '✅ Deployed to vault'",
+        "deploy": "cp main.js styles.css manifest.json /Users/haoyangs/Obsidian_test_vault/.obsidian/plugins/tidelog/ && cp main.js styles.css manifest.json /Users/haoyangs/Obsidian_test_vault/.obsidian/plugins/dailot/ && cp main.js styles.css manifest.json /Users/haoyangs/Obsidian_test_vault/.obsidian/plugins/ai-flow-manager/ && echo '✅ Deployed to vault'",
         "version": "node version-bump.mjs && git add manifest.json versions.json"
     },
     "keywords": [

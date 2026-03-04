@@ -3,7 +3,7 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { AIFlowSettings } from '../types';
+import { TideLogSettings } from '../types';
 
 // =============================================================================
 // Types
@@ -27,9 +27,9 @@ export interface TaskItem {
 
 export class TaskRegistryService {
     private app: App;
-    private settings: AIFlowSettings;
+    private settings: TideLogSettings;
 
-    constructor(app: App, settings: AIFlowSettings) {
+    constructor(app: App, settings: TideLogSettings) {
         this.app = app;
         this.settings = settings;
     }

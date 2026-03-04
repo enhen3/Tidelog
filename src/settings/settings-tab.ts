@@ -10,13 +10,13 @@ import {
     Notice,
 } from 'obsidian';
 
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 import { AIProviderType, DEFAULT_EVENING_QUESTIONS, EveningQuestionConfig } from '../types';
 
-export class AIFlowSettingTab extends PluginSettingTab {
-    plugin: AIFlowManagerPlugin;
+export class TideLogSettingTab extends PluginSettingTab {
+    plugin: TideLogPlugin;
 
-    constructor(app: App, plugin: AIFlowManagerPlugin) {
+    constructor(app: App, plugin: TideLogPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -26,7 +26,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         // Header
-        containerEl.createEl('h1', { text: 'Dailot「小舵」设置' });
+        containerEl.createEl('h1', { text: 'TideLog「潮记」设置' });
 
         // =================================================================
         // AI Provider Settings
@@ -191,7 +191,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
 
             // Preset URL buttons
             const presetDesc = urlSetting.descEl;
-            const presetContainer = presetDesc.createDiv('ai-flow-preset-urls');
+            const presetContainer = presetDesc.createDiv('tl-preset-urls');
             const presets: [string, string][] = [
                 ['DeepSeek', 'https://api.deepseek.com/v1'],
                 ['SiliconFlow', 'https://api.siliconflow.cn/v1'],
@@ -200,7 +200,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
             ];
             for (const [label, url] of presets) {
                 const btn = presetContainer.createEl('button', {
-                    cls: 'ai-flow-preset-btn',
+                    cls: 'tl-preset-btn',
                     text: label,
                 });
                 btn.addEventListener('click', async () => {
@@ -423,7 +423,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
         questions.forEach((question, index) => {
             // --- Collapsed row: [toggle] #N sectionName [badge] [expand] ---
             const badge = question.required ? '必问' : '选问';
-            const badgeCls = question.required ? 'ai-flow-badge-required' : 'ai-flow-badge-optional';
+            const badgeCls = question.required ? 'tl-badge-required' : 'tl-badge-optional';
             const label = `#${index + 1} ${question.sectionName}`;
 
             const rowSetting = new Setting(containerEl)
@@ -434,7 +434,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
                         .onClick(() => {
                             // Toggle detail panel
                             const detailEl = rowSetting.settingEl.nextElementSibling;
-                            if (detailEl && detailEl.hasClass('ai-flow-q-detail')) {
+                            if (detailEl && detailEl.hasClass('tl-q-detail')) {
                                 detailEl.remove();
                                 btn.setIcon('chevron-down');
                             } else {
@@ -456,12 +456,12 @@ export class AIFlowSettingTab extends PluginSettingTab {
             const nameEl = rowSetting.nameEl;
             nameEl.createSpan({
                 text: ` ${badge}`,
-                cls: `ai-flow-badge ${badgeCls}`,
+                cls: `tl-badge ${badgeCls}`,
             });
 
             // Dim disabled items
             if (!question.enabled) {
-                rowSetting.settingEl.addClass('ai-flow-q-disabled');
+                rowSetting.settingEl.addClass('tl-q-disabled');
             }
         });
     }
@@ -471,7 +471,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
      */
     private renderQuestionDetail(afterEl: HTMLElement, question: EveningQuestionConfig, index: number): void {
         const detailEl = document.createElement('div');
-        detailEl.addClass('ai-flow-q-detail');
+        detailEl.addClass('tl-q-detail');
         afterEl.after(detailEl);
 
         // Section name
@@ -491,7 +491,7 @@ export class AIFlowSettingTab extends PluginSettingTab {
             .setName('提问内容');
 
         const textareaEl = messageSetting.controlEl.createEl('textarea', {
-            cls: 'ai-flow-question-textarea',
+            cls: 'tl-question-textarea',
         });
         textareaEl.value = question.initialMessage;
         textareaEl.rows = 3;

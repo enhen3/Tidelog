@@ -4,13 +4,13 @@
  */
 
 import { MarkdownRenderer } from 'obsidian';
-import type AIFlowManagerPlugin from '../main';
+import type TideLogPlugin from '../main';
 import type { App, Component } from 'obsidian';
 import type { ChatMessage, SOPContext } from '../types';
 
 /** Minimal interface for the host view that owns this controller. */
 export interface ChatControllerHost extends Component {
-    plugin: AIFlowManagerPlugin;
+    plugin: TideLogPlugin;
     app: App;
     messages: ChatMessage[];
     sopContext: SOPContext;
@@ -57,10 +57,10 @@ export class ChatController {
         const text = messageEl.createDiv();
         text.textContent = '你想更新哪个计划？';
 
-        const buttons = messageEl.createDiv('ai-flow-plan-buttons');
+        const buttons = messageEl.createDiv('tl-plan-buttons');
 
         const todayBtn = buttons.createEl('button', {
-            cls: 'ai-flow-plan-option-btn',
+            cls: 'tl-plan-option-btn',
             text: '📋 更新今日计划',
         });
         todayBtn.addEventListener('click', () => {
@@ -68,7 +68,7 @@ export class ChatController {
         });
 
         const weekBtn = buttons.createEl('button', {
-            cls: 'ai-flow-plan-option-btn',
+            cls: 'tl-plan-option-btn',
             text: '📅 更新周计划',
         });
         weekBtn.addEventListener('click', async () => {
@@ -87,7 +87,7 @@ export class ChatController {
         });
 
         const monthBtn = buttons.createEl('button', {
-            cls: 'ai-flow-plan-option-btn',
+            cls: 'tl-plan-option-btn',
             text: '📆 更新月计划',
         });
         monthBtn.addEventListener('click', async () => {
@@ -188,7 +188,7 @@ export class ChatController {
                 messageEl.empty();
                 MarkdownRenderer.render(
                     h.app,
-                    `⚠️ **未配置 API Key**\n\n请先在 Obsidian 设置 → Dailot 中配置 ${activeProvider.toUpperCase()} 的 API Key。\n\n配置完成后即可开始对话。`,
+                    `⚠️ **未配置 API Key**\n\n请先在 Obsidian 设置 → TideLog 中配置 ${activeProvider.toUpperCase()} 的 API Key。\n\n配置完成后即可开始对话。`,
                     messageEl,
                     '',
                     h
@@ -233,7 +233,7 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
             if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized')) {
                 MarkdownRenderer.render(
                     h.app,
-                    `🔑 **API Key 无效或已过期**\n\n请检查 Obsidian 设置 → Dailot 中的 API Key 是否正确。`,
+                    `🔑 **API Key 无效或已过期**\n\n请检查 Obsidian 设置 → TideLog 中的 API Key 是否正确。`,
                     messageEl,
                     '',
                     h
@@ -257,7 +257,7 @@ ${userProfile ? `用户背景：\n${userProfile}` : ''}
             } else {
                 messageEl.createSpan({ text: `抱歉，发生了错误：${error}` });
             }
-            messageEl.addClass('ai-flow-message-error');
+            messageEl.addClass('tl-message-error');
         }
 
         h.isProcessing = false;

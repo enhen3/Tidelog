@@ -4,12 +4,12 @@
  */
 
 import { TFile, moment } from 'obsidian';
-import type AIFlowManagerPlugin from '../main';
+import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 
 /** Minimal interface for the host view that owns this renderer. */
 export interface ReviewHost {
-    plugin: AIFlowManagerPlugin;
+    plugin: TideLogPlugin;
     app: App;
     calendarMonth: moment.Moment;
     parseNoteScores(content: string): number | null;
@@ -20,7 +20,7 @@ export class ReviewRenderer {
     constructor(private host: ReviewHost) { }
 
     async render(panel: HTMLElement): Promise<void> {
-        panel.addClass('af-review-scroll');
+        panel.addClass('tl-review-scroll');
         await this.renderReviewCalendar(panel);
         await this.renderReviewDashboard(panel);
     }
@@ -29,37 +29,37 @@ export class ReviewRenderer {
 
     private async renderReviewCalendar(panel: HTMLElement): Promise<void> {
         const h = this.host;
-        const layer = panel.createDiv('af-pyramid-layer af-pyramid-review-cal');
+        const layer = panel.createDiv('tl-pyramid-layer tl-pyramid-review-cal');
         // Header
-        const header = layer.createDiv('af-pyramid-layer-header af-cal-header');
-        const prevBtn = header.createEl('button', { cls: 'af-cal-nav-btn', text: '‹' });
+        const header = layer.createDiv('tl-pyramid-layer-header tl-cal-header');
+        const prevBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '‹' });
         prevBtn.addEventListener('click', () => {
             h.calendarMonth.subtract(1, 'month');
             h.switchTab('review');
         });
-        header.createEl('span', { cls: 'af-cal-title', text: h.calendarMonth.format('YYYY年 M月') });
-        const nextBtn = header.createEl('button', { cls: 'af-cal-nav-btn', text: '›' });
+        header.createEl('span', { cls: 'tl-cal-title', text: h.calendarMonth.format('YYYY年 M月') });
+        const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
         nextBtn.addEventListener('click', () => {
             h.calendarMonth.add(1, 'month');
             h.switchTab('review');
         });
 
         // Body with legend + grid
-        const body = layer.createDiv('af-pyramid-review-cal-body');
+        const body = layer.createDiv('tl-pyramid-review-cal-body');
 
         // Legend
-        const legend = body.createDiv('af-cal-legend');
-        legend.createEl('span', { cls: 'af-cal-legend-item', text: '情绪：' });
-        const grad = legend.createDiv('af-cal-legend-gradient');
+        const legend = body.createDiv('tl-cal-legend');
+        legend.createEl('span', { cls: 'tl-cal-legend-item', text: '情绪：' });
+        const grad = legend.createDiv('tl-cal-legend-gradient');
         grad.createEl('span', { text: '低' });
-        grad.createEl('div', { cls: 'af-cal-gradient-bar' });
+        grad.createEl('div', { cls: 'tl-cal-gradient-bar' });
         grad.createEl('span', { text: '高' });
 
         // Weekday row
         const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
-        const grid = body.createDiv('af-cal-grid');
+        const grid = body.createDiv('tl-cal-grid');
         for (const wd of weekdays) {
-            grid.createEl('div', { cls: 'af-cal-weekday', text: wd });
+            grid.createEl('div', { cls: 'tl-cal-weekday', text: wd });
         }
 
         // Gather data
@@ -100,7 +100,7 @@ export class ReviewRenderer {
         // Pad
         const firstDay = moment(h.calendarMonth).startOf('month');
         const startPad = firstDay.isoWeekday() - 1;
-        for (let i = 0; i < startPad; i++) grid.createDiv('af-cal-cell af-cal-cell-empty');
+        for (let i = 0; i < startPad; i++) grid.createDiv('tl-cal-cell tl-cal-cell-empty');
 
         const daysInMonth = h.calendarMonth.daysInMonth();
         const todayStr = moment().format('YYYY-MM-DD');
@@ -110,8 +110,8 @@ export class ReviewRenderer {
             const data = dataMap.get(dateStr);
             const isToday = dateStr === todayStr;
 
-            const cell = grid.createDiv(`af-cal-cell ${isToday ? 'af-cal-cell-today' : ''}`);
-            cell.createEl('div', { cls: 'af-cal-date', text: `${d}` });
+            const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
+            cell.createEl('div', { cls: 'tl-cal-date', text: `${d}` });
 
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
@@ -119,19 +119,19 @@ export class ReviewRenderer {
             }
 
             if (data && data.taskCount > 0) {
-                const dots = cell.createDiv('af-cal-dots');
+                const dots = cell.createDiv('tl-cal-dots');
                 for (let i = 0; i < Math.min(data.taskCount, 5); i++) {
-                    const dot = dots.createEl('span', { cls: 'af-cal-dot' });
-                    if (data.completedCount > i) dot.addClass('af-cal-dot-done');
+                    const dot = dots.createEl('span', { cls: 'tl-cal-dot' });
+                    if (data.completedCount > i) dot.addClass('tl-cal-dot-done');
                 }
             }
 
             if (data?.status === 'completed') {
-                cell.createEl('div', { cls: 'af-cal-status-badge af-cal-status-done', text: '✓' });
+                cell.createEl('div', { cls: 'tl-cal-status-badge tl-cal-status-done', text: '✓' });
             }
 
             if (data?.filePath) {
-                cell.addClass('af-cal-cell-clickable');
+                cell.addClass('tl-cal-cell-clickable');
                 cell.addEventListener('click', () => {
                     const f = h.app.vault.getAbstractFileByPath(data.filePath);
                     if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
@@ -174,57 +174,57 @@ export class ReviewRenderer {
         }
 
         // Card 1: Progress
-        const progressCard = panel.createDiv('af-pyramid-layer af-dash-card af-dash-card-progress');
-        const progressHeader = progressCard.createDiv('af-pyramid-layer-header');
-        progressHeader.createEl('span', { cls: 'af-pyramid-layer-icon', text: '📋' });
-        progressHeader.createEl('span', { cls: 'af-pyramid-layer-title', text: '本周进度' });
-        const progressBody = progressCard.createDiv('af-dash-card-body');
+        const progressCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-progress');
+        const progressHeader = progressCard.createDiv('tl-pyramid-layer-header');
+        progressHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📋' });
+        progressHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '本周进度' });
+        const progressBody = progressCard.createDiv('tl-dash-card-body');
         const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-        const pInfo = progressBody.createDiv('af-dash-progress-info');
-        pInfo.createEl('span', { cls: 'af-dash-progress-number', text: `${completedTasks}/${totalTasks}` });
-        pInfo.createEl('span', { cls: 'af-dash-progress-pct', text: `${pct}%` });
-        const barOuter = progressBody.createDiv('af-dash-progress-bar-outer');
-        const barInner = barOuter.createDiv('af-dash-progress-bar-inner');
+        const pInfo = progressBody.createDiv('tl-dash-progress-info');
+        pInfo.createEl('span', { cls: 'tl-dash-progress-number', text: `${completedTasks}/${totalTasks}` });
+        pInfo.createEl('span', { cls: 'tl-dash-progress-pct', text: `${pct}%` });
+        const barOuter = progressBody.createDiv('tl-dash-progress-bar-outer');
+        const barInner = barOuter.createDiv('tl-dash-progress-bar-inner');
         barInner.style.width = `${pct}%`;
 
         // Card 2: Emotion trend
-        const emotionCard = panel.createDiv('af-pyramid-layer af-dash-card af-dash-card-emotion');
-        const emotionHeader = emotionCard.createDiv('af-pyramid-layer-header');
-        emotionHeader.createEl('span', { cls: 'af-pyramid-layer-icon', text: '💭' });
-        emotionHeader.createEl('span', { cls: 'af-pyramid-layer-title', text: '本周情绪' });
-        const emotionBody = emotionCard.createDiv('af-dash-card-body');
-        const chart = emotionBody.createDiv('af-dash-chart');
+        const emotionCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-emotion');
+        const emotionHeader = emotionCard.createDiv('tl-pyramid-layer-header');
+        emotionHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💭' });
+        emotionHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '本周情绪' });
+        const emotionBody = emotionCard.createDiv('tl-dash-card-body');
+        const chart = emotionBody.createDiv('tl-dash-chart');
         const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
         const today = moment();
 
         for (let i = 0; i < 7; i++) {
             const dayStart = moment(today).startOf('isoWeek').add(i, 'days');
             const dayData = days.find(dd => dd.date === dayStart.format('YYYY-MM-DD'));
-            const barCol = chart.createDiv('af-dash-chart-col');
+            const barCol = chart.createDiv('tl-dash-chart-col');
             const score = dayData?.emotionScore;
 
-            const bWrap = barCol.createDiv('af-dash-chart-bar-wrap');
+            const bWrap = barCol.createDiv('tl-dash-chart-bar-wrap');
             if (score) {
                 const barH = (score / 10) * 100;
-                const bar = bWrap.createDiv('af-dash-chart-bar');
+                const bar = bWrap.createDiv('tl-dash-chart-bar');
                 bar.style.height = `${barH}%`;
                 const hue = Math.round(((score - 1) / 9) * 120);
                 bar.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
-                bWrap.createEl('span', { cls: 'af-dash-chart-score', text: `${score}` });
+                bWrap.createEl('span', { cls: 'tl-dash-chart-score', text: `${score}` });
             }
 
             barCol.createEl('span', {
-                cls: `af-dash-chart-label ${dayStart.isSame(today, 'day') ? 'af-dash-chart-label-today' : ''}`,
+                cls: `tl-dash-chart-label ${dayStart.isSame(today, 'day') ? 'tl-dash-chart-label-today' : ''}`,
                 text: dayLabels[i],
             });
         }
 
         // Card 3: Principle + Pattern (combined)
-        const insightCard = panel.createDiv('af-pyramid-layer af-dash-card af-dash-card-insight');
-        const insightHeader = insightCard.createDiv('af-pyramid-layer-header');
-        insightHeader.createEl('span', { cls: 'af-pyramid-layer-icon', text: '💡' });
-        insightHeader.createEl('span', { cls: 'af-pyramid-layer-title', text: '洞察' });
-        const insightBody = insightCard.createDiv('af-dash-card-body');
+        const insightCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-insight');
+        const insightHeader = insightCard.createDiv('tl-pyramid-layer-header');
+        insightHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💡' });
+        insightHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '洞察' });
+        const insightBody = insightCard.createDiv('tl-dash-card-body');
 
         // Principle section
         let principle: string | null = null;
@@ -237,7 +237,7 @@ export class ReviewRenderer {
                 if (lines.length) principle = lines[Math.floor(Math.random() * lines.length)];
             } catch { /* skip */ }
         }
-        insightBody.createEl('blockquote', { cls: 'af-dash-quote', text: principle || '尚无原则数据' });
+        insightBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle || '尚无原则数据' });
 
         // Pattern section
         let pattern: string | null = null;
@@ -251,20 +251,20 @@ export class ReviewRenderer {
             } catch { /* skip */ }
         }
         if (pattern) {
-            insightBody.createEl('p', { cls: 'af-dash-pattern', text: `🔄 ${pattern}` });
+            insightBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });
         }
 
         // Card 4: Quick links
-        const linksCard = panel.createDiv('af-pyramid-layer af-dash-card af-dash-card-links');
-        const linksHeader = linksCard.createDiv('af-pyramid-layer-header');
-        linksHeader.createEl('span', { cls: 'af-pyramid-layer-icon', text: '🚀' });
-        linksHeader.createEl('span', { cls: 'af-pyramid-layer-title', text: '快速入口' });
-        const linkGrid = linksCard.createDiv('af-dash-link-grid');
+        const linksCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-links');
+        const linksHeader = linksCard.createDiv('tl-pyramid-layer-header');
+        linksHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '🚀' });
+        linksHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '快速入口' });
+        const linkGrid = linksCard.createDiv('tl-dash-link-grid');
 
         const makeLink = (icon: string, label: string, onClick: () => void) => {
-            const link = linkGrid.createDiv('af-dash-link');
-            link.createEl('span', { cls: 'af-dash-link-icon', text: icon });
-            link.createEl('span', { cls: 'af-dash-link-label', text: label });
+            const link = linkGrid.createDiv('tl-dash-link');
+            link.createEl('span', { cls: 'tl-dash-link-icon', text: icon });
+            link.createEl('span', { cls: 'tl-dash-link-label', text: label });
             link.addEventListener('click', onClick);
         };
 

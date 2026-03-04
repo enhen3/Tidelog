@@ -2,15 +2,15 @@
  * Morning SOP - Plan alignment workflow
  */
 
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 import { SOPContext, ChatMessage } from '../types';
 import { getBaseContextPrompt, MORNING_PROMPT } from './prompts';
 
 export class MorningSOP {
-    private plugin: AIFlowManagerPlugin;
+    private plugin: TideLogPlugin;
     private messages: ChatMessage[] = [];
 
-    constructor(plugin: AIFlowManagerPlugin) {
+    constructor(plugin: TideLogPlugin) {
         this.plugin = plugin;
     }
 

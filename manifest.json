@@ -1,10 +1,10 @@
 {
-    "id": "dailot",
-    "name": "Dailot「小舵」",
+    "id": "tidelog",
+    "name": "TideLog「潮记」",
     "version": "1.0.0",
     "minAppVersion": "1.0.0",
-    "description": "AI-guided daily planning and reflection — your personal growth pilot",
+    "description": "AI-guided daily tide — plan, log, reflect",
     "author": "enhen3",
-    "authorUrl": "https://github.com/enhen3/dailot",
+    "authorUrl": "https://github.com/enhen3/tidelog",
     "isDesktopOnly": false
 }

@@ -10,9 +10,9 @@ import {
     moment,
 } from 'obsidian';
 
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 
-export const CALENDAR_VIEW_TYPE = 'ai-flow-calendar-view';
+export const CALENDAR_VIEW_TYPE = 'tl-calendar-view';
 
 interface DayCellData {
     date: moment.Moment;
@@ -24,11 +24,11 @@ interface DayCellData {
 }
 
 export class CalendarView extends ItemView {
-    private plugin: AIFlowManagerPlugin;
+    private plugin: TideLogPlugin;
     private containerEl_: HTMLElement | null = null;
     private currentMonth: moment.Moment = moment();
 
-    constructor(leaf: WorkspaceLeaf, plugin: AIFlowManagerPlugin) {
+    constructor(leaf: WorkspaceLeaf, plugin: TideLogPlugin) {
         super(leaf);
         this.plugin = plugin;
     }
@@ -40,7 +40,7 @@ export class CalendarView extends ItemView {
     async onOpen(): Promise<void> {
         const container = this.contentEl;
         container.empty();
-        container.addClass('af-calendar-container');
+        container.addClass('tl-calendar-container');
         this.containerEl_ = container;
         await this.render();
     }
@@ -58,39 +58,39 @@ export class CalendarView extends ItemView {
         this.containerEl_.empty();
 
         // Header
-        const header = this.containerEl_.createDiv('af-cal-header');
+        const header = this.containerEl_.createDiv('tl-cal-header');
 
-        const prevBtn = header.createEl('button', { cls: 'af-cal-nav-btn', text: '‹' });
+        const prevBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '‹' });
         prevBtn.addEventListener('click', () => {
             this.currentMonth.subtract(1, 'month');
             this.render();
         });
 
         header.createEl('span', {
-            cls: 'af-cal-title',
+            cls: 'tl-cal-title',
             text: this.currentMonth.format('YYYY年 M月'),
         });
 
-        const nextBtn = header.createEl('button', { cls: 'af-cal-nav-btn', text: '›' });
+        const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
         nextBtn.addEventListener('click', () => {
             this.currentMonth.add(1, 'month');
             this.render();
         });
 
         // Legend
-        const legend = this.containerEl_.createDiv('af-cal-legend');
-        legend.createEl('span', { cls: 'af-cal-legend-item', text: '情绪热力图：' });
-        const gradient = legend.createDiv('af-cal-legend-gradient');
+        const legend = this.containerEl_.createDiv('tl-cal-legend');
+        legend.createEl('span', { cls: 'tl-cal-legend-item', text: '情绪热力图：' });
+        const gradient = legend.createDiv('tl-cal-legend-gradient');
         gradient.createEl('span', { text: '低' });
-        const bar = gradient.createEl('div', { cls: 'af-cal-gradient-bar' });
+        const bar = gradient.createEl('div', { cls: 'tl-cal-gradient-bar' });
         gradient.createEl('span', { text: '高' });
 
         // Day-of-week header
         const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
-        const grid = this.containerEl_.createDiv('af-cal-grid');
+        const grid = this.containerEl_.createDiv('tl-cal-grid');
 
         for (const wd of weekdays) {
-            grid.createEl('div', { cls: 'af-cal-weekday', text: wd });
+            grid.createEl('div', { cls: 'tl-cal-weekday', text: wd });
         }
 
         // Get data for this month
@@ -101,7 +101,7 @@ export class CalendarView extends ItemView {
         const startPad = (firstDay.isoWeekday() - 1); // Mon=0
 
         for (let i = 0; i < startPad; i++) {
-            grid.createDiv('af-cal-cell af-cal-cell-empty');
+            grid.createDiv('tl-cal-cell tl-cal-cell-empty');
         }
 
         const daysInMonth = this.currentMonth.daysInMonth();
@@ -112,10 +112,10 @@ export class CalendarView extends ItemView {
             const data = monthData.get(dateStr);
             const isToday = dateStr === today;
 
-            const cell = grid.createDiv(`af-cal-cell ${isToday ? 'af-cal-cell-today' : ''}`);
+            const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
 
             // Date number
-            cell.createEl('div', { cls: 'af-cal-date', text: `${d}` });
+            cell.createEl('div', { cls: 'tl-cal-date', text: `${d}` });
 
             // Emotion heatmap background
             if (data?.emotionScore !== undefined && data.emotionScore !== null) {
@@ -125,24 +125,24 @@ export class CalendarView extends ItemView {
 
             // Task density dots
             if (data && data.taskCount > 0) {
-                const dots = cell.createDiv('af-cal-dots');
+                const dots = cell.createDiv('tl-cal-dots');
                 const total = Math.min(data.taskCount, 5);
                 for (let i = 0; i < total; i++) {
-                    const dot = dots.createEl('span', { cls: 'af-cal-dot' });
+                    const dot = dots.createEl('span', { cls: 'tl-cal-dot' });
                     if (data.completedCount > i) {
-                        dot.addClass('af-cal-dot-done');
+                        dot.addClass('tl-cal-dot-done');
                     }
                 }
             }
 
             // Status badge
             if (data?.status === 'completed') {
-                cell.createEl('div', { cls: 'af-cal-status-badge af-cal-status-done', text: '✓' });
+                cell.createEl('div', { cls: 'tl-cal-status-badge tl-cal-status-done', text: '✓' });
             }
 
             // Click to open daily note
             if (data?.filePath) {
-                cell.addClass('af-cal-cell-clickable');
+                cell.addClass('tl-cal-cell-clickable');
                 cell.addEventListener('click', () => {
                     const file = this.app.vault.getAbstractFileByPath(data.filePath!);
                     if (file && file instanceof TFile) {

@@ -2,7 +2,7 @@
  * Evening SOP - 5+4 Review workflow
  */
 
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 import { SOPContext, ChatMessage, EveningQuestionType, EveningQuestionConfig } from '../types';
 import {
     getBaseContextPrompt,
@@ -41,7 +41,7 @@ const PROMPT_MAP: Record<EveningQuestionType, string> = {
 };
 
 export class EveningSOP {
-    private plugin: AIFlowManagerPlugin;
+    private plugin: TideLogPlugin;
     private messages: ChatMessage[] = [];
     private currentQuestionIndex: number = 0;
     private questionFlow: QuestionConfig[] = [];
@@ -62,7 +62,7 @@ export class EveningSOP {
             }));
     }
 
-    constructor(plugin: AIFlowManagerPlugin) {
+    constructor(plugin: TideLogPlugin) {
         this.plugin = plugin;
     }
 

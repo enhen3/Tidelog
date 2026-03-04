@@ -2,7 +2,7 @@
  * AI Provider - Factory for AI providers
  */
 
-import { AIFlowSettings, AIProvider } from '../types';
+import { TideLogSettings, AIProvider } from '../types';
 import { OpenRouterProvider } from './openrouter-provider';
 import { AnthropicProvider } from './anthropic-provider';
 import { GeminiProvider } from './gemini-provider';
@@ -15,7 +15,7 @@ export { BaseAIProvider } from './base-provider';
 /**
  * Create an AI provider based on settings
  */
-export function createAIProvider(settings: AIFlowSettings): AIProvider {
+export function createAIProvider(settings: TideLogSettings): AIProvider {
     const provider = settings.activeProvider;
     const config = settings.providers[provider];
 

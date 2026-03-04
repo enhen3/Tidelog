@@ -3,13 +3,13 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { AIFlowSettings } from '../types';
+import { TideLogSettings } from '../types';
 
 export class DashboardService {
     private app: App;
-    private settings: AIFlowSettings;
+    private settings: TideLogSettings;
 
-    constructor(app: App, settings: AIFlowSettings) {
+    constructor(app: App, settings: TideLogSettings) {
         this.app = app;
         this.settings = settings;
     }
@@ -109,7 +109,7 @@ LIMIT 7
 
 ---
 
-> _此页面由 Dailot 自动生成，可随时运行"刷新 Dashboard"命令更新。_
+> _此页面由 TideLog 自动生成，可随时运行"刷新 Dashboard"命令更新。_
 `;
     }
 

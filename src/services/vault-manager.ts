@@ -3,13 +3,13 @@
  */
 
 import { App, TFile, TFolder, moment } from 'obsidian';
-import { AIFlowSettings } from '../types';
+import { TideLogSettings } from '../types';
 
 export class VaultManager {
     private app: App;
-    private settings: AIFlowSettings;
+    private settings: TideLogSettings;
 
-    constructor(app: App, settings: AIFlowSettings) {
+    constructor(app: App, settings: TideLogSettings) {
         this.app = app;
         this.settings = settings;
     }

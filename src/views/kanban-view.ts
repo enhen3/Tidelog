@@ -10,9 +10,9 @@ import {
     moment,
 } from 'obsidian';
 
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 
-export const KANBAN_VIEW_TYPE = 'ai-flow-kanban-view';
+export const KANBAN_VIEW_TYPE = 'tl-kanban-view';
 
 const DAY_COLUMNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_LABELS: Record<string, string> = {
@@ -32,11 +32,11 @@ interface KanbanColumn {
 }
 
 export class KanbanView extends ItemView {
-    private plugin: AIFlowManagerPlugin;
+    private plugin: TideLogPlugin;
     private containerEl_: HTMLElement | null = null;
     private currentWeekOffset = 0;
 
-    constructor(leaf: WorkspaceLeaf, plugin: AIFlowManagerPlugin) {
+    constructor(leaf: WorkspaceLeaf, plugin: TideLogPlugin) {
         super(leaf);
         this.plugin = plugin;
     }
@@ -48,12 +48,12 @@ export class KanbanView extends ItemView {
     async onOpen(): Promise<void> {
         const container = this.contentEl;
         container.empty();
-        container.addClass('af-kanban-container');
+        container.addClass('tl-kanban-container');
 
         // Design tokens
-        container.style.setProperty('--af-radius-sm', '8px');
-        container.style.setProperty('--af-radius-md', '12px');
-        container.style.setProperty('--af-ease', 'cubic-bezier(0.25, 0.46, 0.45, 0.94)');
+        container.style.setProperty('--tl-radius-sm', '8px');
+        container.style.setProperty('--tl-radius-md', '12px');
+        container.style.setProperty('--tl-ease', 'cubic-bezier(0.25, 0.46, 0.45, 0.94)');
 
         this.containerEl_ = container;
         await this.render();
@@ -78,18 +78,18 @@ export class KanbanView extends ItemView {
         const weekRef = `${targetDate.format('YYYY')}-W${targetDate.format('ww')}`;
 
         // Header
-        const header = this.containerEl_.createDiv('af-kanban-header');
+        const header = this.containerEl_.createDiv('tl-kanban-header');
 
-        const prevBtn = header.createEl('button', { cls: 'af-kanban-nav-btn', text: '‹' });
+        const prevBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '‹' });
         prevBtn.addEventListener('click', () => { this.currentWeekOffset--; this.render(); });
 
-        const title = header.createEl('span', { cls: 'af-kanban-title', text: `${weekRef}  ${weekLabel}` });
+        const title = header.createEl('span', { cls: 'tl-kanban-title', text: `${weekRef}  ${weekLabel}` });
 
-        const nextBtn = header.createEl('button', { cls: 'af-kanban-nav-btn', text: '›' });
+        const nextBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '›' });
         nextBtn.addEventListener('click', () => { this.currentWeekOffset++; this.render(); });
 
         if (this.currentWeekOffset !== 0) {
-            const todayBtn = header.createEl('button', { cls: 'af-kanban-today-btn', text: '今天' });
+            const todayBtn = header.createEl('button', { cls: 'tl-kanban-today-btn', text: '今天' });
             todayBtn.addEventListener('click', () => { this.currentWeekOffset = 0; this.render(); });
         }
 
@@ -97,27 +97,27 @@ export class KanbanView extends ItemView {
         const columns = await this.parseBoard(targetDate.toDate());
 
         // Board grid
-        const grid = this.containerEl_.createDiv('af-kanban-grid');
+        const grid = this.containerEl_.createDiv('tl-kanban-grid');
 
         for (const col of columns) {
-            const colEl = grid.createDiv('af-kanban-column');
+            const colEl = grid.createDiv('tl-kanban-column');
 
-            const colHeader = colEl.createDiv('af-kanban-col-header');
+            const colHeader = colEl.createDiv('tl-kanban-col-header');
             const headerTitle = colHeader.createEl('span', { text: col.label });
             const badge = colHeader.createEl('span', {
-                cls: 'af-kanban-badge',
+                cls: 'tl-kanban-badge',
                 text: `${col.tasks.length}`,
             });
 
-            const taskList = colEl.createDiv('af-kanban-task-list');
+            const taskList = colEl.createDiv('tl-kanban-task-list');
 
             if (col.tasks.length === 0) {
-                taskList.createDiv({ cls: 'af-kanban-empty', text: '暂无任务' });
+                taskList.createDiv({ cls: 'tl-kanban-empty', text: '暂无任务' });
             }
 
             for (const task of col.tasks) {
                 const card = taskList.createDiv({
-                    cls: `af-kanban-card ${task.done ? 'af-kanban-card-done' : ''}`,
+                    cls: `tl-kanban-card ${task.done ? 'tl-kanban-card-done' : ''}`,
                 });
 
                 const checkbox = card.createEl('input', { type: 'checkbox' });
@@ -128,7 +128,7 @@ export class KanbanView extends ItemView {
                 });
 
                 const label = card.createEl('span', {
-                    cls: 'af-kanban-card-text',
+                    cls: 'tl-kanban-card-text',
                     text: task.text,
                 });
                 if (task.done) {

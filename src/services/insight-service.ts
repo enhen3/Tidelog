@@ -4,7 +4,7 @@
  */
 
 import { moment } from 'obsidian';
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import {
     getBaseContextPrompt,
@@ -14,9 +14,9 @@ import {
 } from '../sop/prompts';
 
 export class InsightService {
-    private plugin: AIFlowManagerPlugin;
+    private plugin: TideLogPlugin;
 
-    constructor(plugin: AIFlowManagerPlugin) {
+    constructor(plugin: TideLogPlugin) {
         this.plugin = plugin;
     }
 

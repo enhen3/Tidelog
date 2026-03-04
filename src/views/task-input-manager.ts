@@ -4,13 +4,13 @@
  */
 
 import { TFile, setIcon } from 'obsidian';
-import type AIFlowManagerPlugin from '../main';
+import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 import type { SOPContext } from '../types';
 
 /** Minimal interface for the host view that owns this manager. */
 export interface TaskInputHost {
-    plugin: AIFlowManagerPlugin;
+    plugin: TideLogPlugin;
     app: App;
     containerEl: HTMLElement;
     sopContext: SOPContext;
@@ -43,14 +43,14 @@ export class TaskInputManager {
         h.inputContainer.style.display = 'none';
 
         // Create task input container after messages
-        h.taskInputContainer = h.containerEl.children[1].createDiv('ai-flow-task-input-container');
+        h.taskInputContainer = h.containerEl.children[1].createDiv('tl-task-input-container');
 
         // Header
-        const header = h.taskInputContainer.createDiv('ai-flow-task-input-header');
+        const header = h.taskInputContainer.createDiv('tl-task-input-header');
         header.createSpan({ text: '📋 输入今日任务' });
 
         // Task rows container
-        const rowsContainer = h.taskInputContainer.createDiv('ai-flow-task-rows');
+        const rowsContainer = h.taskInputContainer.createDiv('tl-task-rows');
 
         // Add rows: pre-filled or 3 empty
         if (prefillTasks && prefillTasks.length > 0) {
@@ -66,7 +66,7 @@ export class TaskInputManager {
 
         // Add task button
         const addBtn = h.taskInputContainer.createEl('button', {
-            cls: 'ai-flow-task-add-btn',
+            cls: 'tl-task-add-btn',
             text: '＋ 添加任务',
         });
         addBtn.addEventListener('click', () => {
@@ -77,7 +77,7 @@ export class TaskInputManager {
 
         // Submit button
         const submitBtn = h.taskInputContainer.createEl('button', {
-            cls: 'ai-flow-task-submit-btn',
+            cls: 'tl-task-submit-btn',
             text: '✅ 确认提交',
         });
         submitBtn.addEventListener('click', () => this.submitTasks());
@@ -98,13 +98,13 @@ export class TaskInputManager {
      */
     private addTaskRow(container: HTMLElement, prefillValue?: string, prefillSubtasks?: string[]): void {
         const h = this.host;
-        const row = container.createDiv('ai-flow-task-row');
+        const row = container.createDiv('tl-task-row');
 
         const index = h.taskData.length + 1;
-        row.createSpan({ cls: 'ai-flow-task-label', text: `${index}.` });
+        row.createSpan({ cls: 'tl-task-label', text: `${index}.` });
 
         const input = row.createEl('input', {
-            cls: 'ai-flow-task-field',
+            cls: 'tl-task-field',
             attr: {
                 type: 'text',
                 placeholder: `任务 ${index}...`,
@@ -116,18 +116,18 @@ export class TaskInputManager {
         }
 
         // Action buttons container
-        const actions = row.createDiv('ai-flow-task-actions');
+        const actions = row.createDiv('tl-task-actions');
 
         // Sub-task toggle button
         const subtaskBtn = actions.createEl('button', {
-            cls: 'ai-flow-task-subtask-btn',
+            cls: 'tl-task-subtask-btn',
             attr: { 'aria-label': '子任务' },
         });
         setIcon(subtaskBtn, 'list-tree');
 
         // Remove button
         const removeBtn = actions.createEl('button', {
-            cls: 'ai-flow-task-remove-btn',
+            cls: 'tl-task-remove-btn',
             attr: { 'aria-label': '删除' },
         });
         setIcon(removeBtn, 'x');
@@ -151,17 +151,17 @@ export class TaskInputManager {
             } else {
                 // Expand sub-tasks
                 subtaskBtn.addClass('is-expanded');
-                const subContainer = container.createDiv('ai-flow-subtask-container');
+                const subContainer = container.createDiv('tl-subtask-container');
                 taskEntry.subtaskContainer = subContainer;
 
                 // Insert after this row
                 row.after(subContainer);
 
-                const subRows = subContainer.createDiv('ai-flow-subtask-rows');
+                const subRows = subContainer.createDiv('tl-subtask-rows');
                 this.addSubtaskRow(taskEntry, subRows);
 
                 const addSubBtn = subContainer.createEl('button', {
-                    cls: 'ai-flow-subtask-add-btn',
+                    cls: 'tl-subtask-add-btn',
                 });
                 setIcon(addSubBtn, 'plus');
                 addSubBtn.createSpan({ text: '添加子任务' });
@@ -209,7 +209,7 @@ export class TaskInputManager {
                 taskEntry.subtaskFields[0].value = prefillSubtasks[0];
             }
             // Add remaining subtask rows
-            const subRows = taskEntry.subtaskContainer?.querySelector('.ai-flow-subtask-rows') as HTMLElement;
+            const subRows = taskEntry.subtaskContainer?.querySelector('.tl-subtask-rows') as HTMLElement;
             if (subRows) {
                 for (let i = 1; i < prefillSubtasks.length; i++) {
                     this.addSubtaskRow(taskEntry, subRows, prefillSubtasks[i]);
@@ -226,11 +226,11 @@ export class TaskInputManager {
         container: HTMLElement,
         prefillValue?: string
     ): void {
-        const subRow = container.createDiv('ai-flow-subtask-row');
-        subRow.createSpan({ cls: 'ai-flow-subtask-bullet', text: '◦' });
+        const subRow = container.createDiv('tl-subtask-row');
+        subRow.createSpan({ cls: 'tl-subtask-bullet', text: '◦' });
 
         const subInput = subRow.createEl('input', {
-            cls: 'ai-flow-subtask-field',
+            cls: 'tl-subtask-field',
             attr: {
                 type: 'text',
                 placeholder: '子任务...',
@@ -242,7 +242,7 @@ export class TaskInputManager {
         }
 
         const subRemoveBtn = subRow.createEl('button', {
-            cls: 'ai-flow-subtask-remove-btn',
+            cls: 'tl-subtask-remove-btn',
             attr: { 'aria-label': '删除子任务' },
         });
         setIcon(subRemoveBtn, 'x');
@@ -272,7 +272,7 @@ export class TaskInputManager {
         this.host.taskData.forEach((entry, i) => {
             const row = entry.field.parentElement;
             if (row) {
-                const label = row.querySelector('.ai-flow-task-label');
+                const label = row.querySelector('.tl-task-label');
                 if (label) label.textContent = `${i + 1}.`;
                 entry.field.placeholder = `任务 ${i + 1}...`;
             }

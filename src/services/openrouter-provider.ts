@@ -22,7 +22,7 @@ export class OpenRouterProvider extends BaseAIProvider {
                 'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json',
                 'HTTP-Referer': 'https://obsidian.md',
-                'X-Title': 'Dailot',
+                'X-Title': 'TideLog',
             },
             body: JSON.stringify({
                 model: this.model,

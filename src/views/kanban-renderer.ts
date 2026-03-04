@@ -4,12 +4,12 @@
  */
 
 import { TFile, moment } from 'obsidian';
-import type AIFlowManagerPlugin from '../main';
+import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 
 /** Minimal interface for the host view that owns this renderer. */
 export interface KanbanHost {
-    plugin: AIFlowManagerPlugin;
+    plugin: TideLogPlugin;
     app: App;
     kanbanMonthOffset: number;
     kanbanWeekOffset: number;
@@ -24,8 +24,8 @@ export class KanbanRenderer {
     constructor(private host: KanbanHost) { }
 
     async render(panel: HTMLElement): Promise<void> {
-        panel.addClass('af-kanban-container');
-        panel.addClass('af-pyramid');
+        panel.addClass('tl-kanban-container');
+        panel.addClass('tl-pyramid');
 
         const targetDate = moment().add(this.host.kanbanWeekOffset, 'weeks');
         const weekStart = moment(targetDate).startOf('isoWeek');
@@ -46,7 +46,7 @@ export class KanbanRenderer {
 
     private async renderPyramidMonth(panel: HTMLElement): Promise<void> {
         const h = this.host;
-        const layer = panel.createDiv('af-pyramid-layer af-pyramid-month');
+        const layer = panel.createDiv('tl-pyramid-layer tl-pyramid-month');
 
         // Compute target month
         const targetMonth = moment().add(h.kanbanMonthOffset, 'months');
@@ -54,20 +54,20 @@ export class KanbanRenderer {
         const monthRef = targetMonth.format('YYYY-MM');
 
         // Header with < > nav
-        const header = layer.createDiv('af-pyramid-layer-header af-pyramid-month-header');
-        const navLeft = header.createEl('button', { cls: 'af-pyramid-nav-btn', text: '‹' });
+        const header = layer.createDiv('tl-pyramid-layer-header tl-pyramid-month-header');
+        const navLeft = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '‹' });
         navLeft.addEventListener('click', () => { h.kanbanMonthOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
-        const titleArea = header.createDiv('af-pyramid-week-title-area');
-        titleArea.createEl('span', { cls: 'af-pyramid-layer-icon', text: '🏔️' });
-        titleArea.createEl('span', { cls: 'af-pyramid-layer-title', text: `${monthLabel}目标` });
+        const titleArea = header.createDiv('tl-pyramid-week-title-area');
+        titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '🏔️' });
+        titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthLabel}目标` });
         titleArea.style.cursor = 'pointer';
 
-        const navRight = header.createEl('button', { cls: 'af-pyramid-nav-btn', text: '›' });
+        const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
         navRight.addEventListener('click', () => { h.kanbanMonthOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
         if (h.kanbanMonthOffset !== 0) {
-            const resetBtn = header.createEl('button', { cls: 'af-pyramid-today-btn', text: '本月' });
+            const resetBtn = header.createEl('button', { cls: 'tl-pyramid-today-btn', text: '本月' });
             resetBtn.addEventListener('click', () => { h.kanbanMonthOffset = 0; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         }
 
@@ -79,7 +79,7 @@ export class KanbanRenderer {
         } catch { /* skip */ }
 
         if (!file) {
-            layer.createDiv({ cls: 'af-pyramid-empty', text: '暂无月计划' });
+            layer.createDiv({ cls: 'tl-pyramid-empty', text: '暂无月计划' });
             return;
         }
 
@@ -98,21 +98,21 @@ export class KanbanRenderer {
         // Progress bar for monthly goals (count ALL items)
         if (goals.length > 0) {
             const doneCount = goals.filter(g => g.done).length;
-            const progressWrap = layer.createDiv('af-pyramid-progress-wrap');
+            const progressWrap = layer.createDiv('tl-pyramid-progress-wrap');
             progressWrap.style.padding = '0 12px';
-            const progressBar = progressWrap.createDiv('af-pyramid-progress-bar');
-            const progressFill = progressBar.createDiv('af-pyramid-progress-fill');
+            const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
+            const progressFill = progressBar.createDiv('tl-pyramid-progress-fill');
             progressFill.style.width = `${(doneCount / goals.length) * 100}%`;
-            progressWrap.createEl('span', { cls: 'af-pyramid-progress-label', text: `${doneCount}/${goals.length} 完成` });
+            progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: `${doneCount}/${goals.length} 完成` });
         }
 
         // Task list body (same pattern as weekly/daily)
-        const body = layer.createDiv('af-pyramid-month-detail');
+        const body = layer.createDiv('tl-pyramid-month-detail');
         if (goals.length === 0) {
-            body.createDiv({ cls: 'af-pyramid-empty', text: '暂无本月目标' });
+            body.createDiv({ cls: 'tl-pyramid-empty', text: '暂无本月目标' });
         } else {
             for (const goal of goals) {
-                const card = body.createDiv({ cls: `af-pyramid-task ${goal.done ? 'af-pyramid-task-done' : ''}` });
+                const card = body.createDiv({ cls: `tl-pyramid-task ${goal.done ? 'tl-pyramid-task-done' : ''}` });
                 if (goal.indent > 0) {
                     card.style.marginLeft = `${goal.indent * 20}px`;
                     card.style.fontSize = '12px';
@@ -128,11 +128,11 @@ export class KanbanRenderer {
                     // Update UI in-place to avoid scroll reset
                     goal.done = !goal.done;
                     cb.checked = goal.done;
-                    card.toggleClass('af-pyramid-task-done', goal.done);
+                    card.toggleClass('tl-pyramid-task-done', goal.done);
                     label.style.textDecoration = goal.done ? 'line-through' : '';
                     label.style.opacity = goal.done ? '0.5' : '';
                 });
-                const label = card.createEl('span', { cls: 'af-pyramid-task-text', text: goal.text });
+                const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: goal.text });
                 if (goal.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
             }
         }
@@ -144,7 +144,7 @@ export class KanbanRenderer {
 
     private async renderPyramidWeek(panel: HTMLElement, targetDate: ReturnType<typeof moment>, weekStart: ReturnType<typeof moment>): Promise<void> {
         const h = this.host;
-        const layer = panel.createDiv('af-pyramid-layer af-pyramid-week');
+        const layer = panel.createDiv('tl-pyramid-layer tl-pyramid-week');
 
         const weekEnd = moment(targetDate).endOf('isoWeek');
         const weekNum = targetDate.isoWeek();
@@ -152,20 +152,20 @@ export class KanbanRenderer {
         const weekRef = `W${targetDate.format('ww')}`;
 
         // Header with < > nav — click title opens weekly plan
-        const header = layer.createDiv('af-pyramid-layer-header af-pyramid-week-header');
-        const navLeft = header.createEl('button', { cls: 'af-pyramid-nav-btn', text: '‹' });
+        const header = layer.createDiv('tl-pyramid-layer-header tl-pyramid-week-header');
+        const navLeft = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '‹' });
         navLeft.addEventListener('click', () => { h.kanbanWeekOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
-        const titleArea = header.createDiv('af-pyramid-week-title-area');
-        titleArea.createEl('span', { cls: 'af-pyramid-layer-icon', text: '📅' });
-        titleArea.createEl('span', { cls: 'af-pyramid-layer-title', text: weekLabel });
+        const titleArea = header.createDiv('tl-pyramid-week-title-area');
+        titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
+        titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: weekLabel });
         titleArea.style.cursor = 'pointer';
 
-        const navRight = header.createEl('button', { cls: 'af-pyramid-nav-btn', text: '›' });
+        const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
         navRight.addEventListener('click', () => { h.kanbanWeekOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
         if (h.kanbanWeekOffset !== 0) {
-            const todayBtn = header.createEl('button', { cls: 'af-pyramid-today-btn', text: '本周' });
+            const todayBtn = header.createEl('button', { cls: 'tl-pyramid-today-btn', text: '本周' });
             todayBtn.addEventListener('click', () => { h.kanbanWeekOffset = 0; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         }
 
@@ -182,10 +182,10 @@ export class KanbanRenderer {
             if (file) h.app.workspace.getLeaf().openFile(file);
         });
 
-        const body = layer.createDiv('af-pyramid-week-body');
+        const body = layer.createDiv('tl-pyramid-week-body');
 
         if (!file) {
-            body.createDiv({ cls: 'af-pyramid-empty', text: '暂无周计划' });
+            body.createDiv({ cls: 'tl-pyramid-empty', text: '暂无周计划' });
             return;
         }
 
@@ -197,21 +197,21 @@ export class KanbanRenderer {
         const keyItems = allItems.filter(i => weekSections.some(s => i.section.includes(s)));
 
         if (keyItems.length === 0) {
-            body.createDiv({ cls: 'af-pyramid-empty', text: '暂无本周任务' });
+            body.createDiv({ cls: 'tl-pyramid-empty', text: '暂无本周任务' });
         } else {
             // Progress bar (count all items)
             const doneCount = keyItems.filter(t => t.done).length;
             if (keyItems.length > 0) {
-                const progressWrap = body.createDiv('af-pyramid-progress-wrap');
-                const progressBar = progressWrap.createDiv('af-pyramid-progress-bar');
-                const progressFill = progressBar.createDiv('af-pyramid-progress-fill');
+                const progressWrap = body.createDiv('tl-pyramid-progress-wrap');
+                const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
+                const progressFill = progressBar.createDiv('tl-pyramid-progress-fill');
                 progressFill.style.width = `${(doneCount / keyItems.length) * 100}%`;
-                progressWrap.createEl('span', { cls: 'af-pyramid-progress-label', text: `${doneCount}/${keyItems.length} 完成` });
+                progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: `${doneCount}/${keyItems.length} 完成` });
             }
 
             // Render all items with checkboxes
             for (const item of keyItems) {
-                const card = body.createDiv({ cls: `af-pyramid-task ${item.done ? 'af-pyramid-task-done' : ''}` });
+                const card = body.createDiv({ cls: `tl-pyramid-task ${item.done ? 'tl-pyramid-task-done' : ''}` });
                 if (item.indent > 0) {
                     card.style.marginLeft = `${item.indent * 20}px`;
                     card.style.fontSize = '12px';
@@ -227,11 +227,11 @@ export class KanbanRenderer {
                     // Update UI in-place to avoid scroll reset
                     item.done = !item.done;
                     cb.checked = item.done;
-                    card.toggleClass('af-pyramid-task-done', item.done);
+                    card.toggleClass('tl-pyramid-task-done', item.done);
                     label.style.textDecoration = item.done ? 'line-through' : '';
                     label.style.opacity = item.done ? '0.5' : '';
                 });
-                const label = card.createEl('span', { cls: 'af-pyramid-task-text', text: item.text });
+                const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: item.text });
                 if (item.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
             }
         }
@@ -243,7 +243,7 @@ export class KanbanRenderer {
 
     private async renderPyramidDaily(panel: HTMLElement): Promise<void> {
         const h = this.host;
-        const layer = panel.createDiv('af-pyramid-layer af-pyramid-daily');
+        const layer = panel.createDiv('tl-pyramid-layer tl-pyramid-daily');
 
         const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
         const targetDay = moment().add(h.kanbanDayOffset, 'days');
@@ -252,20 +252,20 @@ export class KanbanRenderer {
         const isToday = h.kanbanDayOffset === 0;
 
         // Header with < > nav (day-level)
-        const header = layer.createDiv('af-pyramid-layer-header af-pyramid-daily-header');
-        const navLeft = header.createEl('button', { cls: 'af-pyramid-nav-btn', text: '‹' });
+        const header = layer.createDiv('tl-pyramid-layer-header tl-pyramid-daily-header');
+        const navLeft = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '‹' });
         navLeft.addEventListener('click', () => { h.kanbanDayOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
-        const titleArea = header.createDiv('af-pyramid-week-title-area');
-        titleArea.createEl('span', { cls: 'af-pyramid-layer-icon', text: '📋' });
-        titleArea.createEl('span', { cls: 'af-pyramid-layer-title', text: dayLabel });
+        const titleArea = header.createDiv('tl-pyramid-week-title-area');
+        titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📋' });
+        titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: dayLabel });
         titleArea.style.cursor = 'pointer';
 
-        const navRight = header.createEl('button', { cls: 'af-pyramid-nav-btn', text: '›' });
+        const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
         navRight.addEventListener('click', () => { h.kanbanDayOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
         if (!isToday) {
-            const resetBtn = header.createEl('button', { cls: 'af-pyramid-today-btn', text: '今天' });
+            const resetBtn = header.createEl('button', { cls: 'tl-pyramid-today-btn', text: '今天' });
             resetBtn.addEventListener('click', () => { h.kanbanDayOffset = 0; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         }
 
@@ -307,21 +307,21 @@ export class KanbanRenderer {
         // Progress bar
         if (tasks.length > 0) {
             const doneCount = tasks.filter(t => t.done).length;
-            const progressWrap = layer.createDiv('af-pyramid-progress-wrap');
+            const progressWrap = layer.createDiv('tl-pyramid-progress-wrap');
             progressWrap.style.padding = '0 12px';
-            const progressBar = progressWrap.createDiv('af-pyramid-progress-bar');
-            const progressFill = progressBar.createDiv('af-pyramid-progress-fill');
+            const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
+            const progressFill = progressBar.createDiv('tl-pyramid-progress-fill');
             progressFill.style.width = `${(doneCount / tasks.length) * 100}%`;
-            progressWrap.createEl('span', { cls: 'af-pyramid-progress-label', text: `${doneCount}/${tasks.length} 完成` });
+            progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: `${doneCount}/${tasks.length} 完成` });
         }
 
         // Task list body
-        const body = layer.createDiv('af-pyramid-daily-body');
+        const body = layer.createDiv('tl-pyramid-daily-body');
         if (tasks.length === 0) {
-            body.createDiv({ cls: 'af-pyramid-empty', text: '暂无任务' });
+            body.createDiv({ cls: 'tl-pyramid-empty', text: '暂无任务' });
         } else {
             for (const task of tasks) {
-                const card = body.createDiv({ cls: `af-pyramid-task ${task.done ? 'af-pyramid-task-done' : ''}` });
+                const card = body.createDiv({ cls: `tl-pyramid-task ${task.done ? 'tl-pyramid-task-done' : ''}` });
                 if (task.indent > 0) {
                     card.style.marginLeft = `${task.indent * 20}px`;
                     card.style.fontSize = '12px';
@@ -340,11 +340,11 @@ export class KanbanRenderer {
                     // Update UI in-place to avoid scroll reset
                     task.done = !task.done;
                     cb.checked = task.done;
-                    card.toggleClass('af-pyramid-task-done', task.done);
+                    card.toggleClass('tl-pyramid-task-done', task.done);
                     label.style.textDecoration = task.done ? 'line-through' : '';
                     label.style.opacity = task.done ? '0.5' : '';
                 });
-                const label = card.createEl('span', { cls: 'af-pyramid-task-text', text: task.text });
+                const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: task.text });
                 if (task.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
             }
         }

@@ -3,13 +3,13 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { AIFlowSettings } from '../types';
+import { TideLogSettings } from '../types';
 
 export class TemplateManager {
     private app: App;
-    private settings: AIFlowSettings;
+    private settings: TideLogSettings;
 
-    constructor(app: App, settings: AIFlowSettings) {
+    constructor(app: App, settings: TideLogSettings) {
         this.app = app;
         this.settings = settings;
     }

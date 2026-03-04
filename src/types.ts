@@ -1,5 +1,5 @@
 /**
- * Dailot — Type Definitions
+ * TideLog — Type Definitions
  */
 
 // =============================================================================
@@ -15,7 +15,7 @@ export interface ProviderConfig {
     baseUrl?: string;
 }
 
-export interface AIFlowSettings {
+export interface TideLogSettings {
     // AI Provider Settings
     activeProvider: AIProviderType;
     providers: {
@@ -120,7 +120,7 @@ export const DEFAULT_EVENING_QUESTIONS: EveningQuestionConfig[] = [
     },
 ];
 
-export const DEFAULT_SETTINGS: AIFlowSettings = {
+export const DEFAULT_SETTINGS: TideLogSettings = {
     activeProvider: 'openrouter',
     providers: {
         openrouter: {

@@ -14,7 +14,7 @@
  */
 
 import { App, TFile, moment } from 'obsidian';
-import { AIFlowSettings } from '../types';
+import { TideLogSettings } from '../types';
 import { TaskRegistryService, TaskItem } from './task-registry';
 
 const DAY_COLUMNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -25,10 +25,10 @@ const DAY_LABELS: Record<string, string> = {
 
 export class KanbanService {
     private app: App;
-    private settings: AIFlowSettings;
+    private settings: TideLogSettings;
     private taskRegistry: TaskRegistryService;
 
-    constructor(app: App, settings: AIFlowSettings, taskRegistry: TaskRegistryService) {
+    constructor(app: App, settings: TideLogSettings, taskRegistry: TaskRegistryService) {
         this.app = app;
         this.settings = settings;
         this.taskRegistry = taskRegistry;

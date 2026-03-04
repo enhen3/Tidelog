@@ -1,5 +1,5 @@
 /**
- * Dailot — Main Plugin Entry Point
+ * TideLog — Main Plugin Entry Point
  */
 
 import {
@@ -10,8 +10,8 @@ import {
     addIcon,
 } from 'obsidian';
 
-import { AIFlowSettings, DEFAULT_SETTINGS } from './types';
-import { AIFlowSettingTab } from './settings/settings-tab';
+import { TideLogSettings, DEFAULT_SETTINGS } from './types';
+import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
 import { KanbanView, KANBAN_VIEW_TYPE } from './views/kanban-view';
 import { CalendarView, CALENDAR_VIEW_TYPE } from './views/calendar-view';
@@ -25,8 +25,8 @@ import { KanbanService } from './services/kanban-service';
 import { FileLinkService } from './services/file-linker';
 import { DashboardService } from './services/dashboard-service';
 
-export default class AIFlowManagerPlugin extends Plugin {
-    settings: AIFlowSettings = DEFAULT_SETTINGS;
+export default class TideLogPlugin extends Plugin {
+    settings: TideLogSettings = DEFAULT_SETTINGS;
     vaultManager!: VaultManager;
     templateManager!: TemplateManager;
     insightService!: InsightService;
@@ -40,7 +40,7 @@ export default class AIFlowManagerPlugin extends Plugin {
     }
 
     async onload(): Promise<void> {
-        console.log('Loading Dailot plugin');
+        console.log('Loading TideLog plugin');
 
         // Load settings
         await this.loadSettings();
@@ -63,11 +63,11 @@ export default class AIFlowManagerPlugin extends Plugin {
         this.registerView(CALENDAR_VIEW_TYPE, (leaf) => new CalendarView(leaf, this));
         this.registerView(DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this));
 
-        // Register custom helm icon for ribbon
-        addIcon('dailot-helm', `<circle cx="50" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="6"/><circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" stroke-width="6"/><line x1="50" y1="18" x2="50" y2="4" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="96" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="50" x2="4" y2="50" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="82" y1="50" x2="96" y2="50" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="27.4" y1="27.4" x2="17.5" y2="17.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="72.6" y1="72.6" x2="82.5" y2="82.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="27.4" y1="72.6" x2="17.5" y2="82.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="72.6" y1="27.4" x2="82.5" y2="17.5" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>`);
+        // Register custom tide icon for ribbon
+        addIcon('tidelog-wave', `<path d="M8 50 Q20 30 32 50 Q44 70 56 50 Q68 30 80 50 Q92 70 96 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 70 Q16 50 28 70 Q40 90 52 70 Q64 50 76 70 Q88 90 96 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="22" r="8" fill="currentColor"/><path d="M42 22 Q50 8 58 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
 
         // Add ribbon icons
-        this.addRibbonIcon('dailot-helm', 'Dailot「小舵」', () => {
+        this.addRibbonIcon('tidelog-wave', 'TideLog「潮记」', () => {
             this.activateChatView();
         });
 
@@ -153,7 +153,7 @@ export default class AIFlowManagerPlugin extends Plugin {
         });
 
         // Add settings tab
-        this.addSettingTab(new AIFlowSettingTab(this.app, this));
+        this.addSettingTab(new TideLogSettingTab(this.app, this));
 
         // Auto-open chat view in sidebar when layout is ready
         this.app.workspace.onLayoutReady(async () => {
@@ -168,16 +168,27 @@ export default class AIFlowManagerPlugin extends Plugin {
             this.fileLinkService.startListening();
         });
 
-        console.log('Dailot plugin loaded');
+        console.log('TideLog plugin loaded');
     }
 
     onunload(): void {
-        console.log('Unloading Dailot plugin');
+        console.log('Unloading TideLog plugin');
         this.fileLinkService.stopListening();
     }
 
     async loadSettings(): Promise<void> {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const saved = (await this.loadData()) || {};
+        // Deep merge: providers need per-key merge so new providers get defaults
+        const mergedProviders = { ...DEFAULT_SETTINGS.providers };
+        if (saved.providers) {
+            for (const key of Object.keys(saved.providers)) {
+                mergedProviders[key as keyof typeof mergedProviders] = {
+                    ...DEFAULT_SETTINGS.providers[key as keyof typeof DEFAULT_SETTINGS.providers],
+                    ...saved.providers[key],
+                };
+            }
+        }
+        this.settings = { ...DEFAULT_SETTINGS, ...saved, providers: mergedProviders };
     }
 
     async saveSettings(): Promise<void> {

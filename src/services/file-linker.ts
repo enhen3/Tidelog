@@ -3,18 +3,18 @@
  */
 
 import { App, TFile, EventRef } from 'obsidian';
-import { AIFlowSettings } from '../types';
+import { TideLogSettings } from '../types';
 import { KanbanService } from './kanban-service';
 
 export class FileLinkService {
     private app: App;
-    private settings: AIFlowSettings;
+    private settings: TideLogSettings;
     private kanbanService: KanbanService;
     private syncing = false;
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
     private eventRef: EventRef | null = null;
 
-    constructor(app: App, settings: AIFlowSettings, kanbanService: KanbanService) {
+    constructor(app: App, settings: TideLogSettings, kanbanService: KanbanService) {
         this.app = app;
         this.settings = settings;
         this.kanbanService = kanbanService;

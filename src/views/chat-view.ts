@@ -11,7 +11,7 @@ import {
     moment,
 } from 'obsidian';
 
-import AIFlowManagerPlugin from '../main';
+import TideLogPlugin from '../main';
 import { ChatMessage, SOPContext, SOPType } from '../types';
 import { MorningSOP } from '../sop/morning-sop';
 import { EveningSOP } from '../sop/evening-sop';
@@ -22,10 +22,10 @@ import { ChatController } from './chat-controller';
 
 type SidebarTab = 'chat' | 'kanban' | 'review';
 
-export const CHAT_VIEW_TYPE = 'ai-flow-chat-view';
+export const CHAT_VIEW_TYPE = 'tl-chat-view';
 
 export class ChatView extends ItemView {
-    public plugin: AIFlowManagerPlugin;
+    public plugin: TideLogPlugin;
     public messages: ChatMessage[] = [];
     public sopContext: SOPContext = {
         type: 'none',
@@ -67,7 +67,7 @@ export class ChatView extends ItemView {
     private taskInputManager!: TaskInputManager;
     private chatController!: ChatController;
 
-    constructor(leaf: WorkspaceLeaf, plugin: AIFlowManagerPlugin) {
+    constructor(leaf: WorkspaceLeaf, plugin: TideLogPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.morningSOP = new MorningSOP(plugin);
@@ -83,18 +83,18 @@ export class ChatView extends ItemView {
     }
 
     getDisplayText(): string {
-        return 'Dailot「小舵」';
+        return 'TideLog「潮记」';
     }
 
     getIcon(): string {
-        return 'dailot-helm';
+        return 'tidelog-wave';
     }
 
     async onOpen(): Promise<void> {
-        console.log('[Dailot] ChatView.onOpen() called');
+        console.log('[TideLog] ChatView.onOpen() called');
         const container = this.contentEl;
         container.empty();
-        container.addClass('ai-flow-chat-container');
+        container.addClass('tl-chat-container');
 
         // Header (title only)
         this.renderHeader(container);
@@ -103,12 +103,12 @@ export class ChatView extends ItemView {
         this.renderTabBar(container);
 
         // Tab content area
-        this.tabContentEl = container.createDiv('af-tab-content');
+        this.tabContentEl = container.createDiv('tl-tab-content');
 
         // Chat panel (SOP buttons + messages + input)
-        this.chatPanel = this.tabContentEl.createDiv('af-tab-panel af-tab-panel-chat');
+        this.chatPanel = this.tabContentEl.createDiv('tl-tab-panel tl-tab-panel-chat');
         this.renderSOPButtons(this.chatPanel);
-        this.messagesContainer = this.chatPanel.createDiv('ai-flow-messages');
+        this.messagesContainer = this.chatPanel.createDiv('tl-messages');
         this.renderInputArea(this.chatPanel);
         this.showWelcomeMessage();
 
@@ -137,39 +137,28 @@ export class ChatView extends ItemView {
      * Render the header with SOP mode buttons
      */
     private renderHeader(container: HTMLElement): void {
-        const header = container.createDiv('ai-flow-header');
-        const title = header.createDiv('ai-flow-title');
-        const iconSpan = title.createSpan('ai-flow-title-icon');
+        const header = container.createDiv('tl-header');
+        const title = header.createDiv('tl-title');
+        const iconSpan = title.createSpan('tl-title-icon');
         iconSpan.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<defs><linearGradient id="helmGrad" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="hsl(220,55%,55%)"/><stop offset="100%" stop-color="hsl(260,45%,50%)"/></linearGradient></defs>
-<circle cx="12" cy="12" r="9.5" fill="url(#helmGrad)" opacity="0.12"/>
-<circle cx="12" cy="12" r="7" fill="none" stroke="url(#helmGrad)" stroke-width="2.2"/>
-<circle cx="12" cy="12" r="2.8" fill="url(#helmGrad)" opacity="0.35"/>
-<circle cx="12" cy="12" r="2.8" fill="none" stroke="url(#helmGrad)" stroke-width="1.6"/>
-<line x1="12" y1="5" x2="12" y2="1.2" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="12" y1="19" x2="12" y2="22.8" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="5" y1="12" x2="1.2" y2="12" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="19" y1="12" x2="22.8" y2="12" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="7.05" y1="7.05" x2="4.2" y2="4.2" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="16.95" y1="16.95" x2="19.8" y2="19.8" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="7.05" y1="16.95" x2="4.2" y2="19.8" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="16.95" y1="7.05" x2="19.8" y2="4.2" stroke="url(#helmGrad)" stroke-width="1.8" stroke-linecap="round"/>
-<circle cx="12" cy="1.2" r="1.3" fill="url(#helmGrad)"/><circle cx="12" cy="22.8" r="1.3" fill="url(#helmGrad)"/>
-<circle cx="1.2" cy="12" r="1.3" fill="url(#helmGrad)"/><circle cx="22.8" cy="12" r="1.3" fill="url(#helmGrad)"/>
-<circle cx="4.2" cy="4.2" r="1.3" fill="url(#helmGrad)"/><circle cx="19.8" cy="19.8" r="1.3" fill="url(#helmGrad)"/>
-<circle cx="4.2" cy="19.8" r="1.3" fill="url(#helmGrad)"/><circle cx="19.8" cy="4.2" r="1.3" fill="url(#helmGrad)"/>
+<defs><linearGradient id="tideGrad" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="hsl(200,70%,55%)"/><stop offset="100%" stop-color="hsl(230,55%,50%)"/></linearGradient></defs>
+<circle cx="12" cy="12" r="10" fill="url(#tideGrad)" opacity="0.1"/>
+<path d="M3 14 Q6 10 9 14 Q12 18 15 14 Q18 10 21 14" fill="none" stroke="url(#tideGrad)" stroke-width="2" stroke-linecap="round"/>
+<path d="M3 18 Q6 14 9 18 Q12 22 15 18 Q18 14 21 18" fill="none" stroke="url(#tideGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+<circle cx="12" cy="7" r="3" fill="url(#tideGrad)" opacity="0.6"/>
+<path d="M9.5 7 Q12 3 14.5 7" fill="none" stroke="url(#tideGrad)" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`;
-        title.createSpan({ text: 'Dailot「小舵」' });
+        title.createSpan({ text: 'TideLog「潮记」' });
     }
 
     /**
      * Render SOP buttons inside the chat panel only
      */
     private renderSOPButtons(container: HTMLElement): void {
-        const buttons = container.createDiv('ai-flow-header-buttons');
+        const buttons = container.createDiv('tl-header-buttons');
 
         const morningBtn = buttons.createEl('button', {
-            cls: 'ai-flow-mode-btn',
+            cls: 'tl-mode-btn',
             attr: { 'aria-label': 'Plan：规划今日' },
         });
         setIcon(morningBtn, 'sun');
@@ -177,7 +166,7 @@ export class ChatView extends ItemView {
         morningBtn.addEventListener('click', () => this.startSOP('morning'));
 
         const eveningBtn = buttons.createEl('button', {
-            cls: 'ai-flow-mode-btn',
+            cls: 'tl-mode-btn',
             attr: { 'aria-label': 'Review：回顾今天' },
         });
         setIcon(eveningBtn, 'moon');
@@ -185,8 +174,8 @@ export class ChatView extends ItemView {
         eveningBtn.addEventListener('click', () => this.startSOP('evening'));
 
         const insightBtn = buttons.createEl('button', {
-            cls: 'ai-flow-mode-btn',
-            attr: { 'aria-label': 'Dailot Talk：自由对话' },
+            cls: 'tl-mode-btn',
+            attr: { 'aria-label': 'TideLog Talk：自由对话' },
         });
         setIcon(insightBtn, 'lightbulb');
         insightBtn.createSpan({ text: 'Insight' });
@@ -198,22 +187,22 @@ export class ChatView extends ItemView {
     // =========================================================================
 
     private renderTabBar(container: HTMLElement): void {
-        const tabBarWrap = container.createDiv('af-tab-bar-wrap');
-        this.tabBarEl = tabBarWrap.createDiv('af-tab-bar');
+        const tabBarWrap = container.createDiv('tl-tab-bar-wrap');
+        this.tabBarEl = tabBarWrap.createDiv('tl-tab-bar');
 
         const tabs: { id: SidebarTab; icon: string; label: string }[] = [
-            { id: 'chat', icon: '💬', label: 'Dailot Talk' },
+            { id: 'chat', icon: '💬', label: 'TideLog Talk' },
             { id: 'kanban', icon: '📋', label: '目标' },
             { id: 'review', icon: '📊', label: '仪表盘' },
         ];
 
         for (const tab of tabs) {
             const btn = this.tabBarEl.createEl('button', {
-                cls: `af-tab-btn ${tab.id === this.activeTab ? 'af-tab-btn-active' : ''}`,
+                cls: `tl-tab-btn ${tab.id === this.activeTab ? 'tl-tab-btn-active' : ''}`,
                 attr: { 'data-tab': tab.id },
             });
-            btn.createEl('span', { cls: 'af-tab-btn-icon', text: tab.icon });
-            btn.createEl('span', { cls: 'af-tab-btn-label', text: tab.label });
+            btn.createEl('span', { cls: 'tl-tab-btn-icon', text: tab.icon });
+            btn.createEl('span', { cls: 'tl-tab-btn-label', text: tab.label });
             btn.addEventListener('click', () => this.switchTab(tab.id, true));
         }
     }
@@ -222,28 +211,28 @@ export class ChatView extends ItemView {
         this.activeTab = tab;
 
         // Update tab bar active state
-        this.tabBarEl.querySelectorAll('.af-tab-btn').forEach(btn => {
-            btn.removeClass('af-tab-btn-active');
+        this.tabBarEl.querySelectorAll('.tl-tab-btn').forEach(btn => {
+            btn.removeClass('tl-tab-btn-active');
             if (btn.getAttribute('data-tab') === tab) {
-                btn.addClass('af-tab-btn-active');
+                btn.addClass('tl-tab-btn-active');
             }
         });
 
         if (tab === 'chat') {
             this.chatPanel.style.display = '';
             // Remove non-chat panels
-            this.tabContentEl.querySelectorAll('.af-tab-panel:not(.af-tab-panel-chat)').forEach(el => el.remove());
+            this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => el.remove());
         } else {
             this.chatPanel.style.display = 'none';
             // Build new panel first, THEN remove old to avoid white flash
-            const panel = this.tabContentEl.createDiv('af-tab-panel');
-            if (animate) panel.addClass('af-tab-panel-animate');
+            const panel = this.tabContentEl.createDiv('tl-tab-panel');
+            if (animate) panel.addClass('tl-tab-panel-animate');
             const renderDone = (tab === 'kanban')
                 ? this.renderKanbanTab(panel)
                 : this.renderReviewTab(panel);
             renderDone.then(() => {
                 // Remove stale panels (keep the new one and chat)
-                this.tabContentEl.querySelectorAll('.af-tab-panel:not(.af-tab-panel-chat)').forEach(el => {
+                this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => {
                     if (el !== panel) el.remove();
                 });
             });
@@ -407,10 +396,10 @@ export class ChatView extends ItemView {
      * Render the input area
      */
     private renderInputArea(container: HTMLElement): void {
-        this.inputContainer = container.createDiv('ai-flow-input-container');
+        this.inputContainer = container.createDiv('tl-input-container');
 
         this.inputEl = this.inputContainer.createEl('textarea', {
-            cls: 'ai-flow-input',
+            cls: 'tl-input',
             attr: {
                 placeholder: '输入你的想法...',
                 rows: '3',
@@ -431,10 +420,10 @@ export class ChatView extends ItemView {
             this.inputEl.style.height = `${Math.min(this.inputEl.scrollHeight, 150)}px`;
         });
 
-        const buttonContainer = this.inputContainer.createDiv('ai-flow-input-buttons');
+        const buttonContainer = this.inputContainer.createDiv('tl-input-buttons');
 
         this.sendButton = buttonContainer.createEl('button', {
-            cls: 'ai-flow-send-btn',
+            cls: 'tl-send-btn',
             text: '发送',
         });
         this.sendButton.addEventListener('click', () => this.sendMessage());
@@ -549,22 +538,22 @@ export class ChatView extends ItemView {
         );
 
         // Insight generation buttons
-        const btnGroup = messageEl.createDiv('ai-flow-insight-buttons');
+        const btnGroup = messageEl.createDiv('tl-insight-buttons');
 
         const weeklyBtn = btnGroup.createEl('button', {
-            cls: 'ai-flow-insight-btn',
+            cls: 'tl-insight-btn',
             text: '📊 本周洞察',
         });
         weeklyBtn.addEventListener('click', () => this.triggerInsight('weekly'));
 
         const monthlyBtn = btnGroup.createEl('button', {
-            cls: 'ai-flow-insight-btn',
+            cls: 'tl-insight-btn',
             text: '📈 本月洞察',
         });
         monthlyBtn.addEventListener('click', () => this.triggerInsight('monthly'));
 
         const profileBtn = btnGroup.createEl('button', {
-            cls: 'ai-flow-insight-btn',
+            cls: 'tl-insight-btn',
             text: '👤 画像建议',
         });
         profileBtn.addEventListener('click', () => this.triggerProfileSuggestion());
@@ -646,26 +635,27 @@ export class ChatView extends ItemView {
      */
     createMessageElement(type: 'user' | 'ai'): HTMLElement {
         const wrapper = this.messagesContainer.createDiv(
-            `ai-flow-message ai-flow-message-${type}`
+            `tl-message tl-message-${type}`
         );
 
-        const avatar = wrapper.createDiv('ai-flow-message-avatar');
+        const avatar = wrapper.createDiv('tl-message-avatar');
         if (type === 'user') {
-            // Naval officer peaked cap — white dome, visor band, anchor badge
+            // User avatar — person silhouette with subtle wave
             avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor">
-<ellipse cx="12" cy="17" rx="9.5" ry="2.5" opacity="0.4"/>
-<ellipse cx="12" cy="15.5" rx="9" ry="1.5" opacity="0.9"/>
-<path d="M5.5 15c0-2.5 1-4 2.5-5s3-1.5 4-1.5 2.5.5 4 1.5 2.5 2.5 2.5 5z"/>
-<circle cx="12" cy="12" r="1.8" fill="var(--af-accent,hsl(260,50%,55%))"/>
-<line x1="12" y1="10.5" x2="12" y2="14" stroke="var(--af-accent,hsl(260,50%,55%))" stroke-width="0.7"/>
-<path d="M10.5 13c.4.5 1 .8 1.5.8s1.1-.3 1.5-.8" stroke="var(--af-accent,hsl(260,50%,55%))" stroke-width="0.5" fill="none"/>
+<circle cx="12" cy="8" r="4"/>
+<path d="M5 20 Q5 14 12 14 Q19 14 19 20z" opacity="0.7"/>
+<path d="M3 22 Q7 19 12 22 Q17 19 21 22" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
 </svg>`;
         } else {
-            // Ship's wheel — same style as header helm
-            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6.5" stroke-width="1.8"/><line x1="12" y1="5.5" x2="12" y2="2"/><circle cx="12" cy="2" r="1" fill="currentColor" stroke="none"/><line x1="12" y1="18.5" x2="12" y2="22"/><circle cx="12" cy="22" r="1" fill="currentColor" stroke="none"/><line x1="5.5" y1="12" x2="2" y2="12"/><circle cx="2" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="18.5" y1="12" x2="22" y2="12"/><circle cx="22" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="7.4" y1="7.4" x2="4.9" y2="4.9"/><circle cx="4.9" cy="4.9" r="1" fill="currentColor" stroke="none"/><line x1="16.6" y1="16.6" x2="19.1" y2="19.1"/><circle cx="19.1" cy="19.1" r="1" fill="currentColor" stroke="none"/><line x1="7.4" y1="16.6" x2="4.9" y2="19.1"/><circle cx="4.9" cy="19.1" r="1" fill="currentColor" stroke="none"/><line x1="16.6" y1="7.4" x2="19.1" y2="4.9"/><circle cx="19.1" cy="4.9" r="1" fill="currentColor" stroke="none"/></svg>`;
+            // AI avatar — wave circle
+            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+<circle cx="12" cy="12" r="9" stroke-width="1.8"/>
+<path d="M5 12 Q8 8 11 12 Q14 16 17 12 Q19 10 20 11"/>
+<path d="M5 16 Q8 12 11 16 Q14 20 17 16" opacity="0.4"/>
+</svg>`;
         }
 
-        const content = wrapper.createDiv('ai-flow-message-content');
+        const content = wrapper.createDiv('tl-message-content');
 
         return content;
     }
