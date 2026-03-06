@@ -351,33 +351,60 @@ export class KanbanRenderer {
         if (tasks.length === 0) {
             body.createDiv({ cls: 'tl-pyramid-empty', text: '暂无任务' });
         } else {
-            for (const task of tasks) {
-                const card = body.createDiv({ cls: `tl-pyramid-task ${task.done ? 'tl-pyramid-task-done' : ''}` });
-                if (task.indent > 0) {
-                    card.style.marginLeft = `${task.indent * 20}px`;
-                    card.style.fontSize = '12px';
-                    card.style.opacity = '0.7';
-                    card.style.padding = '5px 8px';
+            const inProgress = tasks.filter(t => !t.done);
+            const completed = tasks.filter(t => t.done);
+
+            // In-progress section
+            if (inProgress.length > 0) {
+                const section = body.createDiv('tl-task-group');
+                section.createDiv({ cls: 'tl-task-group-header', text: `⏳ 进行中 (${inProgress.length})` });
+                for (const task of inProgress) {
+                    this.renderTaskCard(section, task, filePath);
                 }
-                const cb = card.createEl('input', { type: 'checkbox' });
-                cb.checked = task.done;
-                cb.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const f = h.app.vault.getAbstractFileByPath(filePath);
-                    if (f && f instanceof TFile) {
-                        await h.toggleMdTask(f, task.text, task.done);
-                    }
-                    // Update UI in-place to avoid scroll reset
-                    task.done = !task.done;
-                    cb.checked = task.done;
-                    card.toggleClass('tl-pyramid-task-done', task.done);
-                    label.style.textDecoration = task.done ? 'line-through' : '';
-                    label.style.opacity = task.done ? '0.5' : '';
+            }
+
+            // Completed section (collapsible)
+            if (completed.length > 0) {
+                const section = body.createDiv('tl-task-group tl-task-group-done');
+                const doneHeader = section.createDiv({ cls: 'tl-task-group-header tl-task-group-header-done' });
+                doneHeader.setText(`✅ 已完成 (${completed.length})`);
+                const doneBody = section.createDiv('tl-task-group-body tl-task-group-collapsed');
+                doneHeader.addEventListener('click', () => {
+                    doneBody.toggleClass('tl-task-group-collapsed', !doneBody.hasClass('tl-task-group-collapsed'));
+                    doneHeader.toggleClass('tl-task-group-header-expanded', !doneBody.hasClass('tl-task-group-collapsed'));
                 });
-                const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: task.text });
-                if (task.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
+                for (const task of completed) {
+                    this.renderTaskCard(doneBody, task, filePath);
+                }
             }
         }
+    }
+
+    private renderTaskCard(container: HTMLElement, task: { text: string; done: boolean; indent: number }, filePath: string): void {
+        const h = this.host;
+        const card = container.createDiv({ cls: `tl-pyramid-task ${task.done ? 'tl-pyramid-task-done' : ''}` });
+        if (task.indent > 0) {
+            card.style.marginLeft = `${task.indent * 20}px`;
+            card.style.fontSize = '12px';
+            card.style.opacity = '0.7';
+            card.style.padding = '5px 8px';
+        }
+        const cb = card.createEl('input', { type: 'checkbox' });
+        cb.checked = task.done;
+        cb.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const f = h.app.vault.getAbstractFileByPath(filePath);
+            if (f && f instanceof TFile) {
+                await h.toggleMdTask(f, task.text, task.done);
+            }
+            task.done = !task.done;
+            cb.checked = task.done;
+            card.toggleClass('tl-pyramid-task-done', task.done);
+            label.style.textDecoration = task.done ? 'line-through' : '';
+            label.style.opacity = task.done ? '0.5' : '';
+        });
+        const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: task.text });
+        if (task.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
     }
 }

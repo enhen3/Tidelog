@@ -1953,3 +1953,321 @@
 	opacity: 0.6;
 	font-style: italic;
 }
+
+/* =============================================================================
+   Phase 7: Week View, Task Grouping, Popover, Task Summaries
+   ============================================================================= */
+
+/* ---- Calendar Mode Toggle ---- */
+.tl-cal-mode-toggle {
+	display: flex;
+	gap: 2px;
+	margin-left: 8px;
+	background: var(--background-modifier-hover);
+	border-radius: 6px;
+	padding: 2px;
+}
+
+.tl-cal-mode-btn {
+	padding: 3px 10px;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	font-size: 12px;
+	cursor: pointer;
+	color: var(--text-muted);
+	transition: all 0.15s ease;
+}
+
+.tl-cal-mode-btn-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.tl-cal-today-btn {
+	margin-left: 6px;
+	padding: 3px 8px;
+	border: none;
+	border-radius: 4px;
+	font-size: 11px;
+	cursor: pointer;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+}
+
+/* ---- Week View ---- */
+.tl-week-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 4px;
+	padding: 8px;
+	min-height: 200px;
+}
+
+.tl-week-col {
+	display: flex;
+	flex-direction: column;
+	background: var(--background-primary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.tl-week-col-today {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.tl-week-day-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 8px;
+	font-size: 11px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.tl-week-day-name {
+	font-weight: 500;
+	opacity: 0.7;
+}
+
+.tl-week-day-num {
+	font-weight: 700;
+	font-size: 13px;
+}
+
+.tl-week-day-num-today {
+	color: var(--interactive-accent);
+}
+
+.tl-week-emotion-badge {
+	margin-left: auto;
+	font-size: 10px;
+	font-weight: 600;
+	color: #fff;
+	padding: 1px 5px;
+	border-radius: 8px;
+}
+
+.tl-week-task-area {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 6px;
+	overflow-y: auto;
+	max-height: 300px;
+}
+
+.tl-week-task-strip {
+	padding: 4px 6px;
+	font-size: 11px;
+	border-radius: 4px;
+	background: var(--background-modifier-hover);
+	border-left: 3px solid var(--interactive-accent);
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: transform 0.1s ease;
+}
+
+.tl-week-task-strip:hover {
+	transform: translateX(2px);
+}
+
+.tl-week-task-strip-done {
+	opacity: 0.4;
+	text-decoration: line-through;
+	border-left-color: var(--text-success);
+}
+
+.tl-week-task-stats {
+	font-size: 10px;
+	text-align: center;
+	opacity: 0.5;
+	padding-top: 4px;
+	margin-top: auto;
+}
+
+.tl-week-empty {
+	font-size: 12px;
+	opacity: 0.3;
+	text-align: center;
+	padding: 20px 0;
+}
+
+/* ---- Month Cell Task Summaries ---- */
+.tl-cal-task-summary {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	margin-top: 2px;
+}
+
+.tl-cal-task-line {
+	font-size: 9px;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0.7;
+	padding: 0 2px;
+}
+
+.tl-cal-task-line-done {
+	text-decoration: line-through;
+	opacity: 0.35;
+}
+
+.tl-cal-task-more {
+	font-size: 8px;
+	opacity: 0.4;
+	text-align: right;
+	padding-right: 2px;
+}
+
+/* ---- Task Popover ---- */
+.tl-cal-popover {
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 220px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	z-index: 100;
+	animation: tl-popover-in 0.15s ease;
+}
+
+@keyframes tl-popover-in {
+	from {
+		opacity: 0;
+		transform: translateX(-50%) translateY(4px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+}
+
+.tl-cal-popover-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tl-cal-popover-close {
+	margin-left: auto;
+	border: none;
+	background: none;
+	cursor: pointer;
+	font-size: 12px;
+	opacity: 0.5;
+	padding: 0 4px;
+}
+
+.tl-cal-popover-emotion {
+	font-size: 11px;
+	opacity: 0.7;
+}
+
+.tl-cal-popover-body {
+	padding: 6px 10px;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.tl-cal-popover-task {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 0;
+	font-size: 12px;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: background 0.1s;
+}
+
+.tl-cal-popover-task:hover {
+	background: var(--background-modifier-hover);
+}
+
+.tl-cal-popover-task-done {
+	opacity: 0.45;
+	text-decoration: line-through;
+}
+
+.tl-cal-popover-check {
+	width: 16px;
+	text-align: center;
+	flex-shrink: 0;
+}
+
+.tl-cal-popover-empty {
+	font-size: 12px;
+	opacity: 0.5;
+	text-align: center;
+	padding: 8px;
+}
+
+.tl-cal-popover-open {
+	padding: 6px 10px;
+	font-size: 11px;
+	text-align: center;
+	color: var(--interactive-accent);
+	cursor: pointer;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.tl-cal-popover-open:hover {
+	background: var(--background-modifier-hover);
+}
+
+/* ---- Kanban Task Grouping ---- */
+.tl-task-group {
+	margin-bottom: 8px;
+}
+
+.tl-task-group-header {
+	font-size: 12px;
+	font-weight: 600;
+	padding: 6px 10px;
+	opacity: 0.7;
+}
+
+.tl-task-group-header-done {
+	cursor: pointer;
+	opacity: 0.5;
+	transition: opacity 0.15s;
+}
+
+.tl-task-group-header-done:hover {
+	opacity: 0.8;
+}
+
+.tl-task-group-header-done::before {
+	content: '▸ ';
+}
+
+.tl-task-group-header-expanded::before {
+	content: '▾ ';
+}
+
+.tl-task-group-collapsed {
+	display: none;
+}
+
+.tl-task-group-done {
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 4px;
+}

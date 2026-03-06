@@ -54,6 +54,8 @@ export class ChatView extends ItemView {
     public kanbanMonthOffset = 0;
     public kanbanDayOffset = 0;
     public calendarMonth: moment.Moment = moment();
+    public calendarViewMode: 'month' | 'week' = 'month';
+    public calendarWeekOffset = 0;
 
     // Live refresh
     private vaultModifyRef: ReturnType<typeof this.app.vault.on> | null = null;

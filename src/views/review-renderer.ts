@@ -7,13 +7,18 @@ import { TFile, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 
+interface CalData { emotionScore: number | null; taskCount: number; completedCount: number; tasks: { text: string; done: boolean }[]; status: string; filePath: string }
+
 /** Minimal interface for the host view that owns this renderer. */
 export interface ReviewHost {
     plugin: TideLogPlugin;
     app: App;
     calendarMonth: moment.Moment;
+    calendarViewMode: 'month' | 'week';
+    calendarWeekOffset: number;
     parseNoteScores(content: string): number | null;
     switchTab(tab: string): void;
+    invalidateTabCache(tab: string): void;
 }
 
 export class ReviewRenderer {
@@ -25,76 +30,98 @@ export class ReviewRenderer {
         await this.renderReviewDashboard(panel);
     }
 
+    // ---- Shared data loader ----
+
+    private async loadDayData(dateStr: string): Promise<CalData | null> {
+        const h = this.host;
+        const path = `${h.plugin.settings.dailyFolder}/${dateStr}.md`;
+        const file = h.app.vault.getAbstractFileByPath(path);
+        if (!file || !(file instanceof TFile)) return null;
+        try {
+            const content = await h.app.vault.read(file);
+            const emotionScore = h.parseNoteScores(content);
+            let status = 'todo';
+            if (content.startsWith('---')) {
+                const end = content.indexOf('---', 3);
+                if (end > 0) {
+                    const sm = content.substring(4, end).match(/status:\s*(\S+)/);
+                    if (sm) status = sm[1];
+                }
+            }
+            const tasks: { text: string; done: boolean }[] = [];
+            for (const line of content.split('\n')) {
+                const m = line.match(/^- \[([ x])\] (.+)$/);
+                if (m) tasks.push({ done: m[1] === 'x', text: m[2].trim() });
+            }
+            return {
+                emotionScore,
+                taskCount: tasks.length,
+                completedCount: tasks.filter(t => t.done).length,
+                tasks,
+                status,
+                filePath: file.path,
+            };
+        } catch { return null; }
+    }
+
     // --- Calendar section ---
 
     private async renderReviewCalendar(panel: HTMLElement): Promise<void> {
         const h = this.host;
+        const mode = h.calendarViewMode || 'month';
         const layer = panel.createDiv('tl-pyramid-layer tl-pyramid-review-cal');
-        // Header
+
+        // Header with nav + mode toggle
         const header = layer.createDiv('tl-pyramid-layer-header tl-cal-header');
         const prevBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '‹' });
-        prevBtn.addEventListener('click', () => {
-            h.calendarMonth.subtract(1, 'month');
-            h.switchTab('review');
-        });
-        header.createEl('span', { cls: 'tl-cal-title', text: h.calendarMonth.format('YYYY年 M月') });
+        const titleEl = header.createEl('span', { cls: 'tl-cal-title' });
         const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
-        nextBtn.addEventListener('click', () => {
-            h.calendarMonth.add(1, 'month');
-            h.switchTab('review');
+
+        // Mode toggle
+        const modeToggle = header.createDiv('tl-cal-mode-toggle');
+        const monthBtn = modeToggle.createEl('button', {
+            cls: `tl-cal-mode-btn ${mode === 'month' ? 'tl-cal-mode-btn-active' : ''}`,
+            text: '月',
         });
+        const weekBtn = modeToggle.createEl('button', {
+            cls: `tl-cal-mode-btn ${mode === 'week' ? 'tl-cal-mode-btn-active' : ''}`,
+            text: '周',
+        });
+        monthBtn.addEventListener('click', () => { h.calendarViewMode = 'month'; h.invalidateTabCache('review'); h.switchTab('review'); });
+        weekBtn.addEventListener('click', () => { h.calendarViewMode = 'week'; h.calendarWeekOffset = 0; h.invalidateTabCache('review'); h.switchTab('review'); });
 
-        // Body with legend + grid
+        if (mode === 'month') {
+            titleEl.setText(h.calendarMonth.format('YYYY年 M月'));
+            prevBtn.addEventListener('click', () => { h.calendarMonth.subtract(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
+            nextBtn.addEventListener('click', () => { h.calendarMonth.add(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
+            await this.renderMonthView(layer);
+        } else {
+            const weekStart = moment().startOf('isoWeek').add(h.calendarWeekOffset, 'weeks');
+            titleEl.setText(`${weekStart.format('M月D日')} — ${moment(weekStart).add(6, 'days').format('M月D日')}`);
+            prevBtn.addEventListener('click', () => { h.calendarWeekOffset--; h.invalidateTabCache('review'); h.switchTab('review'); });
+            nextBtn.addEventListener('click', () => { h.calendarWeekOffset++; h.invalidateTabCache('review'); h.switchTab('review'); });
+
+            // "Today" button
+            if (h.calendarWeekOffset !== 0) {
+                const todayBtn = header.createEl('button', { cls: 'tl-cal-today-btn', text: '本周' });
+                todayBtn.addEventListener('click', () => { h.calendarWeekOffset = 0; h.invalidateTabCache('review'); h.switchTab('review'); });
+            }
+
+            await this.renderWeekView(layer, weekStart);
+        }
+    }
+
+    // ---- Month View ----
+
+    private async renderMonthView(layer: HTMLElement): Promise<void> {
+        const h = this.host;
         const body = layer.createDiv('tl-pyramid-review-cal-body');
-
-        // Legend
-        const legend = body.createDiv('tl-cal-legend');
-        legend.createEl('span', { cls: 'tl-cal-legend-item', text: '情绪：' });
-        const grad = legend.createDiv('tl-cal-legend-gradient');
-        grad.createEl('span', { text: '低' });
-        grad.createEl('div', { cls: 'tl-cal-gradient-bar' });
-        grad.createEl('span', { text: '高' });
 
         // Weekday row
         const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
         const grid = body.createDiv('tl-cal-grid');
         for (const wd of weekdays) {
             grid.createEl('div', { cls: 'tl-cal-weekday', text: wd });
-        }
-
-        // Gather data
-        const folder = h.plugin.settings.dailyFolder;
-        const yearMonth = h.calendarMonth.format('YYYY-MM');
-        const files = h.app.vault.getFiles().filter(f => f.path.startsWith(folder + '/') && f.name.startsWith(yearMonth));
-
-        interface CalData { emotionScore: number | null; taskCount: number; completedCount: number; status: string; filePath: string }
-        const dataMap = new Map<string, CalData>();
-
-        for (const file of files) {
-            try {
-                const content = await h.app.vault.read(file);
-                const dm = file.name.match(/(\d{4}-\d{2}-\d{2})/);
-                if (!dm) continue;
-                const emotionScore = h.parseNoteScores(content);
-                let status = 'todo';
-                // Check YAML status if frontmatter exists
-                if (content.startsWith('---')) {
-                    const end = content.indexOf('---', 3);
-                    if (end > 0) {
-                        const sm = content.substring(4, end).match(/status:\s*(\S+)/);
-                        if (sm) status = sm[1];
-                    }
-                }
-                const allT = content.match(/^- \[[ x]\] /gm);
-                const doneT = content.match(/^- \[x\] /gm);
-                dataMap.set(dm[1], {
-                    emotionScore,
-                    taskCount: allT ? allT.length : 0,
-                    completedCount: doneT ? doneT.length : 0,
-                    status,
-                    filePath: file.path,
-                });
-            } catch { /* skip */ }
         }
 
         // Pad
@@ -107,7 +134,7 @@ export class ReviewRenderer {
 
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = moment(h.calendarMonth).date(d).format('YYYY-MM-DD');
-            const data = dataMap.get(dateStr);
+            const data = await this.loadDayData(dateStr);
             const isToday = dateStr === todayStr;
 
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
@@ -118,11 +145,15 @@ export class ReviewRenderer {
                 cell.style.backgroundColor = `hsla(${hue}, 55%, 75%, 0.35)`;
             }
 
-            if (data && data.taskCount > 0) {
-                const dots = cell.createDiv('tl-cal-dots');
-                for (let i = 0; i < Math.min(data.taskCount, 5); i++) {
-                    const dot = dots.createEl('span', { cls: 'tl-cal-dot' });
-                    if (data.completedCount > i) dot.addClass('tl-cal-dot-done');
+            // Task summary text (max 2 tasks shown)
+            if (data && data.tasks.length > 0) {
+                const summaryDiv = cell.createDiv('tl-cal-task-summary');
+                for (const task of data.tasks.slice(0, 2)) {
+                    const line = summaryDiv.createDiv(`tl-cal-task-line ${task.done ? 'tl-cal-task-line-done' : ''}`);
+                    line.setText(task.text);
+                }
+                if (data.tasks.length > 2) {
+                    summaryDiv.createEl('span', { cls: 'tl-cal-task-more', text: `+${data.tasks.length - 2}` });
                 }
             }
 
@@ -132,17 +163,135 @@ export class ReviewRenderer {
 
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
-                // Tooltip on hover
+                // Tooltip
                 const tipParts: string[] = [];
                 if (data.emotionScore) tipParts.push(`情绪 ${data.emotionScore}/10`);
                 if (data.taskCount > 0) tipParts.push(`任务 ${data.completedCount}/${data.taskCount}`);
                 if (tipParts.length) cell.setAttribute('aria-label', tipParts.join(' · '));
-                cell.addEventListener('click', () => {
-                    const f = h.app.vault.getAbstractFileByPath(data.filePath);
-                    if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
+
+                // Click → popover with task list
+                cell.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showTaskPopover(cell, data, dateStr);
                 });
             }
         }
+    }
+
+    // ---- Week View ----
+
+    private async renderWeekView(layer: HTMLElement, weekStart: moment.Moment): Promise<void> {
+        const h = this.host;
+        const todayStr = moment().format('YYYY-MM-DD');
+        const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+        const weekGrid = layer.createDiv('tl-week-grid');
+
+        for (let i = 0; i < 7; i++) {
+            const d = moment(weekStart).add(i, 'days');
+            const dateStr = d.format('YYYY-MM-DD');
+            const isToday = dateStr === todayStr;
+            const data = await this.loadDayData(dateStr);
+
+            const col = weekGrid.createDiv(`tl-week-col ${isToday ? 'tl-week-col-today' : ''}`);
+
+            // Day header
+            const dayHeader = col.createDiv('tl-week-day-header');
+            dayHeader.createEl('span', { cls: 'tl-week-day-name', text: weekdays[i] });
+            dayHeader.createEl('span', { cls: `tl-week-day-num ${isToday ? 'tl-week-day-num-today' : ''}`, text: `${d.date()}` });
+
+            // Emotion badge
+            if (data?.emotionScore) {
+                const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
+                const badge = dayHeader.createEl('span', { cls: 'tl-week-emotion-badge', text: `${data.emotionScore}` });
+                badge.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
+            }
+
+            // Task strips
+            const taskArea = col.createDiv('tl-week-task-area');
+            if (data && data.tasks.length > 0) {
+                for (const task of data.tasks) {
+                    const strip = taskArea.createDiv(`tl-week-task-strip ${task.done ? 'tl-week-task-strip-done' : ''}`);
+                    strip.setText(task.text);
+                    // Click to open note
+                    strip.addEventListener('click', () => {
+                        const f = h.app.vault.getAbstractFileByPath(data.filePath);
+                        if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
+                    });
+                }
+                // Stats at bottom
+                const stats = taskArea.createDiv('tl-week-task-stats');
+                stats.setText(`${data.completedCount}/${data.taskCount}`);
+            } else {
+                taskArea.createDiv({ cls: 'tl-week-empty', text: '—' });
+            }
+        }
+    }
+
+    // ---- Task Popover ----
+
+    private showTaskPopover(anchor: HTMLElement, data: CalData, dateStr: string): void {
+        const h = this.host;
+        // Remove existing popover
+        document.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
+
+        const popover = document.createElement('div');
+        popover.className = 'tl-cal-popover';
+
+        const popHeader = popover.createDiv('tl-cal-popover-header');
+        popHeader.createEl('span', { text: `📋 ${dateStr.substring(5)}` });
+        const closeBtn = popHeader.createEl('button', { cls: 'tl-cal-popover-close', text: '✕' });
+        closeBtn.addEventListener('click', () => popover.remove());
+
+        if (data.emotionScore) {
+            popHeader.createEl('span', { cls: 'tl-cal-popover-emotion', text: `💭 ${data.emotionScore}/10` });
+        }
+
+        const popBody = popover.createDiv('tl-cal-popover-body');
+        for (const task of data.tasks) {
+            const row = popBody.createDiv(`tl-cal-popover-task ${task.done ? 'tl-cal-popover-task-done' : ''}`);
+            row.createEl('span', { text: task.done ? '✓' : '○', cls: 'tl-cal-popover-check' });
+            row.createEl('span', { text: task.text });
+
+            // Click to toggle task
+            row.addEventListener('click', async () => {
+                const f = h.app.vault.getAbstractFileByPath(data.filePath);
+                if (f && f instanceof TFile) {
+                    const content = await h.app.vault.read(f);
+                    const oldMark = task.done ? '- [x] ' : '- [ ] ';
+                    const newMark = task.done ? '- [ ] ' : '- [x] ';
+                    const newContent = content.replace(oldMark + task.text, newMark + task.text);
+                    await h.app.vault.modify(f, newContent);
+                    task.done = !task.done;
+                    row.toggleClass('tl-cal-popover-task-done', task.done);
+                    row.querySelector('.tl-cal-popover-check')!.textContent = task.done ? '✓' : '○';
+                }
+            });
+        }
+
+        if (data.tasks.length === 0) {
+            popBody.createDiv({ cls: 'tl-cal-popover-empty', text: '暂无任务' });
+        }
+
+        // Open note button
+        const openBtn = popover.createDiv('tl-cal-popover-open');
+        openBtn.setText('打开日记 →');
+        openBtn.addEventListener('click', () => {
+            const f = h.app.vault.getAbstractFileByPath(data.filePath);
+            if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
+            popover.remove();
+        });
+
+        anchor.appendChild(popover);
+
+        // Dismiss on outside click
+        const dismiss = (ev: MouseEvent) => {
+            if (!popover.contains(ev.target as Node)) {
+                popover.remove();
+                document.removeEventListener('click', dismiss);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', dismiss), 50);
     }
 
     // --- Dashboard section ---
