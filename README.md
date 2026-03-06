@@ -96,8 +96,8 @@ TideLog 是一个 Obsidian 插件，通过 AI 引导的 **计划 → 日记 → 
 ### 开发模式
 
 ```bash
-git clone https://github.com/enhen3/dailot.git
-cd dailot
+git clone https://github.com/enhen3/Tidelog.git
+cd Tidelog
 npm install
 npm run dev    # 开发模式（watch）
 npm run build  # 生产构建 + 自动部署

@@ -162,7 +162,7 @@ export default class TideLogPlugin extends Plugin {
             try {
                 await this.kanbanService.ensureWeeklyBoard();
             } catch (e) {
-                console.error('[AI Flow] Failed to ensure kanban board:', e);
+                console.error('[TideLog] Failed to ensure kanban board:', e);
             }
             // Start file linker
             this.fileLinkService.startListening();
