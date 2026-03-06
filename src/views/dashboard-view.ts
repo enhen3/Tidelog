@@ -57,7 +57,7 @@ export class DashboardView extends ItemView {
 
         // Title bar
         const titleBar = this.containerEl_.createDiv('tl-dash-title-bar');
-        titleBar.createEl('h2', { cls: 'tl-dash-title', text: '📊 AI Flow 仪表盘' });
+        titleBar.createEl('h2', { cls: 'tl-dash-title', text: '📊 TideLog 仪表盘' });
 
         const refreshBtn = titleBar.createEl('button', { cls: 'tl-dash-refresh-btn', text: '刷新' });
         refreshBtn.addEventListener('click', () => this.render());
@@ -68,6 +68,62 @@ export class DashboardView extends ItemView {
         const weekProgress = await this.getWeekProgress();
         const principle = await this.getRandomPrinciple();
         const pattern = await this.getLatestPattern();
+
+        // ---- Card 0: Today Focus ----
+        const todayStr = moment().format('YYYY-MM-DD');
+        const todayData = weekProgress.days.find(d => d.date === todayStr);
+        const focusCard = grid.createDiv('tl-dash-card tl-dash-card-focus');
+        focusCard.createEl('h3', { text: '🎯 今日聚焦' });
+        const focusBody = focusCard.createDiv('tl-dash-focus-body');
+
+        // Today's tasks
+        const todayFile = this.app.vault.getAbstractFileByPath(
+            `${this.plugin.settings.dailyFolder}/${todayStr}.md`
+        );
+        interface FocusTask { text: string; done: boolean }
+        const todayTasks: FocusTask[] = [];
+
+        if (todayFile && todayFile instanceof TFile) {
+            try {
+                const content = await this.app.vault.read(todayFile);
+                for (const line of content.split('\n')) {
+                    const m = line.match(/^- \[([ x])\] (.+)$/);
+                    if (m) todayTasks.push({ done: m[1] === 'x', text: m[2].trim() });
+                }
+            } catch { /* skip */ }
+        }
+
+        if (todayTasks.length > 0) {
+            const doneCount = todayTasks.filter(t => t.done).length;
+            const focusStats = focusBody.createDiv('tl-dash-focus-stats');
+            focusStats.createEl('span', { text: `✅ ${doneCount}/${todayTasks.length} 任务` });
+            if (todayData?.emotionScore) {
+                focusStats.createEl('span', { text: `  💭 情绪 ${todayData.emotionScore}/10` });
+            }
+
+            // Carry-forward count
+            try {
+                const unfinished = await this.plugin.vaultManager.getUnfinishedTasks(3);
+                const todayTexts = new Set(todayTasks.map(t => t.text));
+                const carryCount = unfinished.filter(u => !todayTexts.has(u.text)).length;
+                if (carryCount > 0) {
+                    focusStats.createEl('span', { cls: 'tl-dash-focus-carry', text: `  📌 ${carryCount} 待继承` });
+                }
+            } catch { /* skip */ }
+
+            // Task mini-list (top 5)
+            const taskList = focusBody.createDiv('tl-dash-focus-tasks');
+            for (const task of todayTasks.slice(0, 5)) {
+                const row = taskList.createDiv(`tl-dash-focus-task ${task.done ? 'tl-dash-focus-task-done' : ''}`);
+                row.createEl('span', { text: task.done ? '✓' : '○', cls: 'tl-dash-focus-check' });
+                row.createEl('span', { text: task.text });
+            }
+            if (todayTasks.length > 5) {
+                taskList.createEl('span', { cls: 'tl-dash-focus-more', text: `+${todayTasks.length - 5} 更多...` });
+            }
+        } else {
+            focusBody.createEl('p', { cls: 'tl-dash-focus-empty', text: '今日尚未制定计划。使用 Plan 开始晨间规划！' });
+        }
 
         // ---- Card 1: This Week Progress ----
         const progressCard = grid.createDiv('tl-dash-card tl-dash-card-progress');

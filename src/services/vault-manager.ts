@@ -508,4 +508,65 @@ weekly_ref: "[[${weekRef}]]"
     async ensureInsightsFolder(): Promise<void> {
         await this.ensureFolder(`${this.settings.archiveFolder}/Insights`);
     }
+
+    /**
+     * Get unfinished tasks from recent daily notes (excluding today)
+     */
+    async getUnfinishedTasks(daysBack: number = 3): Promise<{ text: string; date: string; filePath: string }[]> {
+        const result: { text: string; date: string; filePath: string }[] = [];
+        const today = this.getEffectiveDate();
+
+        for (let i = 1; i <= daysBack; i++) {
+            const d = moment(today).subtract(i, 'days');
+            const dateStr = d.format('YYYY-MM-DD');
+            const path = `${this.settings.dailyFolder}/${dateStr}.md`;
+            const file = this.app.vault.getAbstractFileByPath(path);
+
+            if (file && file instanceof TFile) {
+                try {
+                    const content = await this.app.vault.read(file);
+                    for (const line of content.split('\n')) {
+                        const m = line.match(/^- \[ \] (.+)$/);
+                        if (m) {
+                            result.push({ text: m[1].trim(), date: dateStr, filePath: path });
+                        }
+                    }
+                } catch { /* skip */ }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Add a task line to today's daily note under 晨间计划
+     */
+    async addTaskToDaily(taskText: string, date?: Date): Promise<void> {
+        const file = await this.getOrCreateDailyNote(date);
+        const content = await this.app.vault.read(file);
+        const taskLine = `- [ ] ${taskText}`;
+
+        // Try to insert under ## 晨间计划
+        const lines = content.split('\n');
+        let insertIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].trim().startsWith('## 晨间计划')) {
+                insertIdx = i + 1;
+                // Skip past any sub-headers, blank lines, or existing content until next ## or ---
+                while (insertIdx < lines.length && !lines[insertIdx].startsWith('## ') && !lines[insertIdx].startsWith('---')) {
+                    insertIdx++;
+                }
+                break;
+            }
+        }
+
+        if (insertIdx >= 0) {
+            lines.splice(insertIdx, 0, taskLine);
+        } else {
+            // Fallback: append
+            lines.push(taskLine);
+        }
+
+        await this.app.vault.modify(file, lines.join('\n'));
+    }
 }

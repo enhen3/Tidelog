@@ -317,6 +317,37 @@ export class KanbanRenderer {
 
         // Task list body
         const body = layer.createDiv('tl-pyramid-daily-body');
+
+        // Carry-forward: show unfinished tasks from past days (only for today)
+        if (isToday) {
+            try {
+                const unfinished = await h.plugin.vaultManager.getUnfinishedTasks(3);
+                // Exclude tasks that already exist in today's list
+                const todayTexts = new Set(tasks.map(t => t.text));
+                const carryTasks = unfinished.filter(u => !todayTexts.has(u.text));
+
+                if (carryTasks.length > 0) {
+                    const carrySection = body.createDiv('tl-carry-forward');
+                    const carryHeader = carrySection.createDiv('tl-carry-forward-header');
+                    carryHeader.createEl('span', { text: `📌 待继承 (${carryTasks.length})` });
+
+                    for (const ct of carryTasks) {
+                        const row = carrySection.createDiv('tl-carry-forward-row');
+                        row.createEl('span', { cls: 'tl-carry-forward-text', text: ct.text });
+                        row.createEl('span', { cls: 'tl-carry-forward-date', text: ct.date.substring(5) });
+                        const addBtn = row.createEl('button', { cls: 'tl-carry-forward-add', text: '+' });
+                        addBtn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            await h.plugin.vaultManager.addTaskToDaily(ct.text);
+                            row.remove();
+                            h.invalidateTabCache('kanban');
+                            h.switchTab('kanban');
+                        });
+                    }
+                }
+            } catch { /* skip */ }
+        }
+
         if (tasks.length === 0) {
             body.createDiv({ cls: 'tl-pyramid-empty', text: '暂无任务' });
         } else {

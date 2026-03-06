@@ -132,6 +132,11 @@ export class ReviewRenderer {
 
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
+                // Tooltip on hover
+                const tipParts: string[] = [];
+                if (data.emotionScore) tipParts.push(`情绪 ${data.emotionScore}/10`);
+                if (data.taskCount > 0) tipParts.push(`任务 ${data.completedCount}/${data.taskCount}`);
+                if (tipParts.length) cell.setAttribute('aria-label', tipParts.join(' · '));
                 cell.addEventListener('click', () => {
                     const f = h.app.vault.getAbstractFileByPath(data.filePath);
                     if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);

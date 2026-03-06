@@ -1791,3 +1791,165 @@
 .tl-q-disabled {
 	opacity: 0.45;
 }
+
+/* =============================================================================
+   Phase 6: Calendar Tooltip, Carry-Forward, Today Focus
+   ============================================================================= */
+
+/* Calendar clickable cells */
+.tl-cal-cell-clickable {
+	cursor: pointer;
+	position: relative;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tl-cal-cell-clickable:hover {
+	transform: scale(1.08);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	z-index: 2;
+}
+
+/* Tooltip via aria-label */
+.tl-cal-cell-clickable[aria-label] {
+	position: relative;
+}
+
+.tl-cal-cell-clickable[aria-label]::after {
+	content: attr(aria-label);
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 4px 8px;
+	font-size: 11px;
+	white-space: nowrap;
+	background: var(--background-modifier-message);
+	color: var(--text-normal);
+	border-radius: 4px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease;
+	z-index: 10;
+}
+
+.tl-cal-cell-clickable[aria-label]:hover::after {
+	opacity: 1;
+}
+
+/* ---- Carry-Forward Section ---- */
+.tl-carry-forward {
+	margin-bottom: 10px;
+	padding: 8px 10px;
+	background: var(--background-modifier-hover);
+	border-radius: var(--tl-radius-sm, 6px);
+	border-left: 3px solid hsl(35, 70%, 55%);
+}
+
+.tl-carry-forward-header {
+	font-size: 12px;
+	font-weight: 600;
+	margin-bottom: 6px;
+	opacity: 0.8;
+}
+
+.tl-carry-forward-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 0;
+	font-size: 12px;
+	opacity: 0.7;
+}
+
+.tl-carry-forward-text {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tl-carry-forward-date {
+	font-size: 10px;
+	opacity: 0.5;
+	white-space: nowrap;
+}
+
+.tl-carry-forward-add {
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: 14px;
+	line-height: 22px;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: transform 0.15s ease;
+}
+
+.tl-carry-forward-add:hover {
+	transform: scale(1.15);
+}
+
+/* ---- Dashboard: Today Focus ---- */
+.tl-dash-card-focus {
+	grid-column: 1 / -1;
+	border-left: 3px solid var(--interactive-accent);
+}
+
+.tl-dash-focus-body {
+	padding: 8px 0;
+}
+
+.tl-dash-focus-stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	font-size: 13px;
+	margin-bottom: 8px;
+	opacity: 0.85;
+}
+
+.tl-dash-focus-carry {
+	color: hsl(35, 70%, 55%);
+	font-weight: 600;
+}
+
+.tl-dash-focus-tasks {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.tl-dash-focus-task {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	padding: 3px 0;
+}
+
+.tl-dash-focus-task-done {
+	opacity: 0.45;
+	text-decoration: line-through;
+}
+
+.tl-dash-focus-check {
+	width: 16px;
+	text-align: center;
+	flex-shrink: 0;
+}
+
+.tl-dash-focus-more {
+	font-size: 11px;
+	opacity: 0.5;
+	padding-top: 2px;
+}
+
+.tl-dash-focus-empty {
+	font-size: 13px;
+	opacity: 0.6;
+	font-style: italic;
+}
