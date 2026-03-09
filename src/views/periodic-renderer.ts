@@ -201,12 +201,50 @@ export class PeriodicRenderer {
             preview.createDiv({ cls: 'tl-periodic-preview-empty', text: '暂无任务' });
         }
 
+        // Review / Reflection section
+        this.renderReviewSection(preview, content);
+
         // Open note button
         const openBtn = preview.createDiv('tl-periodic-open-btn');
         openBtn.setText('打开日记 →');
         openBtn.addEventListener('click', () => {
             h.app.workspace.getLeaf().openFile(file);
         });
+    }
+
+    /** Extract and render 晚间复盘 sections from daily note content */
+    private renderReviewSection(preview: HTMLElement, content: string): void {
+        // Find 晚间复盘 section
+        const reviewMatch = content.match(/## 晚间复盘\n([\s\S]*?)(?=\n---\s*$|$)/m);
+        if (!reviewMatch) return;
+
+        const reviewContent = reviewMatch[1];
+        const section = preview.createDiv('tl-periodic-review-section');
+        section.createDiv({ cls: 'tl-periodic-review-label', text: '📝 复盘' });
+
+        // Extract sub-sections
+        const subSections: { icon: string; title: string; pattern: RegExp }[] = [
+            { icon: '🎯', title: '目标对标', pattern: /### 目标对标\n([\s\S]*?)(?=###|$)/ },
+            { icon: '🏆', title: '成功日记', pattern: /### 成功日记\n([\s\S]*?)(?=###|$)/ },
+            { icon: '😟', title: '焦虑觉察', pattern: /### 焦虑觉察\n([\s\S]*?)(?=###|$)/ },
+            { icon: '📌', title: '明日计划', pattern: /### 明日计划\n([\s\S]*?)(?=###|$)/ },
+        ];
+
+        for (const sub of subSections) {
+            const m = reviewContent.match(sub.pattern);
+            if (m && m[1].trim()) {
+                const text = m[1].trim();
+                // Truncate to 2 lines
+                const lines = text.split('\n').filter(l => l.trim()).slice(0, 2);
+                const item = section.createDiv('tl-periodic-review-item');
+                item.createEl('span', { cls: 'tl-periodic-review-icon', text: sub.icon });
+                const textDiv = item.createDiv('tl-periodic-review-text');
+                textDiv.createEl('div', { cls: 'tl-periodic-review-title', text: sub.title });
+                for (const line of lines) {
+                    textDiv.createEl('div', { cls: 'tl-periodic-review-line', text: line.replace(/^\d+\.\s*\*\*.*?\*\*[:：]\s*/, '').replace(/^[-*]\s*/, '') });
+                }
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────
@@ -353,6 +391,9 @@ export class PeriodicRenderer {
             preview.createDiv({ cls: 'tl-periodic-preview-empty', text: '暂无周计划' });
         }
 
+        // AI Insight summary for this week
+        await this.renderWeeklyInsight(preview, weekStart);
+
         // Open / Create button
         const openBtn = preview.createDiv('tl-periodic-open-btn');
         if (weekFile) {
@@ -366,6 +407,61 @@ export class PeriodicRenderer {
                 const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
                 const f = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
                 h.app.workspace.getLeaf().openFile(f);
+            });
+        }
+    }
+
+    /** Load and render the AI weekly insight report summary */
+    private async renderWeeklyInsight(preview: HTMLElement, weekStart: moment.Moment): Promise<void> {
+        const h = this.host;
+        const weekNum = weekStart.format('ww');
+        const year = weekStart.format('YYYY');
+        // Try various naming patterns
+        const patterns = [
+            `${h.plugin.settings.archiveFolder}/Insights/${year}-W${weekNum}-周报.md`,
+            `${h.plugin.settings.archiveFolder}/Insights/${year}-W${parseInt(weekNum, 10)}-周报.md`,
+        ];
+
+        let insightContent: string | null = null;
+        let insightFile: TFile | null = null;
+        for (const p of patterns) {
+            const f = h.app.vault.getAbstractFileByPath(p);
+            if (f && f instanceof TFile) {
+                insightContent = await h.app.vault.read(f);
+                insightFile = f;
+                break;
+            }
+        }
+
+        if (!insightContent) return;
+
+        const section = preview.createDiv('tl-periodic-insight-section');
+        section.createDiv({ cls: 'tl-periodic-insight-label', text: '🤖 AI 周报摘要' });
+
+        // Extract key sections from insight report
+        const extracts: { icon: string; pattern: RegExp }[] = [
+            { icon: '📊', pattern: /### \d+\.\s*本周概览\n([\s\S]*?)(?=###|$)/ },
+            { icon: '🏆', pattern: /### \d+\.\s*成功模式\n([\s\S]*?)(?=###|$)/ },
+            { icon: '💡', pattern: /### \d+\.\s*下周建议\n([\s\S]*?)(?=###|$)/ },
+        ];
+
+        for (const ex of extracts) {
+            const m = insightContent.match(ex.pattern);
+            if (m && m[1].trim()) {
+                const lines = m[1].trim().split('\n').filter(l => l.trim()).slice(0, 3);
+                for (const line of lines) {
+                    const itemDiv = section.createDiv('tl-periodic-insight-item');
+                    itemDiv.setText(line.replace(/^[-*]\s*\*\*.*?\*\*[:：]?\s*/, '').replace(/^[-*]\s*/, '').replace(/^\d+\.\s*\*\*.*?\*\*[:：]?\s*/, ''));
+                }
+            }
+        }
+
+        // Link to full report
+        if (insightFile) {
+            const link = section.createDiv('tl-periodic-insight-link');
+            link.setText('查看完整周报 →');
+            link.addEventListener('click', () => {
+                h.app.workspace.getLeaf().openFile(insightFile!);
             });
         }
     }
