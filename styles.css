@@ -2338,7 +2338,7 @@
 	display: flex;
 	gap: 16px;
 	padding: 2px 12px 8px;
-	justify-content: flex-start;
+	justify-content: center;
 }
 
 .tl-periodic-mode-btn {
@@ -2359,7 +2359,17 @@
 	opacity: 0.65;
 }
 
+.tl-periodic-mode-btn svg {
+	width: 13px;
+	height: 13px;
+	opacity: 0.7;
+}
+
 .tl-periodic-mode-btn:hover {
+	opacity: 1;
+}
+
+.tl-periodic-mode-btn:hover svg {
 	opacity: 1;
 }
 

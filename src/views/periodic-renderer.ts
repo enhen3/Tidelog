@@ -3,7 +3,7 @@
  * Replaces the old kanban-renderer with a day/week/month period selector + content preview.
  */
 
-import { TFile, moment } from 'obsidian';
+import { TFile, moment, setIcon } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 
@@ -51,16 +51,17 @@ export class PeriodicRenderer {
     private renderModeBar(panel: HTMLElement): void {
         const h = this.host;
         const bar = panel.createDiv('tl-periodic-mode-bar');
-        const modes: { id: PeriodicMode; label: string }[] = [
-            { id: 'day', label: '日' },
-            { id: 'week', label: '周' },
-            { id: 'month', label: '月' },
+        const modes: { id: PeriodicMode; icon: string; label: string }[] = [
+            { id: 'day', icon: 'sun', label: '日' },
+            { id: 'week', icon: 'calendar-range', label: '周' },
+            { id: 'month', icon: 'calendar', label: '月' },
         ];
         for (const m of modes) {
             const btn = bar.createEl('button', {
                 cls: `tl-periodic-mode-btn ${h.periodicMode === m.id ? 'tl-periodic-mode-btn-active' : ''}`,
-                text: m.label,
             });
+            setIcon(btn, m.icon);
+            btn.createSpan({ text: m.label });
             btn.addEventListener('click', () => {
                 h.periodicMode = m.id;
                 // Reset to current period when switching
