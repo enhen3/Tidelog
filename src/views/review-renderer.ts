@@ -221,12 +221,30 @@ export class ReviewRenderer {
 
             cell.appendChild(svg);
 
-            // Click to open popover (no aria-label tooltip)
+            // Hover to show popover (no click needed)
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
-                cell.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.showTaskPopover(cell, data, dateStr);
+                let popoverTimeout: ReturnType<typeof setTimeout> | null = null;
+
+                cell.addEventListener('mouseenter', () => {
+                    popoverTimeout = setTimeout(() => {
+                        this.showTaskPopover(cell, data, dateStr);
+                    }, 200);
+                });
+                cell.addEventListener('mouseleave', () => {
+                    if (popoverTimeout) clearTimeout(popoverTimeout);
+                    // Give a small delay so user can move into popover
+                    setTimeout(() => {
+                        const popover = cell.querySelector('.tl-cal-popover') as HTMLElement;
+                        if (popover && !popover.matches(':hover')) {
+                            popover.remove();
+                        }
+                    }, 150);
+                });
+                // Click to open note directly
+                cell.addEventListener('click', () => {
+                    const f = h.app.vault.getAbstractFileByPath(data.filePath);
+                    if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
                 });
             }
         }
@@ -285,106 +303,180 @@ export class ReviewRenderer {
     // ---- Task Popover ----
 
     private showTaskPopover(anchor: HTMLElement, data: CalData, dateStr: string): void {
-        const h = this.host;
         // Remove existing popover
         document.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
 
         const popover = document.createElement('div');
         popover.className = 'tl-cal-popover';
 
+        // Header (no close button)
         const popHeader = popover.createDiv('tl-cal-popover-header');
-        popHeader.createEl('span', { text: `📋 ${dateStr.substring(5)}` });
-        const closeBtn = popHeader.createEl('button', { cls: 'tl-cal-popover-close', text: '✕' });
-        closeBtn.addEventListener('click', () => popover.remove());
+        const dateLabel = dateStr.substring(5);
+        const hasPlan = data.hasPlan;
+        const hasReview = data.hasReview;
+        popHeader.createEl('span', { text: dateLabel });
+        if (hasPlan) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-plan', text: '计划' });
+        if (hasReview) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-review', text: '复盘' });
+        if (data.emotionScore) popHeader.createEl('span', { cls: 'tl-cal-popover-badge', text: `❤ ${data.emotionScore}` });
 
-        if (data.emotionScore) {
-            popHeader.createEl('span', { cls: 'tl-cal-popover-emotion', text: `💭 ${data.emotionScore}/10` });
+        // Tasks
+        if (data.tasks.length > 0) {
+            const popBody = popover.createDiv('tl-cal-popover-body');
+            for (const task of data.tasks.slice(0, 4)) {
+                const row = popBody.createDiv(`tl-cal-popover-task ${task.done ? 'tl-cal-popover-task-done' : ''}`);
+                row.createEl('span', { text: task.done ? '✓' : '○', cls: 'tl-cal-popover-check' });
+                row.createEl('span', { text: task.text });
+            }
+            if (data.tasks.length > 4) {
+                popBody.createEl('span', { cls: 'tl-cal-popover-more', text: `+${data.tasks.length - 4} 更多` });
+            }
+        } else {
+            popover.createDiv({ cls: 'tl-cal-popover-empty', text: '暂无任务' });
         }
 
-        const popBody = popover.createDiv('tl-cal-popover-body');
-        for (const task of data.tasks) {
-            const row = popBody.createDiv(`tl-cal-popover-task ${task.done ? 'tl-cal-popover-task-done' : ''}`);
-            row.createEl('span', { text: task.done ? '✓' : '○', cls: 'tl-cal-popover-check' });
-            row.createEl('span', { text: task.text });
-
-            // Click to toggle task
-            row.addEventListener('click', async () => {
-                const f = h.app.vault.getAbstractFileByPath(data.filePath);
-                if (f && f instanceof TFile) {
-                    const content = await h.app.vault.read(f);
-                    const oldMark = task.done ? '- [x] ' : '- [ ] ';
-                    const newMark = task.done ? '- [ ] ' : '- [x] ';
-                    const newContent = content.replace(oldMark + task.text, newMark + task.text);
-                    await h.app.vault.modify(f, newContent);
-                    task.done = !task.done;
-                    row.toggleClass('tl-cal-popover-task-done', task.done);
-                    row.querySelector('.tl-cal-popover-check')!.textContent = task.done ? '✓' : '○';
-                }
-            });
-        }
-
-        if (data.tasks.length === 0) {
-            popBody.createDiv({ cls: 'tl-cal-popover-empty', text: '暂无任务' });
-        }
-
-        // Open note button
-        const openBtn = popover.createDiv('tl-cal-popover-open');
-        openBtn.setText('打开日记 →');
-        openBtn.addEventListener('click', () => {
-            const f = h.app.vault.getAbstractFileByPath(data.filePath);
-            if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
+        // Keep popover alive when hovering over it
+        popover.addEventListener('mouseleave', () => {
             popover.remove();
         });
 
         anchor.appendChild(popover);
-
-        // Dismiss on outside click
-        const dismiss = (ev: MouseEvent) => {
-            if (!popover.contains(ev.target as Node)) {
-                popover.remove();
-                document.removeEventListener('click', dismiss);
-            }
-        };
-        setTimeout(() => document.addEventListener('click', dismiss), 50);
     }
 
     // --- Dashboard section ---
 
     private async renderReviewDashboard(panel: HTMLElement): Promise<void> {
-        // Only keep the Insight card
         const h = this.host;
-        const insightCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-insight');
-        const insightHeader = insightCard.createDiv('tl-pyramid-layer-header');
-        insightHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💡' });
-        insightHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '洞察' });
-        const insightBody = insightCard.createDiv('tl-dash-card-body');
 
-        // Principle section
+        // ---- Daily Insight ----
+        const today = moment();
+        const todayPath = `${h.plugin.settings.dailyFolder}/${today.format('YYYY-MM-DD')}.md`;
+        const todayFile = h.app.vault.getAbstractFileByPath(todayPath);
+        if (todayFile && todayFile instanceof TFile) {
+            try {
+                const content = await h.app.vault.read(todayFile);
+                // Extract review summary if exists
+                const reviewIdx = content.indexOf('## 晚间复盘');
+                if (reviewIdx > 0) {
+                    let reviewText = content.substring(reviewIdx + '## 晚间复盘'.length);
+                    const endIdx = reviewText.indexOf('\n---');
+                    if (endIdx > 0) reviewText = reviewText.substring(0, endIdx);
+                    const lines = reviewText.split('\n').map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith('#')).slice(0, 2);
+                    if (lines.length > 0) {
+                        const dailyCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
+                        const dHeader = dailyCard.createDiv('tl-pyramid-layer-header');
+                        dHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📖' });
+                        dHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '今日复盘' });
+                        const dBody = dailyCard.createDiv('tl-dash-card-body');
+                        for (const line of lines) {
+                            dBody.createEl('p', { cls: 'tl-dash-insight-line', text: line.replace(/^[-*]\s*/, '') });
+                        }
+                    }
+                }
+            } catch { /* skip */ }
+        }
+
+        // ---- Weekly Insight ----
+        const weekNum = today.isoWeek();
+        const weekYear = today.isoWeekYear();
+        const weekPatterns = [
+            `${weekYear}-W${weekNum}-周报.md`,
+            `${weekYear}-W${String(weekNum).padStart(2, '0')}-周报.md`,
+        ];
+        for (const wp of weekPatterns) {
+            const wPath = `${h.plugin.settings.archiveFolder}/Insights/${wp}`;
+            const wFile = h.app.vault.getAbstractFileByPath(wPath);
+            if (wFile && wFile instanceof TFile) {
+                try {
+                    const content = await h.app.vault.read(wFile);
+                    const weekCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
+                    const wHeader = weekCard.createDiv('tl-pyramid-layer-header');
+                    wHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📊' });
+                    wHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `W${weekNum} 周报洞察` });
+                    const wBody = weekCard.createDiv('tl-dash-card-body');
+
+                    // Extract key sections
+                    const sections = ['本周概览', '成功模式', '下周建议'];
+                    for (const sec of sections) {
+                        const idx = content.indexOf(sec);
+                        if (idx < 0) continue;
+                        let text = content.substring(idx + sec.length);
+                        const nextH = text.indexOf('\n###');
+                        if (nextH > 0) text = text.substring(0, nextH);
+                        const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith('#')).slice(0, 2);
+                        if (lines.length > 0) {
+                            wBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
+                            for (const line of lines) {
+                                wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line.replace(/^[-*\d.]+\s*/, '') });
+                            }
+                        }
+                    }
+
+                    // Link to full report
+                    const link = wBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整周报 →' });
+                    link.addEventListener('click', () => {
+                        h.app.workspace.getLeaf().openFile(wFile as TFile);
+                    });
+                } catch { /* skip */ }
+                break;
+            }
+        }
+
+        // ---- Monthly Insight ----
+        const monthKey = today.format('YYYY-MM');
+        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${monthKey}-月报.md`;
+        const mFile = h.app.vault.getAbstractFileByPath(mPath);
+        if (mFile && mFile instanceof TFile) {
+            try {
+                const content = await h.app.vault.read(mFile);
+                const monthCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
+                const mHeader = monthCard.createDiv('tl-pyramid-layer-header');
+                mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
+                mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} 月报洞察` });
+                const mBody = monthCard.createDiv('tl-dash-card-body');
+
+                const lines = content.split('\n').map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith('#') && !l.startsWith('---')).slice(0, 3);
+                for (const line of lines) {
+                    mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line.replace(/^[-*\d.]+\s*/, '') });
+                }
+
+                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整月报 →' });
+                link.addEventListener('click', () => {
+                    h.app.workspace.getLeaf().openFile(mFile as TFile);
+                });
+            } catch { /* skip */ }
+        }
+
+        // ---- Principles & Patterns ----
         let principle: string | null = null;
         const pPath = `${h.plugin.settings.archiveFolder}/principles.md`;
         const pFile = h.app.vault.getAbstractFileByPath(pPath);
         if (pFile && pFile instanceof TFile) {
             try {
                 const content = await h.app.vault.read(pFile);
-                const lines = content.split('\n').filter(l => l.startsWith('- ')).map(l => l.substring(2).trim());
+                const lines = content.split('\n').filter((l: string) => l.startsWith('- ')).map((l: string) => l.substring(2).trim());
                 if (lines.length) principle = lines[Math.floor(Math.random() * lines.length)];
             } catch { /* skip */ }
         }
-        insightBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle || '尚无原则数据' });
 
-        // Pattern section
         let pattern: string | null = null;
         const ptPath = `${h.plugin.settings.archiveFolder}/patterns.md`;
         const ptFile = h.app.vault.getAbstractFileByPath(ptPath);
         if (ptFile && ptFile instanceof TFile) {
             try {
                 const content = await h.app.vault.read(ptFile);
-                const lines = content.split('\n').filter(l => l.startsWith('- ')).map(l => l.substring(2).trim());
+                const lines = content.split('\n').filter((l: string) => l.startsWith('- ')).map((l: string) => l.substring(2).trim());
                 if (lines.length) pattern = lines[lines.length - 1];
             } catch { /* skip */ }
         }
-        if (pattern) {
-            insightBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });
+
+        if (principle || pattern) {
+            const ppCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
+            const ppHeader = ppCard.createDiv('tl-pyramid-layer-header');
+            ppHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💡' });
+            ppHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '原则与模式' });
+            const ppBody = ppCard.createDiv('tl-dash-card-body');
+            if (principle) ppBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle });
+            if (pattern) ppBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });
         }
     }
 }

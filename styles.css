@@ -1622,6 +1622,36 @@
 	margin: 6px 0 0;
 }
 
+.tl-dash-insight-line {
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-normal);
+	margin: 2px 0;
+}
+
+.tl-dash-insight-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	margin-top: 8px;
+	margin-bottom: 2px;
+}
+
+.tl-dash-insight-link {
+	font-size: 12px;
+	color: var(--interactive-accent);
+	cursor: pointer;
+	margin-top: 8px;
+	padding-top: 6px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.tl-dash-insight-link:hover {
+	text-decoration: underline;
+}
+
 /* Links */
 .tl-dash-card-links .tl-dash-link-grid {
 	display: flex;
@@ -2165,24 +2195,28 @@
 	align-items: center;
 	gap: 6px;
 	padding: 8px 10px;
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 600;
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.tl-cal-popover-close {
-	margin-left: auto;
-	border: none;
-	background: none;
-	cursor: pointer;
-	font-size: 12px;
-	opacity: 0.5;
-	padding: 0 4px;
+.tl-cal-popover-badge {
+	font-size: 10px;
+	font-weight: 500;
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
 }
 
-.tl-cal-popover-emotion {
-	font-size: 11px;
-	opacity: 0.7;
+.tl-cal-popover-badge-plan {
+	background: rgba(52, 211, 153, 0.15);
+	color: #059669;
+}
+
+.tl-cal-popover-badge-review {
+	background: rgba(96, 165, 250, 0.15);
+	color: #2563EB;
 }
 
 .tl-cal-popover-body {
@@ -2195,15 +2229,14 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 4px 0;
+	padding: 3px 0;
 	font-size: 12px;
-	cursor: pointer;
-	border-radius: 4px;
-	transition: background 0.1s;
 }
 
-.tl-cal-popover-task:hover {
-	background: var(--background-modifier-hover);
+.tl-cal-popover-more {
+	font-size: 11px;
+	color: var(--text-muted);
+	padding: 2px 0;
 }
 
 .tl-cal-popover-task-done {
