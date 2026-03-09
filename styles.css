@@ -47,6 +47,20 @@
 	--tl-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
+/* Dark mode overrides — follow Obsidian theme */
+.theme-dark .tl-chat-container {
+	--tl-surface: var(--background-primary);
+	--tl-surface-raised: var(--background-secondary);
+	--tl-surface-card: var(--background-secondary-alt);
+	--tl-text-primary: var(--text-normal);
+	--tl-text-secondary: var(--text-muted);
+	--tl-text-tertiary: var(--text-faint);
+	--tl-border: var(--background-modifier-border);
+	--tl-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+	--tl-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+	--tl-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
 /* =============================================================================
    Container
    ============================================================================= */
@@ -1633,8 +1647,6 @@
 	font-size: 11px;
 	font-weight: 600;
 	color: var(--text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
 	margin-top: 8px;
 	margin-bottom: 2px;
 }

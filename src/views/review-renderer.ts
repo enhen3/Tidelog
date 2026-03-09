@@ -428,21 +428,36 @@ export class ReviewRenderer {
                         wHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `W${wk} \u5468\u62a5\u6d1e\u5bdf` });
                         const wBody = weekCard.createDiv('tl-dash-card-body');
 
-                        const sections = ['\u672c\u5468\u6982\u89c8', '\u6210\u529f\u6a21\u5f0f', '\u4e0b\u5468\u5efa\u8bae'];
-                        for (const sec of sections) {
-                            const idx = content.indexOf(sec);
-                            if (idx < 0) continue;
-                            let text = content.substring(idx + sec.length);
-                            const nextH = text.search(/\n#{2,3}\s/);
-                            if (nextH > 0) text = text.substring(0, nextH);
-                            const lines = text.split('\n')
+                        // Prefer AI-generated dashboard summary
+                        const summaryIdx = content.indexOf('\u4eea\u8868\u76d8\u6458\u8981');
+                        if (summaryIdx >= 0) {
+                            let summaryText = content.substring(summaryIdx + '\u4eea\u8868\u76d8\u6458\u8981'.length);
+                            const nextH = summaryText.search(/\n#{2,3}\s/);
+                            if (nextH > 0) summaryText = summaryText.substring(0, nextH);
+                            const lines = summaryText.split('\n')
                                 .map((l: string) => stripMd(l))
-                                .filter((l: string) => l.length > 0)
-                                .slice(0, 2);
-                            if (lines.length > 0) {
-                                wBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
-                                for (const line of lines) {
-                                    wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                                .filter((l: string) => l.length > 0);
+                            for (const line of lines) {
+                                wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                            }
+                        } else {
+                            // Fallback: extract key sections
+                            const sections = ['\u672c\u5468\u6982\u89c8', '\u6210\u529f\u6a21\u5f0f', '\u4e0b\u5468\u5efa\u8bae'];
+                            for (const sec of sections) {
+                                const idx = content.indexOf(sec);
+                                if (idx < 0) continue;
+                                let text = content.substring(idx + sec.length);
+                                const nextH2 = text.search(/\n#{2,3}\s/);
+                                if (nextH2 > 0) text = text.substring(0, nextH2);
+                                const lines = text.split('\n')
+                                    .map((l: string) => stripMd(l))
+                                    .filter((l: string) => l.length > 0)
+                                    .slice(0, 2);
+                                if (lines.length > 0) {
+                                    wBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
+                                    for (const line of lines) {
+                                        wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                                    }
                                 }
                             }
                         }
@@ -471,22 +486,36 @@ export class ReviewRenderer {
                 mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} \u6708\u62a5\u6d1e\u5bdf` });
                 const mBody = monthCard.createDiv('tl-dash-card-body');
 
-                // Extract key sections from the monthly report
-                const mSections = ['\u6708\u5ea6\u603b\u7ed3', '\u6210\u957f\u8bb0\u5f55', '\u6210\u957f\u5efa\u8bae'];
-                for (const sec of mSections) {
-                    const idx = content.indexOf(sec);
-                    if (idx < 0) continue;
-                    let text = content.substring(idx + sec.length);
-                    const nextH = text.search(/\n#{2,3}\s/);
-                    if (nextH > 0) text = text.substring(0, nextH);
-                    const lines = text.split('\n')
+                // Prefer AI-generated dashboard summary
+                const summaryIdx = content.indexOf('\u4eea\u8868\u76d8\u6458\u8981');
+                if (summaryIdx >= 0) {
+                    let summaryText = content.substring(summaryIdx + '\u4eea\u8868\u76d8\u6458\u8981'.length);
+                    const nextH = summaryText.search(/\n#{2,3}\s/);
+                    if (nextH > 0) summaryText = summaryText.substring(0, nextH);
+                    const lines = summaryText.split('\n')
                         .map((l: string) => stripMd(l))
-                        .filter((l: string) => l.length > 0)
-                        .slice(0, 2);
-                    if (lines.length > 0) {
-                        mBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
-                        for (const line of lines) {
-                            mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                        .filter((l: string) => l.length > 0);
+                    for (const line of lines) {
+                        mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                    }
+                } else {
+                    // Fallback: extract key sections
+                    const mSections = ['\u6708\u5ea6\u603b\u7ed3', '\u6210\u957f\u8bb0\u5f55', '\u6210\u957f\u5efa\u8bae'];
+                    for (const sec of mSections) {
+                        const idx = content.indexOf(sec);
+                        if (idx < 0) continue;
+                        let text = content.substring(idx + sec.length);
+                        const nextH2 = text.search(/\n#{2,3}\s/);
+                        if (nextH2 > 0) text = text.substring(0, nextH2);
+                        const lines = text.split('\n')
+                            .map((l: string) => stripMd(l))
+                            .filter((l: string) => l.length > 0)
+                            .slice(0, 2);
+                        if (lines.length > 0) {
+                            mBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
+                            for (const line of lines) {
+                                mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                            }
                         }
                     }
                 }
