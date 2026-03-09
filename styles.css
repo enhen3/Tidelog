@@ -2566,6 +2566,13 @@
 	display: none;
 }
 
+.tl-periodic-toggle-indicator {
+	display: inline-block;
+	width: 12px;
+	font-size: 11px;
+	transition: transform 0.15s ease;
+}
+
 .tl-periodic-task-row {
 	display: flex;
 	align-items: center;

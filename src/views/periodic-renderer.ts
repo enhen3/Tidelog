@@ -166,7 +166,7 @@ export class PeriodicRenderer {
         const meta = previewHeader.createDiv('tl-periodic-preview-meta');
         if (emotionScore) {
             const hue = Math.round(((emotionScore - 1) / 9) * 120);
-            const badge = meta.createEl('span', { cls: 'tl-periodic-emotion-badge', text: `💭 ${emotionScore}` });
+            const badge = meta.createEl('span', { cls: 'tl-periodic-emotion-badge', text: `心情 ${emotionScore}/10` });
             badge.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
         }
         if (status === 'completed') {
@@ -188,10 +188,13 @@ export class PeriodicRenderer {
             }
             if (completed.length > 0) {
                 const doneLabel = taskSection.createDiv({ cls: 'tl-periodic-task-group-label tl-periodic-task-group-done-label' });
-                doneLabel.setText(`✅ 已完成 (${completed.length})`);
-                const doneBody = taskSection.createDiv('tl-periodic-task-done-body tl-periodic-collapsed');
+                const indicator = doneLabel.createEl('span', { cls: 'tl-periodic-toggle-indicator', text: '▾' });
+                doneLabel.appendText(` ✅ 已完成 (${completed.length})`);
+                const doneBody = taskSection.createDiv('tl-periodic-task-done-body');
                 doneLabel.addEventListener('click', () => {
-                    doneBody.toggleClass('tl-periodic-collapsed', !doneBody.hasClass('tl-periodic-collapsed'));
+                    const collapsed = !doneBody.hasClass('tl-periodic-collapsed');
+                    doneBody.toggleClass('tl-periodic-collapsed', collapsed);
+                    indicator.setText(collapsed ? '▸' : '▾');
                 });
                 for (const task of completed) {
                     this.renderTask(doneBody, task, file);
