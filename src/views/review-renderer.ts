@@ -141,19 +141,19 @@ export class ReviewRenderer {
 
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
 
-            // Apple Watch-style SVG activity ring
+            // Split-ring SVG: left half = plan, right half = review
             const hasPlan = data?.hasPlan ?? false;
             const hasReview = data?.hasReview ?? false;
             const hasData = !!data;
 
             const svgNS = 'http://www.w3.org/2000/svg';
             const svg = document.createElementNS(svgNS, 'svg');
-            svg.setAttribute('width', '32');
-            svg.setAttribute('height', '32');
-            svg.setAttribute('viewBox', '0 0 32 32');
+            svg.setAttribute('width', '34');
+            svg.setAttribute('height', '34');
+            svg.setAttribute('viewBox', '0 0 34 34');
             svg.setAttribute('class', 'tl-cal-ring-svg');
 
-            const cx = 16, cy = 16;
+            const cx = 17, cy = 17, r = 13;
 
             // Mood fill circle (center)
             if (data?.emotionScore) {
@@ -161,65 +161,52 @@ export class ReviewRenderer {
                 const fillCircle = document.createElementNS(svgNS, 'circle');
                 fillCircle.setAttribute('cx', `${cx}`);
                 fillCircle.setAttribute('cy', `${cy}`);
-                fillCircle.setAttribute('r', '6');
-                fillCircle.setAttribute('fill', `hsl(${hue}, 60%, 70%)`);
+                fillCircle.setAttribute('r', '10');
+                fillCircle.setAttribute('fill', `hsla(${hue}, 55%, 72%, 0.4)`);
                 svg.appendChild(fillCircle);
             }
 
             if (hasData) {
-                // Outer ring: Plan (green #34D399)
-                const outerR = 13;
-                const outerC = 2 * Math.PI * outerR; // ~81.68
-                const outerTrack = document.createElementNS(svgNS, 'circle');
-                outerTrack.setAttribute('cx', `${cx}`);
-                outerTrack.setAttribute('cy', `${cy}`);
-                outerTrack.setAttribute('r', `${outerR}`);
-                outerTrack.setAttribute('fill', 'none');
-                outerTrack.setAttribute('stroke', 'var(--background-modifier-border)');
-                outerTrack.setAttribute('stroke-width', '2.5');
-                svg.appendChild(outerTrack);
+                // Track (gray background ring)
+                const track = document.createElementNS(svgNS, 'circle');
+                track.setAttribute('cx', `${cx}`);
+                track.setAttribute('cy', `${cy}`);
+                track.setAttribute('r', `${r}`);
+                track.setAttribute('fill', 'none');
+                track.setAttribute('stroke', 'var(--background-modifier-border)');
+                track.setAttribute('stroke-width', '3');
+                svg.appendChild(track);
 
-                if (hasPlan) {
-                    const outerArc = document.createElementNS(svgNS, 'circle');
-                    outerArc.setAttribute('cx', `${cx}`);
-                    outerArc.setAttribute('cy', `${cy}`);
-                    outerArc.setAttribute('r', `${outerR}`);
-                    outerArc.setAttribute('fill', 'none');
-                    outerArc.setAttribute('stroke', '#34D399');
-                    outerArc.setAttribute('stroke-width', '2.5');
-                    outerArc.setAttribute('stroke-linecap', 'round');
-                    outerArc.setAttribute('stroke-dasharray', `${outerC}`);
-                    outerArc.setAttribute('stroke-dashoffset', '0');
-                    outerArc.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
-                    svg.appendChild(outerArc);
-                }
+                const halfC = Math.PI * r; // half circumference
+                const fullC = 2 * halfC;
 
-                // Inner ring: Review (blue #60A5FA)
-                const innerR = 9.5;
-                const innerC = 2 * Math.PI * innerR; // ~59.69
-                const innerTrack = document.createElementNS(svgNS, 'circle');
-                innerTrack.setAttribute('cx', `${cx}`);
-                innerTrack.setAttribute('cy', `${cy}`);
-                innerTrack.setAttribute('r', `${innerR}`);
-                innerTrack.setAttribute('fill', 'none');
-                innerTrack.setAttribute('stroke', 'var(--background-modifier-border)');
-                innerTrack.setAttribute('stroke-width', '2.5');
-                svg.appendChild(innerTrack);
+                // Left half arc (plan) — top to bottom, left side
+                const leftArc = document.createElementNS(svgNS, 'circle');
+                leftArc.setAttribute('cx', `${cx}`);
+                leftArc.setAttribute('cy', `${cy}`);
+                leftArc.setAttribute('r', `${r}`);
+                leftArc.setAttribute('fill', 'none');
+                leftArc.setAttribute('stroke', hasPlan ? '#34D399' : 'var(--background-modifier-border)');
+                leftArc.setAttribute('stroke-width', '3');
+                leftArc.setAttribute('stroke-linecap', 'round');
+                leftArc.setAttribute('stroke-dasharray', `${halfC} ${halfC}`);
+                leftArc.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+                if (hasPlan) leftArc.setAttribute('opacity', '0.9');
+                svg.appendChild(leftArc);
 
-                if (hasReview) {
-                    const innerArc = document.createElementNS(svgNS, 'circle');
-                    innerArc.setAttribute('cx', `${cx}`);
-                    innerArc.setAttribute('cy', `${cy}`);
-                    innerArc.setAttribute('r', `${innerR}`);
-                    innerArc.setAttribute('fill', 'none');
-                    innerArc.setAttribute('stroke', '#60A5FA');
-                    innerArc.setAttribute('stroke-width', '2.5');
-                    innerArc.setAttribute('stroke-linecap', 'round');
-                    innerArc.setAttribute('stroke-dasharray', `${innerC}`);
-                    innerArc.setAttribute('stroke-dashoffset', '0');
-                    innerArc.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
-                    svg.appendChild(innerArc);
-                }
+                // Right half arc (review) — bottom to top, right side
+                const rightArc = document.createElementNS(svgNS, 'circle');
+                rightArc.setAttribute('cx', `${cx}`);
+                rightArc.setAttribute('cy', `${cy}`);
+                rightArc.setAttribute('r', `${r}`);
+                rightArc.setAttribute('fill', 'none');
+                rightArc.setAttribute('stroke', hasReview ? '#60A5FA' : 'var(--background-modifier-border)');
+                rightArc.setAttribute('stroke-width', '3');
+                rightArc.setAttribute('stroke-linecap', 'round');
+                rightArc.setAttribute('stroke-dasharray', `${halfC} ${halfC}`);
+                rightArc.setAttribute('transform', `rotate(90 ${cx} ${cy})`);
+                if (hasReview) rightArc.setAttribute('opacity', '0.9');
+                svg.appendChild(rightArc);
             }
 
             // Date number
@@ -234,16 +221,9 @@ export class ReviewRenderer {
 
             cell.appendChild(svg);
 
-            // Tooltip
+            // Click to open popover (no aria-label tooltip)
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
-                const tipParts: string[] = [];
-                if (hasPlan) tipParts.push('🟢 计划');
-                if (hasReview) tipParts.push('🔵 复盘');
-                if (data.emotionScore) tipParts.push(`心情 ${data.emotionScore}/10`);
-                if (data.taskCount > 0) tipParts.push(`任务 ${data.completedCount}/${data.taskCount}`);
-                if (tipParts.length) cell.setAttribute('aria-label', tipParts.join(' · '));
-
                 cell.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.showTaskPopover(cell, data, dateStr);
@@ -371,83 +351,8 @@ export class ReviewRenderer {
     // --- Dashboard section ---
 
     private async renderReviewDashboard(panel: HTMLElement): Promise<void> {
+        // Only keep the Insight card
         const h = this.host;
-
-        // Dashboard cards rendered as individual pyramid layers
-
-        // Gather week data
-        const folder = h.plugin.settings.dailyFolder;
-        const weekStart = moment().startOf('isoWeek');
-        let totalTasks = 0, completedTasks = 0;
-        const days: { date: string; emotionScore: number | null }[] = [];
-
-        for (let i = 0; i < 7; i++) {
-            const d = moment(weekStart).add(i, 'days');
-            const dateStr = d.format('YYYY-MM-DD');
-            const path = `${folder}/${dateStr}.md`;
-            const file = h.app.vault.getAbstractFileByPath(path);
-            let emotionScore: number | null = null;
-
-            if (file && file instanceof TFile) {
-                try {
-                    const content = await h.app.vault.read(file);
-                    emotionScore = h.parseNoteScores(content);
-                    const allT = content.match(/^- \[[ x]\] /gm);
-                    const doneT = content.match(/^- \[x\] /gm);
-                    totalTasks += allT ? allT.length : 0;
-                    completedTasks += doneT ? doneT.length : 0;
-                } catch { /* skip */ }
-            }
-            days.push({ date: dateStr, emotionScore });
-        }
-
-        // Card 1: Progress
-        const progressCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-progress');
-        const progressHeader = progressCard.createDiv('tl-pyramid-layer-header');
-        progressHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📋' });
-        progressHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '本周进度' });
-        const progressBody = progressCard.createDiv('tl-dash-card-body');
-        const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-        const pInfo = progressBody.createDiv('tl-dash-progress-info');
-        pInfo.createEl('span', { cls: 'tl-dash-progress-number', text: `${completedTasks}/${totalTasks}` });
-        pInfo.createEl('span', { cls: 'tl-dash-progress-pct', text: `${pct}%` });
-        const barOuter = progressBody.createDiv('tl-dash-progress-bar-outer');
-        const barInner = barOuter.createDiv('tl-dash-progress-bar-inner');
-        barInner.style.width = `${pct}%`;
-
-        // Card 2: Emotion trend
-        const emotionCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-emotion');
-        const emotionHeader = emotionCard.createDiv('tl-pyramid-layer-header');
-        emotionHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💭' });
-        emotionHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '本周情绪' });
-        const emotionBody = emotionCard.createDiv('tl-dash-card-body');
-        const chart = emotionBody.createDiv('tl-dash-chart');
-        const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
-        const today = moment();
-
-        for (let i = 0; i < 7; i++) {
-            const dayStart = moment(today).startOf('isoWeek').add(i, 'days');
-            const dayData = days.find(dd => dd.date === dayStart.format('YYYY-MM-DD'));
-            const barCol = chart.createDiv('tl-dash-chart-col');
-            const score = dayData?.emotionScore;
-
-            const bWrap = barCol.createDiv('tl-dash-chart-bar-wrap');
-            if (score) {
-                const barH = (score / 10) * 100;
-                const bar = bWrap.createDiv('tl-dash-chart-bar');
-                bar.style.height = `${barH}%`;
-                const hue = Math.round(((score - 1) / 9) * 120);
-                bar.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
-                bWrap.createEl('span', { cls: 'tl-dash-chart-score', text: `${score}` });
-            }
-
-            barCol.createEl('span', {
-                cls: `tl-dash-chart-label ${dayStart.isSame(today, 'day') ? 'tl-dash-chart-label-today' : ''}`,
-                text: dayLabels[i],
-            });
-        }
-
-        // Card 3: Principle + Pattern (combined)
         const insightCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-insight');
         const insightHeader = insightCard.createDiv('tl-pyramid-layer-header');
         insightHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💡' });
@@ -481,40 +386,5 @@ export class ReviewRenderer {
         if (pattern) {
             insightBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });
         }
-
-        // Card 4: Quick links
-        const linksCard = panel.createDiv('tl-pyramid-layer tl-dash-card tl-dash-card-links');
-        const linksHeader = linksCard.createDiv('tl-pyramid-layer-header');
-        linksHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '🚀' });
-        linksHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '快速入口' });
-        const linkGrid = linksCard.createDiv('tl-dash-link-grid');
-
-        const makeLink = (icon: string, label: string, onClick: () => void) => {
-            const link = linkGrid.createDiv('tl-dash-link');
-            link.createEl('span', { cls: 'tl-dash-link-icon', text: icon });
-            link.createEl('span', { cls: 'tl-dash-link-label', text: label });
-            link.addEventListener('click', onClick);
-        };
-
-        makeLink('📝', '今日日记', async () => {
-            const f = await h.plugin.vaultManager.getOrCreateDailyNote();
-            h.app.workspace.getLeaf().openFile(f);
-        });
-        makeLink('📅', '周计划', async () => {
-            try {
-                const ed = h.plugin.vaultManager.getEffectiveDate();
-                const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(`W${ed.format('ww')}`, ed.format('YYYY-MM'));
-                const f = await h.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, tmpl);
-                h.app.workspace.getLeaf().openFile(f);
-            } catch { /* skip */ }
-        });
-        makeLink('📆', '月计划', async () => {
-            try {
-                const ed = h.plugin.vaultManager.getEffectiveDate();
-                const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(ed.format('YYYY-MM'));
-                const f = await h.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, tmpl);
-                h.app.workspace.getLeaf().openFile(f);
-            } catch { /* skip */ }
-        });
     }
 }
