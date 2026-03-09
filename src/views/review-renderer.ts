@@ -139,9 +139,9 @@ export class ReviewRenderer {
             pg.setAttribute('x1', '0'); pg.setAttribute('y1', '0');
             pg.setAttribute('x2', '0'); pg.setAttribute('y2', '1');
             const pgs1 = document.createElementNS(svgNS, 'stop');
-            pgs1.setAttribute('offset', '0%'); pgs1.setAttribute('stop-color', '#6EE7B7');
+            pgs1.setAttribute('offset', '0%'); pgs1.setAttribute('stop-color', '#5AABB8');
             const pgs2 = document.createElementNS(svgNS, 'stop');
-            pgs2.setAttribute('offset', '100%'); pgs2.setAttribute('stop-color', '#059669');
+            pgs2.setAttribute('offset', '100%'); pgs2.setAttribute('stop-color', '#2D7A8E');
             pg.appendChild(pgs1); pg.appendChild(pgs2); defs.appendChild(pg);
 
             // Review gradient (blue light → deep)
@@ -150,9 +150,9 @@ export class ReviewRenderer {
             rg.setAttribute('x1', '0'); rg.setAttribute('y1', '1');
             rg.setAttribute('x2', '0'); rg.setAttribute('y2', '0');
             const rgs1 = document.createElementNS(svgNS, 'stop');
-            rgs1.setAttribute('offset', '0%'); rgs1.setAttribute('stop-color', '#93C5FD');
+            rgs1.setAttribute('offset', '0%'); rgs1.setAttribute('stop-color', '#E8D5A0');
             const rgs2 = document.createElementNS(svgNS, 'stop');
-            rgs2.setAttribute('offset', '100%'); rgs2.setAttribute('stop-color', '#2563EB');
+            rgs2.setAttribute('offset', '100%'); rgs2.setAttribute('stop-color', '#B8956A');
             rg.appendChild(rgs1); rg.appendChild(rgs2); defs.appendChild(rg);
 
             // Glow filter

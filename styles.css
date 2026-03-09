@@ -1,7 +1,7 @@
 /**
- * TideLog — Apple HIG × Brand Palette
+ * TideLog 「潮记」— Tidal Blue × Warm Gold Palette
  *
- * Brand: #060506 (dark) · #dec89a (gold) · #5fa1a0 (teal)
+ * Primary: #3B8EA5 (tidal blue) · Secondary: #D4B978 (warm gold)
  * Principles: clarity, deference, depth
  * Typography: SF Pro, -apple-system fallback
  * Motion: cubic-bezier(0.25, 0.46, 0.45, 0.94)
@@ -21,27 +21,27 @@
 	--tl-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 	--tl-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
 	--tl-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
-	/* Brand palette */
+	/* Brand palette — Tidal Blue + Warm Gold */
 	--tl-dark: #060506;
-	--tl-gold: #dec89a;
-	--tl-teal: #5fa1a0;
+	--tl-gold: #D4B978;
+	--tl-teal: #3B8EA5;
 	/* Derived tokens */
-	--tl-accent: #b8a070;
-	--tl-accent-light: rgba(222, 200, 154, 0.12);
-	--tl-accent-medium: rgba(222, 200, 154, 0.25);
-	--tl-green: var(--tl-teal);
-	--tl-orange: #C49A6C;
+	--tl-accent: #3B8EA5;
+	--tl-accent-light: rgba(59, 142, 165, 0.10);
+	--tl-accent-medium: rgba(59, 142, 165, 0.22);
+	--tl-green: #3B8EA5;
+	--tl-orange: #D4B978;
 	--tl-red: #C47070;
-	--tl-purple: #9088B4;
-	--tl-gradient-accent: linear-gradient(135deg, var(--tl-gold) 0%, #e8d7b0 100%);
-	--tl-gradient-ai: linear-gradient(135deg, var(--tl-teal) 0%, #7ab5b4 100%);
+	--tl-purple: #3B8EA5;
+	--tl-gradient-accent: linear-gradient(135deg, #3B8EA5 0%, #5AABB8 100%);
+	--tl-gradient-ai: linear-gradient(135deg, #3B8EA5 0%, #2D7A8E 100%);
 	--tl-surface: #ffffff;
-	--tl-surface-raised: #f9f9f9;
+	--tl-surface-raised: #f8f9fa;
 	--tl-surface-card: #ffffff;
 	--tl-text-primary: #1a1a1a;
 	--tl-text-secondary: rgba(26, 26, 26, 0.55);
 	--tl-text-tertiary: rgba(26, 26, 26, 0.3);
-	--tl-border: rgba(180, 160, 120, 0.15);
+	--tl-border: rgba(59, 142, 165, 0.12);
 	--tl-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
 	--tl-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
 	--tl-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -56,6 +56,8 @@
 	--tl-text-secondary: var(--text-muted);
 	--tl-text-tertiary: var(--text-faint);
 	--tl-border: var(--background-modifier-border);
+	--tl-accent-light: rgba(59, 142, 165, 0.15);
+	--tl-accent-medium: rgba(59, 142, 165, 0.30);
 	--tl-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
 	--tl-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
 	--tl-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -785,7 +787,7 @@
 	color: white;
 	border-color: transparent;
 	transform: translateY(-1px);
-	box-shadow: 0 3px 12px color-mix(in srgb, #847F9E 25%, transparent);
+	box-shadow: 0 3px 12px color-mix(in srgb, #3B8EA5 25%, transparent);
 }
 
 .tl-insight-btn:active {
@@ -1472,7 +1474,7 @@
 }
 
 .tl-cal-ring-text {
-	font-size: 8.5px;
+	font-size: 10px;
 	font-weight: 600;
 	fill: var(--text-normal);
 }
@@ -2222,13 +2224,13 @@
 }
 
 .tl-cal-popover-badge-plan {
-	background: rgba(52, 211, 153, 0.15);
-	color: #059669;
+	background: rgba(59, 142, 165, 0.15);
+	color: #2D7A8E;
 }
 
 .tl-cal-popover-badge-review {
-	background: rgba(96, 165, 250, 0.15);
-	color: #2563EB;
+	background: rgba(212, 185, 120, 0.15);
+	color: #B8A060;
 }
 
 .tl-cal-popover-body {
