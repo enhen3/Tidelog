@@ -1451,64 +1451,16 @@
 	border-radius: 8px;
 }
 
-/* ---- Closure Ring ---- */
-.tl-cal-ring {
-	position: relative;
-	width: 30px;
-	height: 30px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	/* Default: no ring border */
-	background: var(--background-secondary);
-	--mood-color: transparent;
+/* ---- Apple Watch Activity Ring (SVG) ---- */
+.tl-cal-ring-svg {
+	display: block;
+	margin: 0 auto;
 }
 
-/* Plan (left half) - green when done */
-.tl-cal-ring-plan {
-	border-left: 2.5px solid var(--text-success, #4ade80);
-	border-top: 2.5px solid var(--text-success, #4ade80);
-	border-bottom: 2.5px solid var(--text-success, #4ade80);
-}
-
-.tl-cal-ring-plan-empty {
-	border-left: 2.5px solid var(--background-modifier-border);
-	border-top: 2.5px solid var(--background-modifier-border);
-	border-bottom: 2.5px solid var(--background-modifier-border);
-}
-
-/* Review (right half) - green when done */
-.tl-cal-ring-review {
-	border-right: 2.5px solid var(--text-success, #4ade80);
-}
-
-.tl-cal-ring-review.tl-cal-ring-plan {
-	border-top: 2.5px solid var(--text-success, #4ade80);
-	border-bottom: 2.5px solid var(--text-success, #4ade80);
-}
-
-.tl-cal-ring-review-empty {
-	border-right: 2.5px solid var(--background-modifier-border);
-}
-
-/* Mood fill - colored center */
-.tl-cal-ring-mood {
-	background: var(--mood-color);
-}
-
-/* Date number inside ring */
-.tl-cal-ring-num {
-	font-size: 11px;
+.tl-cal-ring-text {
+	font-size: 9px;
 	font-weight: 600;
-	color: var(--text-normal);
-	z-index: 1;
-	line-height: 1;
-}
-
-.tl-cal-ring-mood .tl-cal-ring-num {
-	color: #333;
-	font-weight: 700;
+	fill: var(--text-normal);
 }
 
 .tl-cal-dots {
@@ -2337,33 +2289,39 @@
 
 .tl-periodic-mode-bar {
 	display: flex;
-	gap: 2px;
+	gap: 6px;
 	padding: 8px 12px;
-	background: var(--background-secondary);
-	border-bottom: 1px solid var(--background-modifier-border);
-	justify-content: center;
+	background: transparent;
 }
 
 .tl-periodic-mode-btn {
 	flex: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
 	padding: 6px 0;
-	border: none;
-	border-radius: 6px;
-	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-primary);
 	font-size: 13px;
-	font-weight: 500;
+	font-weight: 400;
 	cursor: pointer;
 	color: var(--text-muted);
 	transition: all 0.15s ease;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .tl-periodic-mode-btn:hover {
-	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
 }
 
 .tl-periodic-mode-btn-active {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 8%, var(--background-primary));
+	font-weight: 500;
 }
 
 /* ---- Body ---- */

@@ -141,31 +141,105 @@ export class ReviewRenderer {
 
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
 
-            // Closure ring
-            const ring = cell.createDiv('tl-cal-ring');
+            // Apple Watch-style SVG activity ring
             const hasPlan = data?.hasPlan ?? false;
             const hasReview = data?.hasReview ?? false;
+            const hasData = !!data;
 
-            // Left half (plan) + right half (review)
-            ring.addClass(hasPlan ? 'tl-cal-ring-plan' : 'tl-cal-ring-plan-empty');
-            ring.addClass(hasReview ? 'tl-cal-ring-review' : 'tl-cal-ring-review-empty');
+            const svgNS = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(svgNS, 'svg');
+            svg.setAttribute('width', '32');
+            svg.setAttribute('height', '32');
+            svg.setAttribute('viewBox', '0 0 32 32');
+            svg.setAttribute('class', 'tl-cal-ring-svg');
 
-            // Mood fill color
+            const cx = 16, cy = 16;
+
+            // Mood fill circle (center)
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
-                ring.style.setProperty('--mood-color', `hsl(${hue}, 60%, 70%)`);
-                ring.addClass('tl-cal-ring-mood');
+                const fillCircle = document.createElementNS(svgNS, 'circle');
+                fillCircle.setAttribute('cx', `${cx}`);
+                fillCircle.setAttribute('cy', `${cy}`);
+                fillCircle.setAttribute('r', '6');
+                fillCircle.setAttribute('fill', `hsl(${hue}, 60%, 70%)`);
+                svg.appendChild(fillCircle);
+            }
+
+            if (hasData) {
+                // Outer ring: Plan (green #34D399)
+                const outerR = 13;
+                const outerC = 2 * Math.PI * outerR; // ~81.68
+                const outerTrack = document.createElementNS(svgNS, 'circle');
+                outerTrack.setAttribute('cx', `${cx}`);
+                outerTrack.setAttribute('cy', `${cy}`);
+                outerTrack.setAttribute('r', `${outerR}`);
+                outerTrack.setAttribute('fill', 'none');
+                outerTrack.setAttribute('stroke', 'var(--background-modifier-border)');
+                outerTrack.setAttribute('stroke-width', '2.5');
+                svg.appendChild(outerTrack);
+
+                if (hasPlan) {
+                    const outerArc = document.createElementNS(svgNS, 'circle');
+                    outerArc.setAttribute('cx', `${cx}`);
+                    outerArc.setAttribute('cy', `${cy}`);
+                    outerArc.setAttribute('r', `${outerR}`);
+                    outerArc.setAttribute('fill', 'none');
+                    outerArc.setAttribute('stroke', '#34D399');
+                    outerArc.setAttribute('stroke-width', '2.5');
+                    outerArc.setAttribute('stroke-linecap', 'round');
+                    outerArc.setAttribute('stroke-dasharray', `${outerC}`);
+                    outerArc.setAttribute('stroke-dashoffset', '0');
+                    outerArc.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+                    svg.appendChild(outerArc);
+                }
+
+                // Inner ring: Review (blue #60A5FA)
+                const innerR = 9.5;
+                const innerC = 2 * Math.PI * innerR; // ~59.69
+                const innerTrack = document.createElementNS(svgNS, 'circle');
+                innerTrack.setAttribute('cx', `${cx}`);
+                innerTrack.setAttribute('cy', `${cy}`);
+                innerTrack.setAttribute('r', `${innerR}`);
+                innerTrack.setAttribute('fill', 'none');
+                innerTrack.setAttribute('stroke', 'var(--background-modifier-border)');
+                innerTrack.setAttribute('stroke-width', '2.5');
+                svg.appendChild(innerTrack);
+
+                if (hasReview) {
+                    const innerArc = document.createElementNS(svgNS, 'circle');
+                    innerArc.setAttribute('cx', `${cx}`);
+                    innerArc.setAttribute('cy', `${cy}`);
+                    innerArc.setAttribute('r', `${innerR}`);
+                    innerArc.setAttribute('fill', 'none');
+                    innerArc.setAttribute('stroke', '#60A5FA');
+                    innerArc.setAttribute('stroke-width', '2.5');
+                    innerArc.setAttribute('stroke-linecap', 'round');
+                    innerArc.setAttribute('stroke-dasharray', `${innerC}`);
+                    innerArc.setAttribute('stroke-dashoffset', '0');
+                    innerArc.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+                    svg.appendChild(innerArc);
+                }
             }
 
             // Date number
-            ring.createEl('span', { cls: 'tl-cal-ring-num', text: `${d}` });
+            const text = document.createElementNS(svgNS, 'text');
+            text.setAttribute('x', `${cx}`);
+            text.setAttribute('y', `${cy}`);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'central');
+            text.setAttribute('class', 'tl-cal-ring-text');
+            text.textContent = `${d}`;
+            svg.appendChild(text);
+
+            cell.appendChild(svg);
 
             // Tooltip
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
                 const tipParts: string[] = [];
-                if (hasPlan) tipParts.push('✅ 计划');
-                if (hasReview) tipParts.push('✅ 复盘');
+                if (hasPlan) tipParts.push('🟢 计划');
+                if (hasReview) tipParts.push('🔵 复盘');
                 if (data.emotionScore) tipParts.push(`心情 ${data.emotionScore}/10`);
                 if (data.taskCount > 0) tipParts.push(`任务 ${data.completedCount}/${data.taskCount}`);
                 if (tipParts.length) cell.setAttribute('aria-label', tipParts.join(' · '));
