@@ -2336,39 +2336,37 @@
 
 .tl-periodic-mode-bar {
 	display: flex;
-	gap: 6px;
-	padding: 8px 12px;
-	background: transparent;
+	gap: 16px;
+	padding: 2px 12px 8px;
+	justify-content: flex-start;
 }
 
 .tl-periodic-mode-btn {
-	flex: 1;
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
 	gap: 4px;
-	padding: 6px 0;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 8px;
-	background: var(--background-primary);
-	font-size: 13px;
+	padding: 4px 2px;
+	font-size: 12px;
 	font-weight: 400;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	color: var(--tl-accent);
 	cursor: pointer;
-	color: var(--text-muted);
-	transition: all 0.15s ease;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	transition: opacity 0.15s ease;
+	user-select: none;
+	-webkit-user-select: none;
+	opacity: 0.65;
 }
 
 .tl-periodic-mode-btn:hover {
-	border-color: var(--interactive-accent);
-	color: var(--interactive-accent);
+	opacity: 1;
 }
 
 .tl-periodic-mode-btn-active {
-	border-color: var(--interactive-accent);
-	color: var(--interactive-accent);
-	background: color-mix(in srgb, var(--interactive-accent) 8%, var(--background-primary));
+	opacity: 1;
 	font-weight: 500;
+	border-bottom-color: var(--tl-accent);
 }
 
 /* ---- Body ---- */
