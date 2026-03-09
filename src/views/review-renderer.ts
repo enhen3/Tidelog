@@ -141,72 +141,119 @@ export class ReviewRenderer {
 
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
 
-            // Split-ring SVG: left half = plan, right half = review
+            // Premium split-ring SVG with gradients and glow
             const hasPlan = data?.hasPlan ?? false;
             const hasReview = data?.hasReview ?? false;
             const hasData = !!data;
 
             const svgNS = 'http://www.w3.org/2000/svg';
             const svg = document.createElementNS(svgNS, 'svg');
-            svg.setAttribute('width', '34');
-            svg.setAttribute('height', '34');
-            svg.setAttribute('viewBox', '0 0 34 34');
+            svg.setAttribute('width', '36');
+            svg.setAttribute('height', '36');
+            svg.setAttribute('viewBox', '0 0 36 36');
             svg.setAttribute('class', 'tl-cal-ring-svg');
 
-            const cx = 17, cy = 17, r = 13;
+            const cx = 18, cy = 18, r = 14;
+            const fullC = 2 * Math.PI * r; // ~87.96
+            const arcLen = fullC * 174 / 360; // 174° each half (3° gap on each junction)
+            const gapLen = fullC - arcLen;
+            const uid = `cr${d}`;
 
-            // Mood fill circle (center)
+            // Define gradients + glow filter
+            const defs = document.createElementNS(svgNS, 'defs');
+
+            // Plan gradient (green light → deep)
+            const pg = document.createElementNS(svgNS, 'linearGradient');
+            pg.setAttribute('id', `${uid}pg`);
+            pg.setAttribute('x1', '0'); pg.setAttribute('y1', '0');
+            pg.setAttribute('x2', '0'); pg.setAttribute('y2', '1');
+            const pgs1 = document.createElementNS(svgNS, 'stop');
+            pgs1.setAttribute('offset', '0%'); pgs1.setAttribute('stop-color', '#6EE7B7');
+            const pgs2 = document.createElementNS(svgNS, 'stop');
+            pgs2.setAttribute('offset', '100%'); pgs2.setAttribute('stop-color', '#059669');
+            pg.appendChild(pgs1); pg.appendChild(pgs2); defs.appendChild(pg);
+
+            // Review gradient (blue light → deep)
+            const rg = document.createElementNS(svgNS, 'linearGradient');
+            rg.setAttribute('id', `${uid}rg`);
+            rg.setAttribute('x1', '0'); rg.setAttribute('y1', '1');
+            rg.setAttribute('x2', '0'); rg.setAttribute('y2', '0');
+            const rgs1 = document.createElementNS(svgNS, 'stop');
+            rgs1.setAttribute('offset', '0%'); rgs1.setAttribute('stop-color', '#93C5FD');
+            const rgs2 = document.createElementNS(svgNS, 'stop');
+            rgs2.setAttribute('offset', '100%'); rgs2.setAttribute('stop-color', '#2563EB');
+            rg.appendChild(rgs1); rg.appendChild(rgs2); defs.appendChild(rg);
+
+            // Glow filter
+            const gf = document.createElementNS(svgNS, 'filter');
+            gf.setAttribute('id', `${uid}gl`);
+            gf.setAttribute('x', '-30%'); gf.setAttribute('y', '-30%');
+            gf.setAttribute('width', '160%'); gf.setAttribute('height', '160%');
+            const gb = document.createElementNS(svgNS, 'feGaussianBlur');
+            gb.setAttribute('stdDeviation', '1.5'); gb.setAttribute('result', 'g');
+            gf.appendChild(gb);
+            const gm = document.createElementNS(svgNS, 'feMerge');
+            const gm1 = document.createElementNS(svgNS, 'feMergeNode');
+            gm1.setAttribute('in', 'g');
+            const gm2 = document.createElementNS(svgNS, 'feMergeNode');
+            gm2.setAttribute('in', 'SourceGraphic');
+            gm.appendChild(gm1); gm.appendChild(gm2);
+            gf.appendChild(gm); defs.appendChild(gf);
+
+            svg.appendChild(defs);
+
+            // Mood fill (center soft glow)
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
-                const fillCircle = document.createElementNS(svgNS, 'circle');
-                fillCircle.setAttribute('cx', `${cx}`);
-                fillCircle.setAttribute('cy', `${cy}`);
-                fillCircle.setAttribute('r', '10');
-                fillCircle.setAttribute('fill', `hsla(${hue}, 55%, 72%, 0.4)`);
-                svg.appendChild(fillCircle);
+                const moodCircle = document.createElementNS(svgNS, 'circle');
+                moodCircle.setAttribute('cx', `${cx}`);
+                moodCircle.setAttribute('cy', `${cy}`);
+                moodCircle.setAttribute('r', '10');
+                moodCircle.setAttribute('fill', `hsla(${hue}, 55%, 72%, 0.3)`);
+                svg.appendChild(moodCircle);
             }
 
             if (hasData) {
-                // Track (gray background ring)
+                // Background track (subtle depth ring)
                 const track = document.createElementNS(svgNS, 'circle');
                 track.setAttribute('cx', `${cx}`);
                 track.setAttribute('cy', `${cy}`);
                 track.setAttribute('r', `${r}`);
                 track.setAttribute('fill', 'none');
                 track.setAttribute('stroke', 'var(--background-modifier-border)');
-                track.setAttribute('stroke-width', '3');
+                track.setAttribute('stroke-width', '3.5');
+                track.setAttribute('opacity', '0.4');
                 svg.appendChild(track);
 
-                const halfC = Math.PI * r; // half circumference
-                const fullC = 2 * halfC;
+                // Left half (Plan) — rotated to start just past 6 o'clock
+                const planArc = document.createElementNS(svgNS, 'circle');
+                planArc.setAttribute('cx', `${cx}`);
+                planArc.setAttribute('cy', `${cy}`);
+                planArc.setAttribute('r', `${r}`);
+                planArc.setAttribute('fill', 'none');
+                planArc.setAttribute('stroke', hasPlan ? `url(#${uid}pg)` : 'var(--background-modifier-border)');
+                planArc.setAttribute('stroke-width', '3.5');
+                planArc.setAttribute('stroke-linecap', 'round');
+                planArc.setAttribute('stroke-dasharray', `${arcLen} ${gapLen}`);
+                planArc.setAttribute('transform', `rotate(93 ${cx} ${cy})`);
+                if (hasPlan) planArc.setAttribute('filter', `url(#${uid}gl)`);
+                if (!hasPlan) planArc.setAttribute('opacity', '0.5');
+                svg.appendChild(planArc);
 
-                // Left half arc (plan) — top to bottom, left side
-                const leftArc = document.createElementNS(svgNS, 'circle');
-                leftArc.setAttribute('cx', `${cx}`);
-                leftArc.setAttribute('cy', `${cy}`);
-                leftArc.setAttribute('r', `${r}`);
-                leftArc.setAttribute('fill', 'none');
-                leftArc.setAttribute('stroke', hasPlan ? '#34D399' : 'var(--background-modifier-border)');
-                leftArc.setAttribute('stroke-width', '3');
-                leftArc.setAttribute('stroke-linecap', 'round');
-                leftArc.setAttribute('stroke-dasharray', `${halfC} ${halfC}`);
-                leftArc.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
-                if (hasPlan) leftArc.setAttribute('opacity', '0.9');
-                svg.appendChild(leftArc);
-
-                // Right half arc (review) — bottom to top, right side
-                const rightArc = document.createElementNS(svgNS, 'circle');
-                rightArc.setAttribute('cx', `${cx}`);
-                rightArc.setAttribute('cy', `${cy}`);
-                rightArc.setAttribute('r', `${r}`);
-                rightArc.setAttribute('fill', 'none');
-                rightArc.setAttribute('stroke', hasReview ? '#60A5FA' : 'var(--background-modifier-border)');
-                rightArc.setAttribute('stroke-width', '3');
-                rightArc.setAttribute('stroke-linecap', 'round');
-                rightArc.setAttribute('stroke-dasharray', `${halfC} ${halfC}`);
-                rightArc.setAttribute('transform', `rotate(90 ${cx} ${cy})`);
-                if (hasReview) rightArc.setAttribute('opacity', '0.9');
-                svg.appendChild(rightArc);
+                // Right half (Review) — rotated to start just past 12 o'clock
+                const revArc = document.createElementNS(svgNS, 'circle');
+                revArc.setAttribute('cx', `${cx}`);
+                revArc.setAttribute('cy', `${cy}`);
+                revArc.setAttribute('r', `${r}`);
+                revArc.setAttribute('fill', 'none');
+                revArc.setAttribute('stroke', hasReview ? `url(#${uid}rg)` : 'var(--background-modifier-border)');
+                revArc.setAttribute('stroke-width', '3.5');
+                revArc.setAttribute('stroke-linecap', 'round');
+                revArc.setAttribute('stroke-dasharray', `${arcLen} ${gapLen}`);
+                revArc.setAttribute('transform', `rotate(-87 ${cx} ${cy})`);
+                if (hasReview) revArc.setAttribute('filter', `url(#${uid}gl)`);
+                if (!hasReview) revArc.setAttribute('opacity', '0.5');
+                svg.appendChild(revArc);
             }
 
             // Date number
