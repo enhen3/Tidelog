@@ -2271,3 +2271,378 @@
 	border-top: 1px solid var(--background-modifier-border);
 	padding-top: 4px;
 }
+
+/* =============================================================================
+   Phase 8: Periodic Navigator
+   ============================================================================= */
+
+/* ---- Mode Bar (日 | 周 | 月) ---- */
+.tl-periodic {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.tl-periodic-mode-bar {
+	display: flex;
+	gap: 2px;
+	padding: 8px 12px;
+	background: var(--background-secondary);
+	border-bottom: 1px solid var(--background-modifier-border);
+	justify-content: center;
+}
+
+.tl-periodic-mode-btn {
+	flex: 1;
+	padding: 6px 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	color: var(--text-muted);
+	transition: all 0.15s ease;
+}
+
+.tl-periodic-mode-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.tl-periodic-mode-btn-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+/* ---- Body ---- */
+.tl-periodic-body {
+	flex: 1;
+	overflow-y: auto;
+	padding: 8px;
+}
+
+/* ---- Calendar Selector ---- */
+.tl-periodic-selector {
+	margin-bottom: 10px;
+}
+
+.tl-periodic-cal-nav {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 4px 0;
+}
+
+.tl-periodic-nav-btn {
+	border: none;
+	background: none;
+	font-size: 16px;
+	cursor: pointer;
+	padding: 2px 8px;
+	border-radius: 4px;
+	color: var(--text-muted);
+}
+
+.tl-periodic-nav-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.tl-periodic-cal-title {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+/* ---- Mini Calendar ---- */
+.tl-periodic-mini-cal {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 1px;
+	padding: 4px;
+}
+
+.tl-periodic-cal-wd {
+	text-align: center;
+	font-size: 10px;
+	font-weight: 600;
+	opacity: 0.5;
+	padding: 2px 0;
+}
+
+.tl-periodic-cal-cell {
+	text-align: center;
+	font-size: 12px;
+	padding: 5px 0;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.1s ease;
+	position: relative;
+}
+
+.tl-periodic-cal-cell:hover {
+	background: var(--background-modifier-hover);
+}
+
+.tl-periodic-cal-cell-empty {
+	cursor: default;
+}
+
+.tl-periodic-cal-cell-today {
+	font-weight: 700;
+	color: var(--interactive-accent);
+}
+
+.tl-periodic-cal-cell-selected {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	font-weight: 700;
+}
+
+.tl-periodic-cal-cell-has-note::after {
+	content: '';
+	position: absolute;
+	bottom: 2px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+}
+
+.tl-periodic-cal-cell-selected.tl-periodic-cal-cell-has-note::after {
+	background: var(--text-on-accent);
+}
+
+.tl-periodic-cal-cell-week-highlight {
+	background: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
+}
+
+/* ---- Month Grid (3×4) ---- */
+.tl-periodic-month-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 4px;
+	padding: 8px;
+}
+
+.tl-periodic-month-cell {
+	text-align: center;
+	padding: 10px 0;
+	border-radius: 8px;
+	font-size: 13px;
+	cursor: pointer;
+	transition: all 0.1s ease;
+	border: 1px solid transparent;
+}
+
+.tl-periodic-month-cell:hover {
+	background: var(--background-modifier-hover);
+}
+
+.tl-periodic-month-cell-current {
+	font-weight: 700;
+	color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.tl-periodic-month-cell-selected {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	font-weight: 700;
+}
+
+.tl-periodic-month-cell-has-note {
+	position: relative;
+}
+
+.tl-periodic-month-cell-has-note::after {
+	content: '';
+	position: absolute;
+	bottom: 4px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+}
+
+.tl-periodic-month-cell-selected.tl-periodic-month-cell-has-note::after {
+	background: var(--text-on-accent);
+}
+
+/* ---- Preview Card ---- */
+.tl-periodic-preview {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.tl-periodic-preview-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.tl-periodic-preview-date {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.tl-periodic-preview-meta {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.tl-periodic-emotion-badge {
+	font-size: 11px;
+	font-weight: 600;
+	color: #fff;
+	padding: 1px 6px;
+	border-radius: 8px;
+}
+
+.tl-periodic-status-badge {
+	font-size: 11px;
+	color: var(--text-success);
+	font-weight: 600;
+}
+
+.tl-periodic-preview-empty {
+	padding: 20px;
+	text-align: center;
+	font-size: 13px;
+	opacity: 0.5;
+	font-style: italic;
+}
+
+/* ---- Goals ---- */
+.tl-periodic-goals {
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tl-periodic-goals-label {
+	font-size: 12px;
+	font-weight: 600;
+	opacity: 0.7;
+	margin-bottom: 4px;
+}
+
+.tl-periodic-goal-line {
+	font-size: 12px;
+	padding: 2px 0;
+	line-height: 1.4;
+}
+
+/* ---- Task Section ---- */
+.tl-periodic-task-section {
+	padding: 4px 0;
+}
+
+.tl-periodic-task-group-label {
+	font-size: 12px;
+	font-weight: 600;
+	padding: 6px 12px;
+	opacity: 0.7;
+}
+
+.tl-periodic-task-group-done-label {
+	cursor: pointer;
+	opacity: 0.5;
+}
+
+.tl-periodic-task-group-done-label:hover {
+	opacity: 0.8;
+}
+
+.tl-periodic-collapsed {
+	display: none;
+}
+
+.tl-periodic-task-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 12px;
+	font-size: 13px;
+	transition: background 0.1s;
+}
+
+.tl-periodic-task-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.tl-periodic-task-row input[type='checkbox'] {
+	margin: 0;
+	flex-shrink: 0;
+}
+
+.tl-periodic-task-text {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tl-periodic-task-row-done {
+	opacity: 0.5;
+}
+
+.tl-periodic-task-check {
+	width: 16px;
+	text-align: center;
+	flex-shrink: 0;
+	opacity: 0.5;
+}
+
+.tl-periodic-task-date-badge {
+	font-size: 10px;
+	opacity: 0.5;
+	flex-shrink: 0;
+	background: var(--background-modifier-hover);
+	padding: 1px 5px;
+	border-radius: 4px;
+}
+
+.tl-periodic-task-more {
+	display: block;
+	padding: 4px 12px;
+	font-size: 11px;
+	opacity: 0.4;
+	font-style: italic;
+}
+
+/* ---- Stats ---- */
+.tl-periodic-stats {
+	padding: 8px 12px;
+	font-size: 12px;
+	opacity: 0.5;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* ---- Open/Create Button ---- */
+.tl-periodic-open-btn {
+	padding: 8px 12px;
+	text-align: center;
+	font-size: 12px;
+	color: var(--interactive-accent);
+	cursor: pointer;
+	border-top: 1px solid var(--background-modifier-border);
+	transition: background 0.1s;
+}
+
+.tl-periodic-open-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+button.tl-periodic-open-btn {
+	width: 100%;
+	border: none;
+	background: var(--background-primary);
+}

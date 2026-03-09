@@ -15,7 +15,7 @@ import TideLogPlugin from '../main';
 import { ChatMessage, SOPContext, SOPType } from '../types';
 import { MorningSOP } from '../sop/morning-sop';
 import { EveningSOP } from '../sop/evening-sop';
-import { KanbanRenderer } from './kanban-renderer';
+import { PeriodicRenderer, PeriodicMode } from './periodic-renderer';
 import { ReviewRenderer } from './review-renderer';
 import { TaskInputManager } from './task-input-manager';
 import { ChatController } from './chat-controller';
@@ -57,6 +57,11 @@ export class ChatView extends ItemView {
     public calendarViewMode: 'month' | 'week' = 'month';
     public calendarWeekOffset = 0;
 
+    // Periodic navigator state
+    public periodicMode: PeriodicMode = 'day';
+    public periodicSelectedDate: moment.Moment = moment();
+    public periodicMonthOffset = 0;
+
     // Live refresh
     private vaultModifyRef: ReturnType<typeof this.app.vault.on> | null = null;
     private refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,7 +69,7 @@ export class ChatView extends ItemView {
 
     private morningSOP!: MorningSOP;
     private eveningSOP!: EveningSOP;
-    private kanbanRenderer!: KanbanRenderer;
+    private periodicRenderer!: PeriodicRenderer;
     private reviewRenderer!: ReviewRenderer;
     private taskInputManager!: TaskInputManager;
     private chatController!: ChatController;
@@ -74,7 +79,7 @@ export class ChatView extends ItemView {
         this.plugin = plugin;
         this.morningSOP = new MorningSOP(plugin);
         this.eveningSOP = new EveningSOP(plugin);
-        this.kanbanRenderer = new KanbanRenderer(this);
+        this.periodicRenderer = new PeriodicRenderer(this);
         this.reviewRenderer = new ReviewRenderer(this);
         this.taskInputManager = new TaskInputManager(this);
         this.chatController = new ChatController(this);
@@ -194,7 +199,7 @@ export class ChatView extends ItemView {
 
         const tabs: { id: SidebarTab; icon: string; label: string }[] = [
             { id: 'chat', icon: '💬', label: 'TideLog Talk' },
-            { id: 'kanban', icon: '📋', label: '目标' },
+            { id: 'kanban', icon: '📅', label: '计划' },
             { id: 'review', icon: '📊', label: '仪表盘' },
         ];
 
@@ -370,11 +375,11 @@ export class ChatView extends ItemView {
     }
 
     // =========================================================================
-    // Kanban tab — delegated to KanbanRenderer
+    // Kanban tab — delegated to PeriodicRenderer
     // =========================================================================
 
     private async renderKanbanTab(panel: HTMLElement): Promise<void> {
-        await this.kanbanRenderer.render(panel);
+        await this.periodicRenderer.render(panel);
     }
 
     /**
