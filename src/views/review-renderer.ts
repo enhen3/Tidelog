@@ -378,73 +378,120 @@ export class ReviewRenderer {
 
     private async renderReviewDashboard(panel: HTMLElement): Promise<void> {
         const h = this.host;
-        const today = moment();
+        const calMonth = h.calendarMonth; // Use the selected calendar month, not today
 
-        // ---- Weekly Insight ----
-        const weekNum = today.isoWeek();
-        const weekYear = today.isoWeekYear();
-        const weekPatterns = [
-            `${weekYear}-W${weekNum}-周报.md`,
-            `${weekYear}-W${String(weekNum).padStart(2, '0')}-周报.md`,
-        ];
-        for (const wp of weekPatterns) {
-            const wPath = `${h.plugin.settings.archiveFolder}/Insights/${wp}`;
-            const wFile = h.app.vault.getAbstractFileByPath(wPath);
-            if (wFile && wFile instanceof TFile) {
-                try {
-                    const content = await h.app.vault.read(wFile);
-                    const weekCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
-                    const wHeader = weekCard.createDiv('tl-pyramid-layer-header');
-                    wHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📊' });
-                    wHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `W${weekNum} 周报洞察` });
-                    const wBody = weekCard.createDiv('tl-dash-card-body');
+        // Helper: strip markdown formatting for clean display
+        const stripMd = (s: string): string =>
+            s.replace(/\*\*(.*?)\*\*/g, '$1')   // bold
+                .replace(/\*(.*?)\*/g, '$1')        // italic
+                .replace(/^>\s*/gm, '')             // blockquote
+                .replace(/^[-*]\s*/gm, '')          // list bullets
+                .replace(/^\d+\.\s*/gm, '')         // numbered list
+                .replace(/`(.*?)`/g, '$1')          // inline code
+                .trim();
 
-                    // Extract key sections
-                    const sections = ['本周概览', '成功模式', '下周建议'];
-                    for (const sec of sections) {
-                        const idx = content.indexOf(sec);
-                        if (idx < 0) continue;
-                        let text = content.substring(idx + sec.length);
-                        const nextH = text.indexOf('\n###');
-                        if (nextH > 0) text = text.substring(0, nextH);
-                        const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith('#')).slice(0, 2);
-                        if (lines.length > 0) {
-                            wBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
-                            for (const line of lines) {
-                                wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line.replace(/^[-*\d.]+\s*/, '') });
+        // ---- Weekly Insight (match the month being viewed) ----
+        // Find weeks that fall within the selected calendar month
+        const monthStart = moment(calMonth).startOf('month');
+        const monthEnd = moment(calMonth).endOf('month');
+        let weekFileFound = false;
+
+        // Check weeks within the viewed month range
+        const startWeek = monthStart.isoWeek();
+        const endWeek = monthEnd.isoWeek();
+        const year = monthStart.isoWeekYear();
+        const weeksToCheck: number[] = [];
+        if (endWeek >= startWeek) {
+            for (let w = endWeek; w >= startWeek; w--) weeksToCheck.push(w);
+        } else {
+            // Year boundary (e.g. Dec→Jan)
+            for (let w = endWeek; w >= 1; w--) weeksToCheck.push(w);
+            for (let w = 53; w >= startWeek; w--) weeksToCheck.push(w);
+        }
+
+        for (const wk of weeksToCheck) {
+            if (weekFileFound) break;
+            const wYear = wk >= startWeek ? year : monthEnd.isoWeekYear();
+            const patterns = [
+                `${wYear}-W${wk}-\u5468\u62a5.md`,
+                `${wYear}-W${String(wk).padStart(2, '0')}-\u5468\u62a5.md`,
+            ];
+            for (const wp of patterns) {
+                const wPath = `${h.plugin.settings.archiveFolder}/Insights/${wp}`;
+                const wFile = h.app.vault.getAbstractFileByPath(wPath);
+                if (wFile && wFile instanceof TFile) {
+                    try {
+                        const content = await h.app.vault.read(wFile);
+                        const weekCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
+                        const wHeader = weekCard.createDiv('tl-pyramid-layer-header');
+                        wHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '\ud83d\udcca' });
+                        wHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `W${wk} \u5468\u62a5\u6d1e\u5bdf` });
+                        const wBody = weekCard.createDiv('tl-dash-card-body');
+
+                        const sections = ['\u672c\u5468\u6982\u89c8', '\u6210\u529f\u6a21\u5f0f', '\u4e0b\u5468\u5efa\u8bae'];
+                        for (const sec of sections) {
+                            const idx = content.indexOf(sec);
+                            if (idx < 0) continue;
+                            let text = content.substring(idx + sec.length);
+                            const nextH = text.search(/\n#{2,3}\s/);
+                            if (nextH > 0) text = text.substring(0, nextH);
+                            const lines = text.split('\n')
+                                .map((l: string) => stripMd(l))
+                                .filter((l: string) => l.length > 0)
+                                .slice(0, 2);
+                            if (lines.length > 0) {
+                                wBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
+                                for (const line of lines) {
+                                    wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                                }
                             }
                         }
-                    }
 
-                    // Link to full report
-                    const link = wBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整周报 →' });
-                    link.addEventListener('click', () => {
-                        h.app.workspace.getLeaf().openFile(wFile as TFile);
-                    });
-                } catch { /* skip */ }
-                break;
+                        const link = wBody.createEl('div', { cls: 'tl-dash-insight-link', text: '\u67e5\u770b\u5b8c\u6574\u5468\u62a5 \u2192' });
+                        link.addEventListener('click', () => {
+                            h.app.workspace.getLeaf().openFile(wFile as TFile);
+                        });
+                        weekFileFound = true;
+                    } catch { /* skip */ }
+                    break;
+                }
             }
         }
 
-        // ---- Monthly Insight ----
-        const monthKey = today.format('YYYY-MM');
-        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${monthKey}-月报.md`;
+        // ---- Monthly Insight (match the viewed month) ----
+        const monthKey = calMonth.format('YYYY-MM');
+        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${monthKey}-\u6708\u62a5.md`;
         const mFile = h.app.vault.getAbstractFileByPath(mPath);
         if (mFile && mFile instanceof TFile) {
             try {
                 const content = await h.app.vault.read(mFile);
                 const monthCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
                 const mHeader = monthCard.createDiv('tl-pyramid-layer-header');
-                mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
-                mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} 月报洞察` });
+                mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '\ud83d\udcc5' });
+                mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} \u6708\u62a5\u6d1e\u5bdf` });
                 const mBody = monthCard.createDiv('tl-dash-card-body');
 
-                const lines = content.split('\n').map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith('#') && !l.startsWith('---')).slice(0, 3);
-                for (const line of lines) {
-                    mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line.replace(/^[-*\d.]+\s*/, '') });
+                // Extract key sections from the monthly report
+                const mSections = ['\u6708\u5ea6\u603b\u7ed3', '\u6210\u957f\u8bb0\u5f55', '\u6210\u957f\u5efa\u8bae'];
+                for (const sec of mSections) {
+                    const idx = content.indexOf(sec);
+                    if (idx < 0) continue;
+                    let text = content.substring(idx + sec.length);
+                    const nextH = text.search(/\n#{2,3}\s/);
+                    if (nextH > 0) text = text.substring(0, nextH);
+                    const lines = text.split('\n')
+                        .map((l: string) => stripMd(l))
+                        .filter((l: string) => l.length > 0)
+                        .slice(0, 2);
+                    if (lines.length > 0) {
+                        mBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
+                        for (const line of lines) {
+                            mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
+                        }
+                    }
                 }
 
-                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整月报 →' });
+                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '\u67e5\u770b\u5b8c\u6574\u6708\u62a5 \u2192' });
                 link.addEventListener('click', () => {
                     h.app.workspace.getLeaf().openFile(mFile as TFile);
                 });
