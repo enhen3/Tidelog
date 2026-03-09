@@ -70,47 +70,18 @@ export class ReviewRenderer {
 
     private async renderReviewCalendar(panel: HTMLElement): Promise<void> {
         const h = this.host;
-        const mode = h.calendarViewMode || 'month';
         const layer = panel.createDiv('tl-pyramid-layer tl-pyramid-review-cal');
 
-        // Header with nav + mode toggle
+        // Header with nav only (no mode toggle — always month view)
         const header = layer.createDiv('tl-pyramid-layer-header tl-cal-header');
         const prevBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '‹' });
         const titleEl = header.createEl('span', { cls: 'tl-cal-title' });
         const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
 
-        // Mode toggle
-        const modeToggle = header.createDiv('tl-cal-mode-toggle');
-        const monthBtn = modeToggle.createEl('button', {
-            cls: `tl-cal-mode-btn ${mode === 'month' ? 'tl-cal-mode-btn-active' : ''}`,
-            text: '月',
-        });
-        const weekBtn = modeToggle.createEl('button', {
-            cls: `tl-cal-mode-btn ${mode === 'week' ? 'tl-cal-mode-btn-active' : ''}`,
-            text: '周',
-        });
-        monthBtn.addEventListener('click', () => { h.calendarViewMode = 'month'; h.invalidateTabCache('review'); h.switchTab('review'); });
-        weekBtn.addEventListener('click', () => { h.calendarViewMode = 'week'; h.calendarWeekOffset = 0; h.invalidateTabCache('review'); h.switchTab('review'); });
-
-        if (mode === 'month') {
-            titleEl.setText(h.calendarMonth.format('YYYY年 M月'));
-            prevBtn.addEventListener('click', () => { h.calendarMonth.subtract(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
-            nextBtn.addEventListener('click', () => { h.calendarMonth.add(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
-            await this.renderMonthView(layer);
-        } else {
-            const weekStart = moment().startOf('isoWeek').add(h.calendarWeekOffset, 'weeks');
-            titleEl.setText(`${weekStart.format('M月D日')} — ${moment(weekStart).add(6, 'days').format('M月D日')}`);
-            prevBtn.addEventListener('click', () => { h.calendarWeekOffset--; h.invalidateTabCache('review'); h.switchTab('review'); });
-            nextBtn.addEventListener('click', () => { h.calendarWeekOffset++; h.invalidateTabCache('review'); h.switchTab('review'); });
-
-            // "Today" button
-            if (h.calendarWeekOffset !== 0) {
-                const todayBtn = header.createEl('button', { cls: 'tl-cal-today-btn', text: '本周' });
-                todayBtn.addEventListener('click', () => { h.calendarWeekOffset = 0; h.invalidateTabCache('review'); h.switchTab('review'); });
-            }
-
-            await this.renderWeekView(layer, weekStart);
-        }
+        titleEl.setText(h.calendarMonth.format('YYYY年 M月'));
+        prevBtn.addEventListener('click', () => { h.calendarMonth.subtract(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
+        nextBtn.addEventListener('click', () => { h.calendarMonth.add(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
+        await this.renderMonthView(layer);
     }
 
     // ---- Month View ----
@@ -407,34 +378,7 @@ export class ReviewRenderer {
 
     private async renderReviewDashboard(panel: HTMLElement): Promise<void> {
         const h = this.host;
-
-        // ---- Daily Insight ----
         const today = moment();
-        const todayPath = `${h.plugin.settings.dailyFolder}/${today.format('YYYY-MM-DD')}.md`;
-        const todayFile = h.app.vault.getAbstractFileByPath(todayPath);
-        if (todayFile && todayFile instanceof TFile) {
-            try {
-                const content = await h.app.vault.read(todayFile);
-                // Extract review summary if exists
-                const reviewIdx = content.indexOf('## 晚间复盘');
-                if (reviewIdx > 0) {
-                    let reviewText = content.substring(reviewIdx + '## 晚间复盘'.length);
-                    const endIdx = reviewText.indexOf('\n---');
-                    if (endIdx > 0) reviewText = reviewText.substring(0, endIdx);
-                    const lines = reviewText.split('\n').map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith('#')).slice(0, 2);
-                    if (lines.length > 0) {
-                        const dailyCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
-                        const dHeader = dailyCard.createDiv('tl-pyramid-layer-header');
-                        dHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📖' });
-                        dHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '今日复盘' });
-                        const dBody = dailyCard.createDiv('tl-dash-card-body');
-                        for (const line of lines) {
-                            dBody.createEl('p', { cls: 'tl-dash-insight-line', text: line.replace(/^[-*]\s*/, '') });
-                        }
-                    }
-                }
-            } catch { /* skip */ }
-        }
 
         // ---- Weekly Insight ----
         const weekNum = today.isoWeek();
