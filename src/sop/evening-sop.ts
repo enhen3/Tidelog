@@ -167,6 +167,13 @@ ${this.questionFlow[0].initialMessage}`;
         context: SOPContext,
         onMessage: (message: string) => void
     ): Promise<void> {
+        // Handle emotion score (final step after all questions)
+        if (context.currentQuestion === ('emotion_score' as any)) {
+            context.responses['happiness_emotion'] = content;
+            await this.finishEveningSOP(context, onMessage);
+            return;
+        }
+
         const currentQuestion = this.questionFlow[this.currentQuestionIndex];
 
         // Check for skip/end
@@ -278,7 +285,8 @@ ${this.questionFlow[0].initialMessage}`;
         }
 
         if (this.currentQuestionIndex >= this.questionFlow.length) {
-            await this.finishEveningSOP(context, onMessage);
+            // All questions done — ask for emotion score before finishing
+            await this.askEmotionScore(context, onMessage, previousResponse);
             return;
         }
 
@@ -289,6 +297,24 @@ ${this.questionFlow[0].initialMessage}`;
         const message = previousResponse
             ? `${previousResponse}\n\n---\n\n${nextQuestion.initialMessage}`
             : nextQuestion.initialMessage;
+
+        onMessage(message);
+    }
+
+    /**
+     * Ask for today's emotion/mood score as the final step
+     */
+    private async askEmotionScore(
+        context: SOPContext,
+        onMessage: (message: string) => void,
+        previousResponse?: string
+    ): Promise<void> {
+        context.currentQuestion = 'emotion_score' as any;
+        context.currentStep = this.questionFlow.length + 1;
+
+        const message = previousResponse
+            ? `${previousResponse}\n\n---\n\n最后一个问题：**今天整体心情怎么样？** 请用 1-10 分评估一下。\n（1=很糟糕，5=一般，10=非常开心）`
+            : '最后一个问题：**今天整体心情怎么样？** 请用 1-10 分评估一下。\n（1=很糟糕，5=一般，10=非常开心）';
 
         onMessage(message);
     }

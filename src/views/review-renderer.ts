@@ -7,7 +7,7 @@ import { TFile, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 
-interface CalData { emotionScore: number | null; taskCount: number; completedCount: number; tasks: { text: string; done: boolean }[]; status: string; filePath: string }
+interface CalData { emotionScore: number | null; taskCount: number; completedCount: number; tasks: { text: string; done: boolean }[]; status: string; filePath: string; hasPlan: boolean; hasReview: boolean }
 
 /** Minimal interface for the host view that owns this renderer. */
 export interface ReviewHost {
@@ -60,6 +60,8 @@ export class ReviewRenderer {
                 tasks,
                 status,
                 filePath: file.path,
+                hasPlan: content.includes('## 晨间计划') && tasks.length > 0,
+                hasReview: content.includes('## 晚间复盘'),
             };
         } catch { return null; }
     }
@@ -138,38 +140,36 @@ export class ReviewRenderer {
             const isToday = dateStr === todayStr;
 
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
-            cell.createEl('div', { cls: 'tl-cal-date', text: `${d}` });
 
+            // Closure ring
+            const ring = cell.createDiv('tl-cal-ring');
+            const hasPlan = data?.hasPlan ?? false;
+            const hasReview = data?.hasReview ?? false;
+
+            // Left half (plan) + right half (review)
+            ring.addClass(hasPlan ? 'tl-cal-ring-plan' : 'tl-cal-ring-plan-empty');
+            ring.addClass(hasReview ? 'tl-cal-ring-review' : 'tl-cal-ring-review-empty');
+
+            // Mood fill color
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
-                cell.style.backgroundColor = `hsla(${hue}, 55%, 75%, 0.35)`;
+                ring.style.setProperty('--mood-color', `hsl(${hue}, 60%, 70%)`);
+                ring.addClass('tl-cal-ring-mood');
             }
 
-            // Task summary text (max 2 tasks shown)
-            if (data && data.tasks.length > 0) {
-                const summaryDiv = cell.createDiv('tl-cal-task-summary');
-                for (const task of data.tasks.slice(0, 2)) {
-                    const line = summaryDiv.createDiv(`tl-cal-task-line ${task.done ? 'tl-cal-task-line-done' : ''}`);
-                    line.setText(task.text);
-                }
-                if (data.tasks.length > 2) {
-                    summaryDiv.createEl('span', { cls: 'tl-cal-task-more', text: `+${data.tasks.length - 2}` });
-                }
-            }
+            // Date number
+            ring.createEl('span', { cls: 'tl-cal-ring-num', text: `${d}` });
 
-            if (data?.status === 'completed') {
-                cell.createEl('div', { cls: 'tl-cal-status-badge tl-cal-status-done', text: '✓' });
-            }
-
+            // Tooltip
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
-                // Tooltip
                 const tipParts: string[] = [];
-                if (data.emotionScore) tipParts.push(`情绪 ${data.emotionScore}/10`);
+                if (hasPlan) tipParts.push('✅ 计划');
+                if (hasReview) tipParts.push('✅ 复盘');
+                if (data.emotionScore) tipParts.push(`心情 ${data.emotionScore}/10`);
                 if (data.taskCount > 0) tipParts.push(`任务 ${data.completedCount}/${data.taskCount}`);
                 if (tipParts.length) cell.setAttribute('aria-label', tipParts.join(' · '));
 
-                // Click → popover with task list
                 cell.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.showTaskPopover(cell, data, dateStr);

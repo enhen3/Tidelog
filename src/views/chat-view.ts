@@ -503,6 +503,8 @@ export class ChatView extends ItemView {
         this.addAIMessage('开始晨间复盘...');
         await this.morningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
+        }, () => {
+            this.taskInputManager.showTaskInput();
         });
     }
 

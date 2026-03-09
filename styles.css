@@ -1423,13 +1423,13 @@
 .tl-cal-cell {
 	position: relative;
 	border-radius: 8px;
-	border: 0.5px solid var(--tl-border);
-	background: var(--tl-surface-raised);
+	background: transparent;
 	padding: 4px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	min-height: 36px;
+	justify-content: center;
+	min-height: 40px;
 	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -1443,20 +1443,72 @@
 }
 
 .tl-cal-cell-clickable:hover {
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-	transform: scale(1.03);
+	transform: scale(1.1);
 }
 
 .tl-cal-cell-today {
-	border-color: var(--tl-gold);
-	border-width: 2px;
-	box-shadow: 0 0 0 1px rgba(124, 127, 155, 0.2);
+	background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+	border-radius: 8px;
 }
 
-.tl-cal-date {
-	font-size: 12px;
+/* ---- Closure Ring ---- */
+.tl-cal-ring {
+	position: relative;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* Default: no ring border */
+	background: var(--background-secondary);
+	--mood-color: transparent;
+}
+
+/* Plan (left half) - green when done */
+.tl-cal-ring-plan {
+	border-left: 2.5px solid var(--text-success, #4ade80);
+	border-top: 2.5px solid var(--text-success, #4ade80);
+	border-bottom: 2.5px solid var(--text-success, #4ade80);
+}
+
+.tl-cal-ring-plan-empty {
+	border-left: 2.5px solid var(--background-modifier-border);
+	border-top: 2.5px solid var(--background-modifier-border);
+	border-bottom: 2.5px solid var(--background-modifier-border);
+}
+
+/* Review (right half) - green when done */
+.tl-cal-ring-review {
+	border-right: 2.5px solid var(--text-success, #4ade80);
+}
+
+.tl-cal-ring-review.tl-cal-ring-plan {
+	border-top: 2.5px solid var(--text-success, #4ade80);
+	border-bottom: 2.5px solid var(--text-success, #4ade80);
+}
+
+.tl-cal-ring-review-empty {
+	border-right: 2.5px solid var(--background-modifier-border);
+}
+
+/* Mood fill - colored center */
+.tl-cal-ring-mood {
+	background: var(--mood-color);
+}
+
+/* Date number inside ring */
+.tl-cal-ring-num {
+	font-size: 11px;
 	font-weight: 600;
-	color: var(--tl-text-primary);
+	color: var(--text-normal);
+	z-index: 1;
+	line-height: 1;
+}
+
+.tl-cal-ring-mood .tl-cal-ring-num {
+	color: #333;
+	font-weight: 700;
 }
 
 .tl-cal-dots {
