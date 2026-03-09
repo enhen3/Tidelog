@@ -119,13 +119,13 @@ export class ReviewRenderer {
 
             const svgNS = 'http://www.w3.org/2000/svg';
             const svg = document.createElementNS(svgNS, 'svg');
-            svg.setAttribute('width', '36');
-            svg.setAttribute('height', '36');
-            svg.setAttribute('viewBox', '0 0 36 36');
+            svg.setAttribute('width', '32');
+            svg.setAttribute('height', '32');
+            svg.setAttribute('viewBox', '0 0 32 32');
             svg.setAttribute('class', 'tl-cal-ring-svg');
 
-            const cx = 18, cy = 18, r = 14;
-            const fullC = 2 * Math.PI * r; // ~87.96
+            const cx = 16, cy = 16, r = 12;
+            const fullC = 2 * Math.PI * r;
             const arcLen = fullC * 174 / 360; // 174° each half (3° gap on each junction)
             const gapLen = fullC - arcLen;
             const uid = `cr${d}`;
@@ -179,7 +179,7 @@ export class ReviewRenderer {
                 const moodCircle = document.createElementNS(svgNS, 'circle');
                 moodCircle.setAttribute('cx', `${cx}`);
                 moodCircle.setAttribute('cy', `${cy}`);
-                moodCircle.setAttribute('r', '10');
+                moodCircle.setAttribute('r', '8');
                 moodCircle.setAttribute('fill', `hsla(${hue}, 55%, 72%, 0.3)`);
                 svg.appendChild(moodCircle);
             }
@@ -192,7 +192,7 @@ export class ReviewRenderer {
                 track.setAttribute('r', `${r}`);
                 track.setAttribute('fill', 'none');
                 track.setAttribute('stroke', 'var(--background-modifier-border)');
-                track.setAttribute('stroke-width', '3.5');
+                track.setAttribute('stroke-width', '3');
                 track.setAttribute('opacity', '0.35');
                 svg.appendChild(track);
 
@@ -208,7 +208,7 @@ export class ReviewRenderer {
                     arc.setAttribute('r', `${r}`);
                     arc.setAttribute('fill', 'none');
                     arc.setAttribute('stroke', strokeColor);
-                    arc.setAttribute('stroke-width', '3.5');
+                    arc.setAttribute('stroke-width', '3');
                     arc.setAttribute('stroke-linecap', 'round');
                     arc.setAttribute('stroke-dasharray', `${qArcLen} ${qGapLen}`);
                     arc.setAttribute('transform', `rotate(${rotateDeg} ${cx} ${cy})`);
@@ -441,24 +441,13 @@ export class ReviewRenderer {
                                 wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                             }
                         } else {
-                            // Fallback: extract key sections
-                            const sections = ['\u672c\u5468\u6982\u89c8', '\u6210\u529f\u6a21\u5f0f', '\u4e0b\u5468\u5efa\u8bae'];
-                            for (const sec of sections) {
-                                const idx = content.indexOf(sec);
-                                if (idx < 0) continue;
-                                let text = content.substring(idx + sec.length);
-                                const nextH2 = text.search(/\n#{2,3}\s/);
-                                if (nextH2 > 0) text = text.substring(0, nextH2);
-                                const lines = text.split('\n')
-                                    .map((l: string) => stripMd(l))
-                                    .filter((l: string) => l.length > 0)
-                                    .slice(0, 2);
-                                if (lines.length > 0) {
-                                    wBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
-                                    for (const line of lines) {
-                                        wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
-                                    }
-                                }
+                            // Fallback: grab first 3 meaningful content lines
+                            const lines = content.split('\n')
+                                .map((l: string) => stripMd(l))
+                                .filter((l: string) => l.length > 4 && !l.startsWith('#') && !l.match(/^(生成于|报告结构)/))
+                                .slice(0, 3);
+                            for (const line of lines) {
+                                wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                             }
                         }
 
@@ -499,24 +488,13 @@ export class ReviewRenderer {
                         mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                     }
                 } else {
-                    // Fallback: extract key sections
-                    const mSections = ['\u6708\u5ea6\u603b\u7ed3', '\u6210\u957f\u8bb0\u5f55', '\u6210\u957f\u5efa\u8bae'];
-                    for (const sec of mSections) {
-                        const idx = content.indexOf(sec);
-                        if (idx < 0) continue;
-                        let text = content.substring(idx + sec.length);
-                        const nextH2 = text.search(/\n#{2,3}\s/);
-                        if (nextH2 > 0) text = text.substring(0, nextH2);
-                        const lines = text.split('\n')
-                            .map((l: string) => stripMd(l))
-                            .filter((l: string) => l.length > 0)
-                            .slice(0, 2);
-                        if (lines.length > 0) {
-                            mBody.createEl('div', { cls: 'tl-dash-insight-label', text: sec });
-                            for (const line of lines) {
-                                mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
-                            }
-                        }
+                    // Fallback: grab first 3 meaningful content lines
+                    const lines = content.split('\n')
+                        .map((l: string) => stripMd(l))
+                        .filter((l: string) => l.length > 4 && !l.startsWith('#') && !l.match(/^(生成于|报告结构)/))
+                        .slice(0, 3);
+                    for (const line of lines) {
+                        mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                     }
                 }
 

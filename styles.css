@@ -1423,27 +1423,27 @@
 .tl-cal-grid {
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
-	gap: 6px;
+	gap: 2px;
 }
 
 .tl-cal-weekday {
 	text-align: center;
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 600;
 	color: var(--tl-text-secondary);
-	padding: 8px 0;
+	padding: 4px 0;
 }
 
 .tl-cal-cell {
 	position: relative;
-	border-radius: 8px;
+	border-radius: 6px;
 	background: transparent;
-	padding: 4px;
+	padding: 2px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	min-height: 40px;
+	min-height: 32px;
 	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -1472,7 +1472,7 @@
 }
 
 .tl-cal-ring-text {
-	font-size: 9px;
+	font-size: 8.5px;
 	font-weight: 600;
 	fill: var(--text-normal);
 }
