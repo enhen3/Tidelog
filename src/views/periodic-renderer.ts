@@ -214,35 +214,46 @@ export class PeriodicRenderer {
 
     /** Extract and render 晚间复盘 sections from daily note content */
     private renderReviewSection(preview: HTMLElement, content: string): void {
-        // Find 晚间复盘 section
-        const reviewMatch = content.match(/## 晚间复盘\n([\s\S]*?)(?=\n---\s*$|$)/m);
-        if (!reviewMatch) return;
+        // Find 晚间复盘 section — handle optional blank lines
+        const reviewIdx = content.indexOf('## 晚间复盘');
+        if (reviewIdx < 0) return;
 
-        const reviewContent = reviewMatch[1];
+        // Get everything after "## 晚间复盘" until next --- or end
+        let reviewContent = content.substring(reviewIdx + '## 晚间复盘'.length);
+        const endIdx = reviewContent.indexOf('\n---');
+        if (endIdx > 0) reviewContent = reviewContent.substring(0, endIdx);
+
+        if (!reviewContent.trim()) return;
+
         const section = preview.createDiv('tl-periodic-review-section');
         section.createDiv({ cls: 'tl-periodic-review-label', text: '📝 复盘' });
 
-        // Extract sub-sections
-        const subSections: { icon: string; title: string; pattern: RegExp }[] = [
-            { icon: '🎯', title: '目标对标', pattern: /### 目标对标\n([\s\S]*?)(?=###|$)/ },
-            { icon: '🏆', title: '成功日记', pattern: /### 成功日记\n([\s\S]*?)(?=###|$)/ },
-            { icon: '😟', title: '焦虑觉察', pattern: /### 焦虑觉察\n([\s\S]*?)(?=###|$)/ },
-            { icon: '📌', title: '明日计划', pattern: /### 明日计划\n([\s\S]*?)(?=###|$)/ },
+        // Extract sub-sections — use indexOf-based approach for robustness
+        const subSections: { icon: string; title: string; heading: string }[] = [
+            { icon: '🎯', title: '目标对标', heading: '### 目标对标' },
+            { icon: '🏆', title: '成功日记', heading: '### 成功日记' },
+            { icon: '😟', title: '焦虑觉察', heading: '### 焦虑觉察' },
+            { icon: '📌', title: '明日计划', heading: '### 明日计划' },
         ];
 
         for (const sub of subSections) {
-            const m = reviewContent.match(sub.pattern);
-            if (m && m[1].trim()) {
-                const text = m[1].trim();
-                // Truncate to 2 lines
-                const lines = text.split('\n').filter(l => l.trim()).slice(0, 2);
-                const item = section.createDiv('tl-periodic-review-item');
-                item.createEl('span', { cls: 'tl-periodic-review-icon', text: sub.icon });
-                const textDiv = item.createDiv('tl-periodic-review-text');
-                textDiv.createEl('div', { cls: 'tl-periodic-review-title', text: sub.title });
-                for (const line of lines) {
-                    textDiv.createEl('div', { cls: 'tl-periodic-review-line', text: line.replace(/^\d+\.\s*\*\*.*?\*\*[:：]\s*/, '').replace(/^[-*]\s*/, '') });
-                }
+            const idx = reviewContent.indexOf(sub.heading);
+            if (idx < 0) continue;
+
+            // Get text between this heading and next ### or end
+            let subText = reviewContent.substring(idx + sub.heading.length);
+            const nextH = subText.indexOf('\n###');
+            if (nextH > 0) subText = subText.substring(0, nextH);
+
+            const lines = subText.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+            if (lines.length === 0) continue;
+
+            const item = section.createDiv('tl-periodic-review-item');
+            item.createEl('span', { cls: 'tl-periodic-review-icon', text: sub.icon });
+            const textDiv = item.createDiv('tl-periodic-review-text');
+            textDiv.createEl('div', { cls: 'tl-periodic-review-title', text: sub.title });
+            for (const line of lines.slice(0, 2)) {
+                textDiv.createEl('div', { cls: 'tl-periodic-review-line', text: line.replace(/^\d+\.\s*\*\*.*?\*\*[:：]\s*/, '').replace(/^[-*]\s*/, '') });
             }
         }
     }
