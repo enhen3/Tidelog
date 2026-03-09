@@ -222,38 +222,52 @@ export class ReviewRenderer {
                 track.setAttribute('fill', 'none');
                 track.setAttribute('stroke', 'var(--background-modifier-border)');
                 track.setAttribute('stroke-width', '3.5');
-                track.setAttribute('opacity', '0.4');
+                track.setAttribute('opacity', '0.35');
                 svg.appendChild(track);
 
-                // Left half (Plan) — rotated to start just past 6 o'clock
-                const planArc = document.createElementNS(svgNS, 'circle');
-                planArc.setAttribute('cx', `${cx}`);
-                planArc.setAttribute('cy', `${cy}`);
-                planArc.setAttribute('r', `${r}`);
-                planArc.setAttribute('fill', 'none');
-                planArc.setAttribute('stroke', hasPlan ? `url(#${uid}pg)` : 'var(--background-modifier-border)');
-                planArc.setAttribute('stroke-width', '3.5');
-                planArc.setAttribute('stroke-linecap', 'round');
-                planArc.setAttribute('stroke-dasharray', `${arcLen} ${gapLen}`);
-                planArc.setAttribute('transform', `rotate(93 ${cx} ${cy})`);
-                if (hasPlan) planArc.setAttribute('filter', `url(#${uid}gl)`);
-                if (!hasPlan) planArc.setAttribute('opacity', '0.5');
-                svg.appendChild(planArc);
+                // Quarter arc params: each quarter = 84° (with 3° gap on each side of junction)
+                const qArcLen = fullC * 84 / 360;
+                const qGapLen = fullC - qArcLen;
 
-                // Right half (Review) — rotated to start just past 12 o'clock
-                const revArc = document.createElementNS(svgNS, 'circle');
-                revArc.setAttribute('cx', `${cx}`);
-                revArc.setAttribute('cy', `${cy}`);
-                revArc.setAttribute('r', `${r}`);
-                revArc.setAttribute('fill', 'none');
-                revArc.setAttribute('stroke', hasReview ? `url(#${uid}rg)` : 'var(--background-modifier-border)');
-                revArc.setAttribute('stroke-width', '3.5');
-                revArc.setAttribute('stroke-linecap', 'round');
-                revArc.setAttribute('stroke-dasharray', `${arcLen} ${gapLen}`);
-                revArc.setAttribute('transform', `rotate(-87 ${cx} ${cy})`);
-                if (hasReview) revArc.setAttribute('filter', `url(#${uid}gl)`);
-                if (!hasReview) revArc.setAttribute('opacity', '0.5');
-                svg.appendChild(revArc);
+                // Helper to create a quarter arc
+                const makeQ = (rotateDeg: number, strokeColor: string, hasGlow: boolean, dimmed: boolean) => {
+                    const arc = document.createElementNS(svgNS, 'circle');
+                    arc.setAttribute('cx', `${cx}`);
+                    arc.setAttribute('cy', `${cy}`);
+                    arc.setAttribute('r', `${r}`);
+                    arc.setAttribute('fill', 'none');
+                    arc.setAttribute('stroke', strokeColor);
+                    arc.setAttribute('stroke-width', '3.5');
+                    arc.setAttribute('stroke-linecap', 'round');
+                    arc.setAttribute('stroke-dasharray', `${qArcLen} ${qGapLen}`);
+                    arc.setAttribute('transform', `rotate(${rotateDeg} ${cx} ${cy})`);
+                    if (hasGlow) arc.setAttribute('filter', `url(#${uid}gl)`);
+                    if (dimmed) arc.setAttribute('opacity', '0.45');
+                    return arc;
+                };
+
+                const planColor = hasPlan ? `url(#${uid}pg)` : 'var(--background-modifier-border)';
+                const revColor = hasReview ? `url(#${uid}rg)` : 'var(--background-modifier-border)';
+
+                // INTERLOCKING LAYER ORDER:
+                // At 12 o'clock: Plan overlaps Review
+                // At 6 o'clock:  Review overlaps Plan
+                //
+                // Layer 1 (bottom): Review top-right quarter (12→3 o'clock)
+                //   rotate: 12 o'clock = 270° from default 3-o'clock, +3° gap = 273°
+                svg.appendChild(makeQ(273, revColor, hasReview, !hasReview));
+
+                // Layer 2: Plan bottom-left quarter (6→9 o'clock)
+                //   rotate: 6 o'clock = 90° from default, +3° gap = 93°
+                svg.appendChild(makeQ(93, planColor, hasPlan, !hasPlan));
+
+                // Layer 3: Plan top-left quarter (9→12 o'clock) — OVER review at 12 o'clock
+                //   rotate: 9 o'clock = 180°, +3° gap = 183°
+                svg.appendChild(makeQ(183, planColor, hasPlan, !hasPlan));
+
+                // Layer 4 (top): Review bottom-right quarter (3→6 o'clock) — OVER plan at 6 o'clock
+                //   rotate: 3 o'clock = 0°, +3° gap = 3°
+                svg.appendChild(makeQ(3, revColor, hasReview, !hasReview));
             }
 
             // Date number
