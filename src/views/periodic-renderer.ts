@@ -732,12 +732,23 @@ export class PeriodicRenderer {
             });
         });
 
-        // Drag & drop with hover-to-nest
+        // Drag & drop with hover-to-nest / drag-left-to-promote
         let nestTimer: ReturnType<typeof setTimeout> | null = null;
         let nestMode = false;
+        let promoteMode = false;
+
+        const clearTimers = () => {
+            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+            nestMode = false;
+            promoteMode = false;
+            row.removeClass('tl-task-row-dragover');
+            row.removeClass('tl-task-row-nest-hint');
+            row.removeClass('tl-task-row-promote-hint');
+        };
 
         row.addEventListener('dragstart', (e) => {
             e.dataTransfer?.setData('text/plain', task.text);
+            e.dataTransfer?.setData('text/indent', String(task.indent));
             row.addClass('tl-task-row-dragging');
         });
         row.addEventListener('dragend', () => {
@@ -745,35 +756,52 @@ export class PeriodicRenderer {
         });
         row.addEventListener('dragover', (e) => {
             e.preventDefault();
-            if (!nestMode) {
+            const rect = row.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const isLeftZone = offsetX < 30;
+
+            if (isLeftZone && !promoteMode && !nestMode) {
+                // Left-edge: start promote timer
+                if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+                row.removeClass('tl-task-row-dragover');
+                nestTimer = setTimeout(() => {
+                    promoteMode = true;
+                    nestMode = false;
+                    row.removeClass('tl-task-row-dragover');
+                    row.removeClass('tl-task-row-nest-hint');
+                    row.addClass('tl-task-row-promote-hint');
+                }, 300);
+            } else if (!isLeftZone && !nestMode && !promoteMode) {
+                // Right area: start nest timer
+                if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
                 row.addClass('tl-task-row-dragover');
-            }
-            // Start nest timer if not already running
-            if (!nestTimer && !nestMode) {
                 nestTimer = setTimeout(() => {
                     nestMode = true;
+                    promoteMode = false;
                     row.removeClass('tl-task-row-dragover');
+                    row.removeClass('tl-task-row-promote-hint');
                     row.addClass('tl-task-row-nest-hint');
                 }, 300);
             }
         });
         row.addEventListener('dragleave', () => {
-            row.removeClass('tl-task-row-dragover');
-            row.removeClass('tl-task-row-nest-hint');
-            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
-            nestMode = false;
+            clearTimers();
         });
         row.addEventListener('drop', async (e) => {
             e.preventDefault();
-            row.removeClass('tl-task-row-dragover');
-            row.removeClass('tl-task-row-nest-hint');
-            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+            const wasNest = nestMode;
+            const wasPromote = promoteMode;
+            clearTimers();
             const draggedText = e.dataTransfer?.getData('text/plain');
-            if (!draggedText || draggedText === task.text) { nestMode = false; return; }
+            if (!draggedText || draggedText === task.text) return;
 
-            if (nestMode) {
+            if (wasPromote) {
+                // Promote: make dragged task a top-level task
+                await h.setTaskIndent(file, draggedText, 0);
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            } else if (wasNest) {
                 // Nest: make dragged task a sub-task of this task
-                nestMode = false;
                 await h.deleteMdTask(file, draggedText);
                 await h.addSubTask(file, task.text, draggedText);
                 h.invalidateTabCache('kanban');

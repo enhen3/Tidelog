@@ -2765,6 +2765,14 @@
 	transition: all 0.2s ease;
 }
 
+/* Drag-left-to-promote visual indicator */
+.tl-task-row-promote-hint {
+	border-right: 3px solid #34c759 !important;
+	padding-left: 12px !important;
+	background: rgba(52, 199, 89, 0.08) !important;
+	transition: all 0.2s ease;
+}
+
 /* ── Action controls (hover-reveal) ── */
 .tl-task-drag-handle {
 	cursor: grab;
