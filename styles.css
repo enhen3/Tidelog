@@ -2768,6 +2768,41 @@
 	flex-shrink: 0;
 }
 
+.tl-task-sub-btn {
+	opacity: 0;
+	cursor: pointer;
+	color: var(--tl-accent);
+	font-size: 14px;
+	font-weight: 700;
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	line-height: 18px;
+	text-align: center;
+	border-radius: 50%;
+	transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.tl-periodic-task-row:hover .tl-task-sub-btn {
+	opacity: 0.5;
+}
+
+.tl-task-sub-btn:hover {
+	opacity: 1 !important;
+	background: var(--tl-accent-light);
+}
+
+.tl-subtask-input-row {
+	display: flex;
+	padding: 3px 8px 3px 36px;
+}
+
+.tl-subtask-input {
+	flex: 1;
+	font-size: 12px;
+	border-color: var(--tl-accent) !important;
+}
+
 .tl-periodic-task-input-row {
 	display: flex;
 	align-items: center;

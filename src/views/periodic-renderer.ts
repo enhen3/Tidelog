@@ -19,6 +19,7 @@ export interface PeriodicHost {
     parseMdTasks(content: string): { text: string; done: boolean; isTask: boolean; section: string; indent: number }[];
     toggleMdTask(file: TFile, taskText: string, wasDone: boolean): Promise<void>;
     addMdTask(file: TFile, taskText: string, indent?: number): Promise<void>;
+    addSubTask(file: TFile, parentText: string, subTaskText: string): Promise<void>;
     editMdTask(file: TFile, oldText: string, newText: string): Promise<void>;
     deleteMdTask(file: TFile, taskText: string): Promise<void>;
     reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void>;
@@ -698,6 +699,38 @@ export class PeriodicRenderer {
             row.remove();
         });
 
+        // Add sub-task button
+        const subBtn = row.createEl('span', { cls: 'tl-task-sub-btn', text: '+' });
+        subBtn.setAttribute('title', '添加子任务');
+        subBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Check if sub-input already exists
+            if (row.nextElementSibling?.hasClass('tl-subtask-input-row')) return;
+            const subRow = document.createElement('div');
+            subRow.className = 'tl-subtask-input-row';
+            const subInput = document.createElement('input');
+            subInput.type = 'text';
+            subInput.className = 'tl-periodic-task-input tl-subtask-input';
+            subInput.placeholder = '添加子任务...';
+            subRow.appendChild(subInput);
+            row.after(subRow);
+            subInput.focus();
+
+            const doAddSub = async () => {
+                const text = subInput.value.trim();
+                subRow.remove();
+                if (!text) return;
+                await h.addSubTask(file, task.text, text);
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            };
+            subInput.addEventListener('blur', doAddSub);
+            subInput.addEventListener('keydown', (ke: KeyboardEvent) => {
+                if (ke.key === 'Enter') { ke.preventDefault(); subInput.blur(); }
+                if (ke.key === 'Escape') { subInput.value = ''; subInput.blur(); }
+            });
+        });
+
         // Drag & drop handlers
         row.addEventListener('dragstart', (e) => {
             e.dataTransfer?.setData('text/plain', task.text);
@@ -736,34 +769,25 @@ export class PeriodicRenderer {
         });
     }
 
-    /** Inline task-add input with Tab for sub-task indent */
+    /** Inline task-add input */
     private renderTaskInput(container: HTMLElement, file: TFile): void {
         const h = this.host;
         const row = container.createDiv('tl-periodic-task-input-row');
-        let indent = 0;
-        const indentIndicator = row.createEl('span', { cls: 'tl-task-indent-indicator' });
         const input = row.createEl('input', {
             type: 'text',
             cls: 'tl-periodic-task-input',
-            attr: { placeholder: '添加任务... (Tab 缩进)' },
+            attr: { placeholder: '添加任务...' },
         });
         const addBtn = row.createEl('button', {
             cls: 'tl-periodic-task-add-btn',
             text: '+',
         });
 
-        const updateIndent = () => {
-            indentIndicator.setText(indent > 0 ? '└'.repeat(indent) + ' ' : '');
-            input.style.paddingLeft = indent > 0 ? `${indent * 12}px` : '';
-        };
-
         const doAdd = async () => {
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
-            await h.addMdTask(file, text, indent);
-            indent = 0;
-            updateIndent();
+            await h.addMdTask(file, text);
             h.invalidateTabCache('kanban');
             h.switchTab('kanban');
         };
@@ -771,11 +795,6 @@ export class PeriodicRenderer {
         addBtn.addEventListener('click', doAdd);
         input.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                indent = e.shiftKey ? Math.max(0, indent - 1) : Math.min(3, indent + 1);
-                updateIndent();
-            }
         });
     }
 

@@ -370,6 +370,27 @@ export class ChatView extends ItemView {
         }
     }
 
+    /** Insert a sub-task (indented) directly after a parent task */
+    public async addSubTask(file: TFile, parentText: string, subTaskText: string): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            const content = await this.app.vault.read(file);
+            const lines = content.split('\n');
+            const escaped = parentText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^(\\s*- \\[[ x]\\] )${escaped}$`);
+            let parentIdx = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (pat.test(lines[i])) { parentIdx = i; break; }
+            }
+            if (parentIdx >= 0) {
+                lines.splice(parentIdx + 1, 0, `  - [ ] ${subTaskText}`);
+                await this.app.vault.modify(file, lines.join('\n'));
+            }
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
     /** Edit a task's text in a markdown file */
     public async editMdTask(file: TFile, oldText: string, newText: string): Promise<void> {
         this._suppressRefresh = true;
