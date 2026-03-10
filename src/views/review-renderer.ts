@@ -390,120 +390,72 @@ export class ReviewRenderer {
                 .replace(/`(.*?)`/g, '$1')          // inline code
                 .trim();
 
-        // ---- Weekly Insight (match the month being viewed) ----
-        // Find weeks that fall within the selected calendar month
-        const monthStart = moment(calMonth).startOf('month');
-        const monthEnd = moment(calMonth).endOf('month');
-        let weekFileFound = false;
-
-        // Check weeks within the viewed month range
-        const startWeek = monthStart.isoWeek();
-        const endWeek = monthEnd.isoWeek();
-        const year = monthStart.isoWeekYear();
-        const weeksToCheck: number[] = [];
-        if (endWeek >= startWeek) {
-            for (let w = endWeek; w >= startWeek; w--) weeksToCheck.push(w);
-        } else {
-            // Year boundary (e.g. Dec→Jan)
-            for (let w = endWeek; w >= 1; w--) weeksToCheck.push(w);
-            for (let w = 53; w >= startWeek; w--) weeksToCheck.push(w);
-        }
-
-        for (const wk of weeksToCheck) {
-            if (weekFileFound) break;
-            const wYear = wk >= startWeek ? year : monthEnd.isoWeekYear();
-            const patterns = [
-                `${wYear}-W${wk}-\u5468\u62a5.md`,
-                `${wYear}-W${String(wk).padStart(2, '0')}-\u5468\u62a5.md`,
-            ];
-            for (const wp of patterns) {
-                const wPath = `${h.plugin.settings.archiveFolder}/Insights/${wp}`;
-                const wFile = h.app.vault.getAbstractFileByPath(wPath);
-                if (wFile && wFile instanceof TFile) {
-                    try {
-                        const content = await h.app.vault.read(wFile);
-                        const weekCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
-                        const wHeader = weekCard.createDiv('tl-pyramid-layer-header');
-                        wHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '\ud83d\udcca' });
-                        wHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `W${wk} \u5468\u62a5\u6d1e\u5bdf` });
-                        const wBody = weekCard.createDiv('tl-dash-card-body');
-
-                        // Prefer AI-generated dashboard summary
-                        const summaryIdx = content.indexOf('\u4eea\u8868\u76d8\u6458\u8981');
-                        if (summaryIdx >= 0) {
-                            let summaryText = content.substring(summaryIdx + '\u4eea\u8868\u76d8\u6458\u8981'.length);
-                            const nextH = summaryText.search(/\n#{2,3}\s/);
-                            if (nextH > 0) summaryText = summaryText.substring(0, nextH);
-                            const lines = summaryText.split('\n')
-                                .map((l: string) => stripMd(l))
-                                .filter((l: string) => l.length > 0);
-                            for (const line of lines) {
-                                wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
-                            }
-                        } else {
-                            // Fallback: grab first 3 meaningful content lines
-                            const lines = content.split('\n')
-                                .map((l: string) => stripMd(l))
-                                .filter((l: string) => l.length > 4 && !l.startsWith('#') && !l.match(/^(生成于|报告结构)/))
-                                .slice(0, 3);
-                            for (const line of lines) {
-                                wBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
-                            }
-                        }
-
-                        const link = wBody.createEl('div', { cls: 'tl-dash-insight-link', text: '\u67e5\u770b\u5b8c\u6574\u5468\u62a5 \u2192' });
-                        link.addEventListener('click', () => {
-                            h.app.workspace.getLeaf().openFile(wFile as TFile);
-                        });
-                        weekFileFound = true;
-                    } catch { /* skip */ }
-                    break;
-                }
-            }
-        }
-
-        // ---- Monthly Insight (match the viewed month) ----
+        // ---- Monthly Insight only (no weekly on dashboard) ----
         const monthKey = calMonth.format('YYYY-MM');
-        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${monthKey}-\u6708\u62a5.md`;
+        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${monthKey}-月报.md`;
         const mFile = h.app.vault.getAbstractFileByPath(mPath);
+
+        const monthCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
+        const mHeader = monthCard.createDiv('tl-pyramid-layer-header');
+        mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
+        mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} 月报洞察` });
+        const mBody = monthCard.createDiv('tl-dash-card-body');
+
         if (mFile && mFile instanceof TFile) {
             try {
                 const content = await h.app.vault.read(mFile);
-                const monthCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
-                const mHeader = monthCard.createDiv('tl-pyramid-layer-header');
-                mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '\ud83d\udcc5' });
-                mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} \u6708\u62a5\u6d1e\u5bdf` });
-                const mBody = monthCard.createDiv('tl-dash-card-body');
-
-                // Prefer AI-generated dashboard summary
-                const summaryIdx = content.indexOf('\u4eea\u8868\u76d8\u6458\u8981');
+                const summaryIdx = content.indexOf('仪表盘摘要');
                 if (summaryIdx >= 0) {
-                    let summaryText = content.substring(summaryIdx + '\u4eea\u8868\u76d8\u6458\u8981'.length);
+                    let summaryText = content.substring(summaryIdx + '仪表盘摘要'.length);
                     const nextH = summaryText.search(/\n#{2,3}\s/);
                     if (nextH > 0) summaryText = summaryText.substring(0, nextH);
-                    const lines = summaryText.split('\n')
+                    const sLines = summaryText.split('\n')
                         .map((l: string) => stripMd(l))
                         .filter((l: string) => l.length > 0);
-                    for (const line of lines) {
+                    for (const line of sLines) {
                         mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                     }
                 } else {
-                    // Fallback: grab first 3 meaningful content lines
-                    const lines = content.split('\n')
+                    const fLines = content.split('\n')
                         .map((l: string) => stripMd(l))
                         .filter((l: string) => l.length > 4 && !l.startsWith('#') && !l.match(/^(生成于|报告结构)/))
                         .slice(0, 3);
-                    for (const line of lines) {
+                    for (const line of fLines) {
                         mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                     }
                 }
-
-                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '\u67e5\u770b\u5b8c\u6574\u6708\u62a5 \u2192' });
+                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整月报 →' });
                 link.addEventListener('click', () => {
                     h.app.workspace.getLeaf().openFile(mFile as TFile);
                 });
             } catch { /* skip */ }
+        } else {
+            mBody.createEl('p', { cls: 'tl-dash-insight-line tl-dash-empty-hint', text: '该月尚无洞察报告' });
+            const genBtn = mBody.createEl('button', {
+                cls: 'tl-dash-generate-btn',
+                text: '✨ 生成当月洞察',
+            });
+            genBtn.addEventListener('click', async () => {
+                genBtn.setText('⚙️ 正在生成...');
+                genBtn.disabled = true;
+                genBtn.addClass('tl-dash-generate-btn-loading');
+                try {
+                    await h.plugin.insightService.generateMonthlyInsight(
+                        () => {},
+                        () => {
+                            h.invalidateTabCache('review');
+                            h.switchTab('review');
+                        },
+                        moment(calMonth),
+                    );
+                } catch {
+                    genBtn.setText('❌ 生成失败，点击重试');
+                    genBtn.disabled = false;
+                    genBtn.removeClass('tl-dash-generate-btn-loading');
+                }
+            });
         }
+
 
         // ---- Principles & Patterns ----
         let principle: string | null = null;

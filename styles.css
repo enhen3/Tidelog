@@ -1645,6 +1645,36 @@
 	margin: 2px 0;
 }
 
+.tl-dash-empty-hint {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.tl-dash-generate-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-top: 8px;
+	padding: 6px 14px;
+	border: 1px solid var(--tl-accent);
+	border-radius: var(--tl-radius-sm);
+	background: var(--tl-accent-light);
+	color: var(--tl-accent);
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s var(--tl-ease);
+}
+
+.tl-dash-generate-btn:hover {
+	background: var(--tl-accent-medium);
+}
+
+.tl-dash-generate-btn-loading {
+	opacity: 0.6;
+	cursor: wait;
+}
+
 .tl-dash-insight-label {
 	font-size: 11px;
 	font-weight: 600;

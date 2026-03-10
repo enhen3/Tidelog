@@ -99,17 +99,18 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
      */
     async generateMonthlyInsight(
         onChunk: (chunk: string) => void,
-        onComplete: (fullReport: string) => void
+        onComplete: (fullReport: string) => void,
+        targetMonth?: moment.Moment,
     ): Promise<void> {
-        const today = moment();
-        const monthStart = today.clone().startOf('month');
-        const monthEnd = today.clone().endOf('month');
+        const ref = targetMonth ? moment(targetMonth) : moment();
+        const monthStart = ref.clone().startOf('month');
+        const monthEnd = ref.clone().endOf('month');
 
         // Read daily notes for this month
         const dailyNotes = await this.plugin.vaultManager.getDailyNotesInRange(monthStart, monthEnd);
 
-        if (dailyNotes.length < 3) {
-            onChunk('⚠️ 本月日记数据不足（至少需要 3 天），无法生成有效的月度洞察。请继续使用日记功能后再试。');
+        if (dailyNotes.length < 1) {
+            onChunk('⚠️ 该月没有日记数据，无法生成洞察报告。');
             onComplete('');
             return;
         }
