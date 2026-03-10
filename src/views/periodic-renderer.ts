@@ -701,33 +701,11 @@ export class PeriodicRenderer {
             row.remove();
         });
 
-        // Indent / Outdent buttons
-        const indentWrap = row.createDiv('tl-task-indent-btns');
-        if (task.indent > 0) {
-            const outdentBtn = indentWrap.createEl('span', { cls: 'tl-task-indent-btn', text: '◁' });
-            outdentBtn.setAttribute('title', '提升为主任务');
-            outdentBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                await h.setTaskIndent(file, task.text, task.indent - 1);
-                h.invalidateTabCache('kanban');
-                h.switchTab('kanban');
-            });
-        }
-        const indentBtn = indentWrap.createEl('span', { cls: 'tl-task-indent-btn', text: '▷' });
-        indentBtn.setAttribute('title', '降级为子任务');
-        indentBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            await h.setTaskIndent(file, task.text, task.indent + 1);
-            h.invalidateTabCache('kanban');
-            h.switchTab('kanban');
-        });
-
         // Add sub-task button
         const subBtn = row.createEl('span', { cls: 'tl-task-sub-btn', text: '+' });
         subBtn.setAttribute('title', '添加子任务');
         subBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Check if sub-input already exists
             if (row.nextElementSibling?.hasClass('tl-subtask-input-row')) return;
             const subRow = document.createElement('div');
             subRow.className = 'tl-subtask-input-row';
@@ -754,7 +732,10 @@ export class PeriodicRenderer {
             });
         });
 
-        // Drag & drop handlers
+        // Drag & drop with hover-to-nest
+        let nestTimer: ReturnType<typeof setTimeout> | null = null;
+        let nestMode = false;
+
         row.addEventListener('dragstart', (e) => {
             e.dataTransfer?.setData('text/plain', task.text);
             row.addClass('tl-task-row-dragging');
@@ -764,29 +745,54 @@ export class PeriodicRenderer {
         });
         row.addEventListener('dragover', (e) => {
             e.preventDefault();
-            row.addClass('tl-task-row-dragover');
+            if (!nestMode) {
+                row.addClass('tl-task-row-dragover');
+            }
+            // Start nest timer if not already running
+            if (!nestTimer && !nestMode) {
+                nestTimer = setTimeout(() => {
+                    nestMode = true;
+                    row.removeClass('tl-task-row-dragover');
+                    row.addClass('tl-task-row-nest-hint');
+                }, 500);
+            }
         });
         row.addEventListener('dragleave', () => {
             row.removeClass('tl-task-row-dragover');
+            row.removeClass('tl-task-row-nest-hint');
+            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+            nestMode = false;
         });
         row.addEventListener('drop', async (e) => {
             e.preventDefault();
             row.removeClass('tl-task-row-dragover');
+            row.removeClass('tl-task-row-nest-hint');
+            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
             const draggedText = e.dataTransfer?.getData('text/plain');
-            if (!draggedText || draggedText === task.text) return;
-            const parent = row.parentElement;
-            if (!parent) return;
-            // Collect all task rows for full reorder
-            const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
-            const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
-            const fromIdx = texts.indexOf(draggedText);
-            const toIdx = texts.indexOf(task.text);
-            if (fromIdx >= 0 && toIdx >= 0) {
-                texts.splice(fromIdx, 1);
-                texts.splice(toIdx, 0, draggedText);
-                await h.reorderMdTasks(file, texts);
+            if (!draggedText || draggedText === task.text) { nestMode = false; return; }
+
+            if (nestMode) {
+                // Nest: make dragged task a sub-task of this task
+                nestMode = false;
+                await h.deleteMdTask(file, draggedText);
+                await h.addSubTask(file, task.text, draggedText);
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
+            } else {
+                // Quick drop: reorder
+                const parent = row.parentElement;
+                if (!parent) return;
+                const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
+                const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
+                const fromIdx = texts.indexOf(draggedText);
+                const toIdx = texts.indexOf(task.text);
+                if (fromIdx >= 0 && toIdx >= 0) {
+                    texts.splice(fromIdx, 1);
+                    texts.splice(toIdx, 0, draggedText);
+                    await h.reorderMdTasks(file, texts);
+                    h.invalidateTabCache('kanban');
+                    h.switchTab('kanban');
+                }
             }
         });
     }

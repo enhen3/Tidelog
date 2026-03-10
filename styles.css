@@ -2757,31 +2757,21 @@
 	border-top: 0.5px solid var(--tl-border);
 }
 
-/* Indent / Outdent controls */
-.tl-task-indent-btns {
-	display: flex;
-	gap: 1px;
-	opacity: 0;
-	flex-shrink: 0;
-	transition: opacity 0.2s ease;
+/* Drag-to-nest visual indicator */
+.tl-task-row-nest-hint {
+	border-left: 3px solid var(--tl-accent) !important;
+	padding-left: 20px !important;
+	background: var(--tl-accent-light) !important;
+	transition: all 0.2s ease;
 }
 
-.tl-periodic-task-row:hover .tl-task-indent-btns {
-	opacity: 0.4;
-}
-
-.tl-task-indent-btn {
-	cursor: pointer;
+.tl-task-row-nest-hint::after {
+	content: '↳ 嵌套为子任务';
+	position: absolute;
+	right: 12px;
 	font-size: 10px;
-	color: var(--tl-text-tertiary);
-	width: 14px;
-	text-align: center;
-	transition: color 0.15s ease, opacity 0.15s ease;
-}
-
-.tl-task-indent-btn:hover {
 	color: var(--tl-accent);
-	opacity: 1 !important;
+	opacity: 0.8;
 }
 
 /* ── Action controls (hover-reveal) ── */
