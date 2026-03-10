@@ -419,54 +419,35 @@ export class ChatView extends ItemView {
         }
     }
 
-    /** Reorder tasks in a markdown file, keeping parent+children groups together */
+    /** Reorder all task lines in a markdown file by the given text order */
     public async reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void> {
         this._suppressRefresh = true;
         try {
             const content = await this.app.vault.read(file);
             const lines = content.split('\n');
 
-            // Build task groups: each top-level task + its indented children
-            type TaskGroup = { parentText: string; lines: { idx: number; line: string }[] };
-            const groups: TaskGroup[] = [];
-            const taskIndices: number[] = [];
-
+            // Collect all task lines and their positions
+            const taskEntries: { idx: number; line: string; text: string }[] = [];
             for (let i = 0; i < lines.length; i++) {
-                const topMatch = lines[i].match(/^- \[[ x]\] (.+)$/);
-                if (topMatch) {
-                    const group: TaskGroup = { parentText: topMatch[1], lines: [{ idx: i, line: lines[i] }] };
-                    taskIndices.push(i);
-                    // Collect indented children below
-                    for (let j = i + 1; j < lines.length; j++) {
-                        if (lines[j].match(/^\s+- \[[ x]\] /)) {
-                            group.lines.push({ idx: j, line: lines[j] });
-                            taskIndices.push(j);
-                        } else {
-                            break;
-                        }
-                    }
-                    groups.push(group);
-                }
+                const m = lines[i].match(/^(\s*- \[[ x]\] )(.+)$/);
+                if (m) taskEntries.push({ idx: i, line: lines[i], text: m[2] });
             }
-            if (groups.length < 2) return;
+            if (taskEntries.length < 2) return;
 
-            // Reorder groups by orderedTexts
-            const reordered: TaskGroup[] = [];
+            // Build reordered lines following the requested text order
+            const reordered: string[] = [];
             for (const txt of orderedTexts) {
-                const found = groups.find(g => g.parentText === txt);
-                if (found && !reordered.includes(found)) reordered.push(found);
+                const found = taskEntries.find(t => t.text === txt && !reordered.includes(t.line));
+                if (found) reordered.push(found.line);
             }
-            // Append any groups not mentioned
-            for (const g of groups) {
-                if (!reordered.includes(g)) reordered.push(g);
+            // Append any tasks not in the ordered list
+            for (const t of taskEntries) {
+                if (!reordered.includes(t.line)) reordered.push(t.line);
             }
-
-            // Flatten reordered groups into lines
-            const flatReordered = reordered.flatMap(g => g.lines.map(l => l.line));
 
             // Replace task lines in-place
-            for (let i = 0; i < taskIndices.length && i < flatReordered.length; i++) {
-                lines[taskIndices[i]] = flatReordered[i];
+            for (let i = 0; i < taskEntries.length && i < reordered.length; i++) {
+                lines[taskEntries[i].idx] = reordered[i];
             }
 
             await this.app.vault.modify(file, lines.join('\n'));
