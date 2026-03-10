@@ -67,8 +67,8 @@ export class ChatView extends ItemView {
     private refreshTimer: ReturnType<typeof setTimeout> | null = null;
     private _suppressRefresh = false;
 
-    private morningSOP!: MorningSOP;
-    private eveningSOP!: EveningSOP;
+    public morningSOP!: MorningSOP;
+    public eveningSOP!: EveningSOP;
     private periodicRenderer!: PeriodicRenderer;
     private reviewRenderer!: ReviewRenderer;
     private taskInputManager!: TaskInputManager;
@@ -90,7 +90,7 @@ export class ChatView extends ItemView {
     }
 
     getDisplayText(): string {
-        return 'TideLog「潮记」';
+        return 'TideLog';
     }
 
     getIcon(): string {
@@ -98,7 +98,6 @@ export class ChatView extends ItemView {
     }
 
     async onOpen(): Promise<void> {
-        console.log('[TideLog] ChatView.onOpen() called');
         const container = this.contentEl;
         container.empty();
         container.addClass('tl-chat-container');
@@ -147,15 +146,8 @@ export class ChatView extends ItemView {
         const header = container.createDiv('tl-header');
         const title = header.createDiv('tl-title');
         const iconSpan = title.createSpan('tl-title-icon');
-        iconSpan.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<defs><linearGradient id="tideGrad" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="hsl(200,70%,55%)"/><stop offset="100%" stop-color="hsl(230,55%,50%)"/></linearGradient></defs>
-<circle cx="12" cy="12" r="10" fill="url(#tideGrad)" opacity="0.1"/>
-<path d="M3 14 Q6 10 9 14 Q12 18 15 14 Q18 10 21 14" fill="none" stroke="url(#tideGrad)" stroke-width="2" stroke-linecap="round"/>
-<path d="M3 18 Q6 14 9 18 Q12 22 15 18 Q18 14 21 18" fill="none" stroke="url(#tideGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-<circle cx="12" cy="7" r="3" fill="url(#tideGrad)" opacity="0.6"/>
-<path d="M9.5 7 Q12 3 14.5 7" fill="none" stroke="url(#tideGrad)" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`;
-        title.createSpan({ text: 'TideLog「潮记」' });
+        setIcon(iconSpan, 'tidelog-wave');
+        title.createSpan({ text: 'TideLog' });
     }
 
     /**
@@ -226,11 +218,11 @@ export class ChatView extends ItemView {
         });
 
         if (tab === 'chat') {
-            this.chatPanel.style.display = '';
+            this.chatPanel.removeClass('tl-hidden');
             // Remove non-chat panels
             this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => el.remove());
         } else {
-            this.chatPanel.style.display = 'none';
+            this.chatPanel.addClass('tl-hidden');
             // Build new panel first, THEN remove old to avoid white flash
             const panel = this.tabContentEl.createDiv('tl-tab-panel');
             if (animate) panel.addClass('tl-tab-panel-animate');
@@ -624,8 +616,8 @@ export class ChatView extends ItemView {
         try {
             const dailyNotePath = this.plugin.vaultManager.getDailyNotePath();
             const file = this.app.vault.getAbstractFileByPath(dailyNotePath);
-            if (file) {
-                const content = await this.app.vault.read(file as any);
+            if (file instanceof TFile) {
+                const content = await this.app.vault.read(file);
                 if (content.includes('精力状态')) {
                     // Plan already exists, go straight to task input with pre-fill
                     const existingTasks = await this.getExistingTasks();
@@ -792,19 +784,9 @@ export class ChatView extends ItemView {
 
         const avatar = wrapper.createDiv('tl-message-avatar');
         if (type === 'user') {
-            // User avatar — person silhouette with subtle wave
-            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor">
-<circle cx="12" cy="8" r="4"/>
-<path d="M5 20 Q5 14 12 14 Q19 14 19 20z" opacity="0.7"/>
-<path d="M3 22 Q7 19 12 22 Q17 19 21 22" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-</svg>`;
+            setIcon(avatar, 'user');
         } else {
-            // AI avatar — wave circle
-            avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-<circle cx="12" cy="12" r="9" stroke-width="1.8"/>
-<path d="M5 12 Q8 8 11 12 Q14 16 17 12 Q19 10 20 11"/>
-<path d="M5 16 Q8 12 11 16 Q14 20 17 16" opacity="0.4"/>
-</svg>`;
+            setIcon(avatar, 'tidelog-wave');
         }
 
         const content = wrapper.createDiv('tl-message-content');

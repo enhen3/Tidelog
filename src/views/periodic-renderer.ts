@@ -174,8 +174,8 @@ export class PeriodicRenderer {
         const meta = previewHeader.createDiv('tl-periodic-preview-meta');
         if (emotionScore) {
             const hue = Math.round(((emotionScore - 1) / 9) * 120);
-            const badge = meta.createEl('span', { cls: 'tl-periodic-emotion-badge', text: `心情 ${emotionScore}/10` });
-            badge.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
+            const badge = meta.createEl('span', { cls: 'tl-periodic-emotion-badge tl-dynamic-bg', text: `心情 ${emotionScore}/10` });
+            badge.style.setProperty('--tl-bg', `hsl(${hue}, 55%, 60%)`);
         }
         if (status === 'completed') {
             meta.createEl('span', { cls: 'tl-periodic-status-badge', text: '✓ 完成' });
@@ -638,7 +638,7 @@ export class PeriodicRenderer {
         row.setAttribute('draggable', 'true');
         if (task.indent > 0) {
             row.addClass('tl-periodic-task-subtask');
-            row.style.paddingLeft = `${20 + task.indent * 20}px`;
+            row.style.setProperty('--tl-indent-pad', `${20 + task.indent * 20}px`);
         }
 
         // Drag handle
@@ -655,15 +655,13 @@ export class PeriodicRenderer {
             task.done = !task.done;
             cb.checked = task.done;
             row.toggleClass('tl-periodic-task-row-done', task.done);
-            label.style.textDecoration = task.done ? 'line-through' : '';
-            label.style.opacity = task.done ? '0.5' : '';
+            label.toggleClass('tl-text-done', task.done);
         });
 
         // Label (double-click to edit)
         const label = row.createEl('span', { cls: 'tl-periodic-task-text', text: task.text });
         if (task.done) {
-            label.style.textDecoration = 'line-through';
-            label.style.opacity = '0.5';
+            label.addClass('tl-text-done');
         }
         label.addEventListener('dblclick', () => {
             const input = document.createElement('input');

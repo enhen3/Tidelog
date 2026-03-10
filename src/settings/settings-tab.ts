@@ -25,13 +25,10 @@ export class TideLogSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        // Header
-        containerEl.createEl('h1', { text: 'TideLog「潮记」设置' });
-
         // =================================================================
         // AI Provider Settings
         // =================================================================
-        containerEl.createEl('h2', { text: 'AI 服务配置' });
+        new Setting(containerEl).setName('AI provider').setHeading();
 
         // Active provider selection
         new Setting(containerEl)
@@ -58,7 +55,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         // =================================================================
         // Folder Settings
         // =================================================================
-        containerEl.createEl('h2', { text: '文件夹设置' });
+        new Setting(containerEl).setName('Folders').setHeading();
 
         new Setting(containerEl)
             .setName('日记文件夹')
@@ -102,7 +99,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         // =================================================================
         // Date Settings
         // =================================================================
-        containerEl.createEl('h2', { text: '日期设置' });
+        new Setting(containerEl).setName('Date boundary').setHeading();
 
         new Setting(containerEl)
             .setName('日期分界时间')
@@ -121,7 +118,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         // =================================================================
         // SOP Settings
         // =================================================================
-        containerEl.createEl('h2', { text: 'SOP 流程设置' });
+        new Setting(containerEl).setName('SOP workflow').setHeading();
 
         new Setting(containerEl)
             .setName('启用晨间复盘')
@@ -179,7 +176,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                 .setDesc('OpenAI 兼容 API 的基础地址（如 DeepSeek / SiliconFlow / Groq / Ollama）');
 
             urlSetting.addText((text) => {
-                text.inputEl.style.width = '300px';
+                text.inputEl.addClass('tl-setting-input-wide');
                 text
                     .setPlaceholder('https://api.deepseek.com/v1')
                     .setValue(config.baseUrl || '')
@@ -220,7 +217,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         apiKeySetting.addText((text) => {
             apiKeyInput = text.inputEl;
             apiKeyInput.type = 'password';
-            apiKeyInput.style.width = '250px';
+            apiKeyInput.addClass('tl-setting-input-key');
             text
                 .setPlaceholder('输入 API Key...')
                 .setValue(config.apiKey)
@@ -274,7 +271,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         }
 
         modelSetting.addText((text) => {
-            text.inputEl.style.width = '220px';
+            text.inputEl.addClass('tl-setting-input-model');
             text
                 .setPlaceholder(this.getModelPlaceholder(provider))
                 .setValue(config.model)
@@ -400,7 +397,7 @@ export class TideLogSettingTab extends PluginSettingTab {
      * Render the evening question editor — compact collapsible rows
      */
     private renderEveningQuestions(containerEl: HTMLElement): void {
-        containerEl.createEl('h2', { text: '晚间复盘问题配置' });
+        new Setting(containerEl).setName('Evening review questions').setHeading();
 
         // Reset button
         new Setting(containerEl)

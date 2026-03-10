@@ -120,7 +120,8 @@ export class CalendarView extends ItemView {
             // Emotion heatmap background
             if (data?.emotionScore !== undefined && data.emotionScore !== null) {
                 const color = this.emotionToColor(data.emotionScore);
-                cell.style.backgroundColor = color;
+                cell.addClass('tl-dynamic-bg');
+                cell.style.setProperty('--tl-bg', color);
             }
 
             // Task density dots

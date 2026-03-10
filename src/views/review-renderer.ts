@@ -307,8 +307,8 @@ export class ReviewRenderer {
             // Emotion badge
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
-                const badge = dayHeader.createEl('span', { cls: 'tl-week-emotion-badge', text: `${data.emotionScore}` });
-                badge.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
+                const badge = dayHeader.createEl('span', { cls: 'tl-week-emotion-badge tl-dynamic-bg', text: `${data.emotionScore}` });
+                badge.style.setProperty('--tl-bg', `hsl(${hue}, 55%, 60%)`);
             }
 
             // Task strips

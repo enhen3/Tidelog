@@ -155,7 +155,9 @@ weekly_ref: "[[${weekRef}]]"
         const endIndex = content.indexOf('---', 3);
         if (endIndex === -1) return;
 
-        const yamlBlock = content.substring(4, endIndex);
+        const firstNewline = content.indexOf('\n', 0);
+        if (firstNewline === -1 || firstNewline >= endIndex) return;
+        const yamlBlock = content.substring(firstNewline + 1, endIndex);
         const rest = content.substring(endIndex + 3);
         const yamlLines = yamlBlock.split('\n');
 

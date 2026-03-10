@@ -16,6 +16,7 @@
 import { App, TFile, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { TaskRegistryService, TaskItem } from './task-registry';
+import { VaultManager } from './vault-manager';
 
 const DAY_COLUMNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_LABELS: Record<string, string> = {
@@ -27,11 +28,13 @@ export class KanbanService {
     private app: App;
     private settings: TideLogSettings;
     private taskRegistry: TaskRegistryService;
+    private vaultManager: VaultManager;
 
-    constructor(app: App, settings: TideLogSettings, taskRegistry: TaskRegistryService) {
+    constructor(app: App, settings: TideLogSettings, taskRegistry: TaskRegistryService, vaultManager?: VaultManager) {
         this.app = app;
         this.settings = settings;
         this.taskRegistry = taskRegistry;
+        this.vaultManager = vaultManager || new VaultManager(app, settings);
     }
 
     /**
@@ -310,13 +313,9 @@ export class KanbanService {
     }
 
     /**
-     * Get effective date (inherits day boundary logic)
+     * Get effective date (delegates to VaultManager)
      */
     private getEffectiveDate(date?: Date): moment.Moment {
-        const now = date ? moment(date) : moment();
-        if (now.hour() < this.settings.dayBoundaryHour) {
-            return now.subtract(1, 'day');
-        }
-        return now;
+        return this.vaultManager.getEffectiveDate(date);
     }
 }

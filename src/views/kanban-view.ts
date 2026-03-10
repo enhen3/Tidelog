@@ -50,11 +50,6 @@ export class KanbanView extends ItemView {
         container.empty();
         container.addClass('tl-kanban-container');
 
-        // Design tokens
-        container.style.setProperty('--tl-radius-sm', '8px');
-        container.style.setProperty('--tl-radius-md', '12px');
-        container.style.setProperty('--tl-ease', 'cubic-bezier(0.25, 0.46, 0.45, 0.94)');
-
         this.containerEl_ = container;
         await this.render();
     }
@@ -132,8 +127,7 @@ export class KanbanView extends ItemView {
                     text: task.text,
                 });
                 if (task.done) {
-                    label.style.textDecoration = 'line-through';
-                    label.style.opacity = '0.5';
+                    label.addClass('tl-text-done');
                 }
             }
         }

@@ -45,6 +45,7 @@ export class EveningSOP {
     private messages: ChatMessage[] = [];
     private currentQuestionIndex: number = 0;
     private questionFlow: QuestionConfig[] = [];
+    private isEmotionScoreStep = false;
 
     /**
      * Build question flow from user settings
@@ -88,6 +89,7 @@ export class EveningSOP {
         this.messages = [];
         this.currentQuestionIndex = 0;
         this.questionFlow = this.buildQuestionFlow();
+        this.isEmotionScoreStep = false;
 
         // Load context data
         const userProfile = await this.plugin.vaultManager.getUserProfileContent();
@@ -168,7 +170,7 @@ ${this.questionFlow[0].initialMessage}`;
         onMessage: (message: string) => void
     ): Promise<void> {
         // Handle emotion score (final step after all questions)
-        if (context.currentQuestion === ('emotion_score' as any)) {
+        if (this.isEmotionScoreStep) {
             context.responses['happiness_emotion'] = content;
             await this.finishEveningSOP(context, onMessage);
             return;
@@ -309,7 +311,7 @@ ${this.questionFlow[0].initialMessage}`;
         onMessage: (message: string) => void,
         previousResponse?: string
     ): Promise<void> {
-        context.currentQuestion = 'emotion_score' as any;
+        this.isEmotionScoreStep = true;
         context.currentStep = this.questionFlow.length + 1;
 
         const message = previousResponse

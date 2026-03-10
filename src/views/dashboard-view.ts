@@ -144,8 +144,8 @@ export class DashboardView extends ItemView {
         });
 
         const barOuter = progressCard.createDiv('tl-dash-progress-bar-outer');
-        const barInner = barOuter.createDiv('tl-dash-progress-bar-inner');
-        barInner.style.width = `${pct}%`;
+        const barInner = barOuter.createDiv('tl-dash-progress-bar-inner tl-dynamic-width');
+        barInner.style.setProperty('--tl-width', `${pct}%`);
 
         // ---- Card 2: Emotion Trend (last 7 days) ----
         const emotionCard = grid.createDiv('tl-dash-card tl-dash-card-emotion');
@@ -165,11 +165,11 @@ export class DashboardView extends ItemView {
 
             const barWrap = barCol.createDiv('tl-dash-chart-bar-wrap');
             if (score) {
-                const bar = barWrap.createDiv('tl-dash-chart-bar');
-                bar.style.height = `${barH}%`;
+                const bar = barWrap.createDiv('tl-dash-chart-bar tl-dynamic-height tl-dynamic-bg');
+                bar.style.setProperty('--tl-height', `${barH}%`);
                 // Color by score
                 const hue = Math.round(((score - 1) / 9) * 120);
-                bar.style.backgroundColor = `hsl(${hue}, 55%, 60%)`;
+                bar.style.setProperty('--tl-bg', `hsl(${hue}, 55%, 60%)`);
 
                 barWrap.createEl('span', { cls: 'tl-dash-chart-score', text: `${score}` });
             }

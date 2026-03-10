@@ -7,6 +7,8 @@ import { MarkdownRenderer } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App, Component } from 'obsidian';
 import type { ChatMessage, SOPContext } from '../types';
+import type { MorningSOP } from '../sop/morning-sop';
+import type { EveningSOP } from '../sop/evening-sop';
 
 /** Minimal interface for the host view that owns this controller. */
 export interface ChatControllerHost extends Component {
@@ -29,6 +31,8 @@ export interface ChatControllerHost extends Component {
     getExistingTasks(): Promise<{ text: string; subtasks: string[] }[]>;
     startMorningSOP(): Promise<void>;
     startEveningSOP(): Promise<void>;
+    morningSOP: MorningSOP;
+    eveningSOP: EveningSOP;
 }
 
 export class ChatController {
@@ -141,16 +145,14 @@ export class ChatController {
 
         // Process based on SOP context
         if (h.sopContext.type === 'morning') {
-            const morningSOP = (h as any).morningSOP;
-            await morningSOP.handleResponse(content, h.sopContext, (message: string) => {
+            await h.morningSOP.handleResponse(content, h.sopContext, (message: string) => {
                 h.streamAIMessage(message);
             }, () => {
                 // Callback to show task input UI
                 h.showTaskInput();
             });
         } else if (h.sopContext.type === 'evening') {
-            const eveningSOP = (h as any).eveningSOP;
-            await eveningSOP.handleResponse(content, h.sopContext, (message: string) => {
+            await h.eveningSOP.handleResponse(content, h.sopContext, (message: string) => {
                 h.streamAIMessage(message);
             });
         } else {

@@ -142,9 +142,7 @@ ${todayPlan}
         const todayPlan = context.responses['today_plan'];
 
         // Format tasks as checkbox items
-        console.log('[Morning SOP] Raw todayPlan:', JSON.stringify(todayPlan));
         const formattedPlan = this.formatAsTasks(todayPlan);
-        console.log('[Morning SOP] Formatted plan:', JSON.stringify(formattedPlan));
 
         // Get or create today's daily note
         const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();

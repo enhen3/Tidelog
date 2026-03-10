@@ -61,7 +61,7 @@ export class KanbanRenderer {
         const titleArea = header.createDiv('tl-pyramid-week-title-area');
         titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '🏔️' });
         titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthLabel}目标` });
-        titleArea.style.cursor = 'pointer';
+        titleArea.addClass('tl-clickable');
 
         const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
         navRight.addEventListener('click', () => { h.kanbanMonthOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -99,10 +99,10 @@ export class KanbanRenderer {
         if (goals.length > 0) {
             const doneCount = goals.filter(g => g.done).length;
             const progressWrap = layer.createDiv('tl-pyramid-progress-wrap');
-            progressWrap.style.padding = '0 12px';
+            progressWrap.addClass('tl-pyramid-progress-inline');
             const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
-            const progressFill = progressBar.createDiv('tl-pyramid-progress-fill');
-            progressFill.style.width = `${(doneCount / goals.length) * 100}%`;
+            const progressFill = progressBar.createDiv('tl-pyramid-progress-fill tl-dynamic-width');
+            progressFill.style.setProperty('--tl-width', `${(doneCount / goals.length) * 100}%`);
             progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: `${doneCount}/${goals.length} 完成` });
         }
 
@@ -114,10 +114,9 @@ export class KanbanRenderer {
             for (const goal of goals) {
                 const card = body.createDiv({ cls: `tl-pyramid-task ${goal.done ? 'tl-pyramid-task-done' : ''}` });
                 if (goal.indent > 0) {
-                    card.style.marginLeft = `${goal.indent * 20}px`;
-                    card.style.fontSize = '12px';
-                    card.style.opacity = '0.7';
-                    card.style.padding = '5px 8px';
+                    const indentLevel = Math.min(goal.indent, 3);
+                    card.addClass(`tl-indent-${indentLevel}`);
+                    card.addClass('tl-pyramid-task-sub');
                 }
                 const cb = card.createEl('input', { type: 'checkbox' });
                 cb.checked = goal.done;
@@ -129,11 +128,10 @@ export class KanbanRenderer {
                     goal.done = !goal.done;
                     cb.checked = goal.done;
                     card.toggleClass('tl-pyramid-task-done', goal.done);
-                    label.style.textDecoration = goal.done ? 'line-through' : '';
-                    label.style.opacity = goal.done ? '0.5' : '';
+                    label.toggleClass('tl-text-done', goal.done);
                 });
                 const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: goal.text });
-                if (goal.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
+                if (goal.done) { label.addClass('tl-text-done'); }
             }
         }
     }
@@ -159,7 +157,7 @@ export class KanbanRenderer {
         const titleArea = header.createDiv('tl-pyramid-week-title-area');
         titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
         titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: weekLabel });
-        titleArea.style.cursor = 'pointer';
+        titleArea.addClass('tl-clickable');
 
         const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
         navRight.addEventListener('click', () => { h.kanbanWeekOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -204,8 +202,8 @@ export class KanbanRenderer {
             if (keyItems.length > 0) {
                 const progressWrap = body.createDiv('tl-pyramid-progress-wrap');
                 const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
-                const progressFill = progressBar.createDiv('tl-pyramid-progress-fill');
-                progressFill.style.width = `${(doneCount / keyItems.length) * 100}%`;
+                const progressFill = progressBar.createDiv('tl-pyramid-progress-fill tl-dynamic-width');
+                progressFill.style.setProperty('--tl-width', `${(doneCount / keyItems.length) * 100}%`);
                 progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: `${doneCount}/${keyItems.length} 完成` });
             }
 
@@ -213,10 +211,9 @@ export class KanbanRenderer {
             for (const item of keyItems) {
                 const card = body.createDiv({ cls: `tl-pyramid-task ${item.done ? 'tl-pyramid-task-done' : ''}` });
                 if (item.indent > 0) {
-                    card.style.marginLeft = `${item.indent * 20}px`;
-                    card.style.fontSize = '12px';
-                    card.style.opacity = '0.7';
-                    card.style.padding = '5px 8px';
+                    const indentLevel = Math.min(item.indent, 3);
+                    card.addClass(`tl-indent-${indentLevel}`);
+                    card.addClass('tl-pyramid-task-sub');
                 }
                 const cb = card.createEl('input', { type: 'checkbox' });
                 cb.checked = item.done;
@@ -228,11 +225,10 @@ export class KanbanRenderer {
                     item.done = !item.done;
                     cb.checked = item.done;
                     card.toggleClass('tl-pyramid-task-done', item.done);
-                    label.style.textDecoration = item.done ? 'line-through' : '';
-                    label.style.opacity = item.done ? '0.5' : '';
+                    label.toggleClass('tl-text-done', item.done);
                 });
                 const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: item.text });
-                if (item.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
+                if (item.done) { label.addClass('tl-text-done'); }
             }
         }
     }
@@ -259,7 +255,7 @@ export class KanbanRenderer {
         const titleArea = header.createDiv('tl-pyramid-week-title-area');
         titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📋' });
         titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: dayLabel });
-        titleArea.style.cursor = 'pointer';
+        titleArea.addClass('tl-clickable');
 
         const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
         navRight.addEventListener('click', () => { h.kanbanDayOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -308,10 +304,10 @@ export class KanbanRenderer {
         if (tasks.length > 0) {
             const doneCount = tasks.filter(t => t.done).length;
             const progressWrap = layer.createDiv('tl-pyramid-progress-wrap');
-            progressWrap.style.padding = '0 12px';
+            progressWrap.addClass('tl-pyramid-progress-inline');
             const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
-            const progressFill = progressBar.createDiv('tl-pyramid-progress-fill');
-            progressFill.style.width = `${(doneCount / tasks.length) * 100}%`;
+            const progressFill = progressBar.createDiv('tl-pyramid-progress-fill tl-dynamic-width');
+            progressFill.style.setProperty('--tl-width', `${(doneCount / tasks.length) * 100}%`);
             progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: `${doneCount}/${tasks.length} 完成` });
         }
 
@@ -384,10 +380,9 @@ export class KanbanRenderer {
         const h = this.host;
         const card = container.createDiv({ cls: `tl-pyramid-task ${task.done ? 'tl-pyramid-task-done' : ''}` });
         if (task.indent > 0) {
-            card.style.marginLeft = `${task.indent * 20}px`;
-            card.style.fontSize = '12px';
-            card.style.opacity = '0.7';
-            card.style.padding = '5px 8px';
+            const indentLevel = Math.min(task.indent, 3);
+            card.addClass(`tl-indent-${indentLevel}`);
+            card.addClass('tl-pyramid-task-sub');
         }
         const cb = card.createEl('input', { type: 'checkbox' });
         cb.checked = task.done;
@@ -401,10 +396,9 @@ export class KanbanRenderer {
             task.done = !task.done;
             cb.checked = task.done;
             card.toggleClass('tl-pyramid-task-done', task.done);
-            label.style.textDecoration = task.done ? 'line-through' : '';
-            label.style.opacity = task.done ? '0.5' : '';
+            label.toggleClass('tl-text-done', task.done);
         });
         const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: task.text });
-        if (task.done) { label.style.textDecoration = 'line-through'; label.style.opacity = '0.5'; }
+        if (task.done) { label.addClass('tl-text-done'); }
     }
 }

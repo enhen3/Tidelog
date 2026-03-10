@@ -3,7 +3,7 @@
  * and manages pattern detection & user profile suggestions
  */
 
-import { moment } from 'obsidian';
+import { moment, TFile } from 'obsidian';
 import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import {
@@ -235,9 +235,9 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
                 : `# ${date.format('YYYY年MM月')} 洞察报告\n\n> 生成于 ${moment().format('YYYY-MM-DD HH:mm')}\n\n`;
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
-            if (existingFile) {
+            if (existingFile instanceof TFile) {
                 // Overwrite existing report
-                await this.plugin.app.vault.modify(existingFile as any, header + content);
+                await this.plugin.app.vault.modify(existingFile, header + content);
             } else {
                 await this.plugin.app.vault.create(filePath, header + content);
             }

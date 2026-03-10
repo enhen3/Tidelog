@@ -40,7 +40,7 @@ export class TaskInputManager {
         h.taskData = [];
 
         // Hide normal input
-        h.inputContainer.style.display = 'none';
+        h.inputContainer.addClass('tl-hidden');
 
         // Create task input container after messages
         h.taskInputContainer = h.containerEl.children[1].createDiv('tl-task-input-container');
@@ -336,8 +336,8 @@ export class TaskInputManager {
                 let energyLine = '';
                 try {
                     const noteFile = h.app.vault.getAbstractFileByPath(dailyNote.path);
-                    if (noteFile) {
-                        const noteContent = await h.app.vault.read(noteFile as any);
+                    if (noteFile instanceof TFile) {
+                        const noteContent = await h.app.vault.read(noteFile);
                         const match = noteContent.match(/\*\*精力状态\*\*: .+/);
                         if (match) {
                             energyLine = match[0] + '\n\n';
@@ -382,7 +382,7 @@ export class TaskInputManager {
         }
         h.taskData = [];
         h.isTaskInputMode = false;
-        h.inputContainer.style.display = '';
+        h.inputContainer.removeClass('tl-hidden');
     }
 
     /**
@@ -409,8 +409,8 @@ export class TaskInputManager {
         try {
             const dailyNotePath = h.plugin.vaultManager.getDailyNotePath();
             const file = h.app.vault.getAbstractFileByPath(dailyNotePath);
-            if (!file) return [];
-            const content = await h.app.vault.read(file as any);
+            if (!(file instanceof TFile)) return [];
+            const content = await h.app.vault.read(file);
             const tasks: { text: string; subtasks: string[] }[] = [];
             const lines = content.split('\n');
             for (const line of lines) {

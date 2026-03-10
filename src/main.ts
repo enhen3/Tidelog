@@ -40,7 +40,6 @@ export default class TideLogPlugin extends Plugin {
     }
 
     async onload(): Promise<void> {
-        console.log('Loading TideLog plugin');
 
         // Load settings
         await this.loadSettings();
@@ -50,7 +49,7 @@ export default class TideLogPlugin extends Plugin {
         this.templateManager = new TemplateManager(this.app, this.settings);
         this.insightService = new InsightService(this);
         this.taskRegistry = new TaskRegistryService(this.app, this.settings);
-        this.kanbanService = new KanbanService(this.app, this.settings, this.taskRegistry);
+        this.kanbanService = new KanbanService(this.app, this.settings, this.taskRegistry, this.vaultManager);
         this.fileLinkService = new FileLinkService(this.app, this.settings, this.kanbanService);
         this.dashboardService = new DashboardService(this.app, this.settings);
 
@@ -168,11 +167,10 @@ export default class TideLogPlugin extends Plugin {
             this.fileLinkService.startListening();
         });
 
-        console.log('TideLog plugin loaded');
+
     }
 
     onunload(): void {
-        console.log('Unloading TideLog plugin');
         this.fileLinkService.stopListening();
     }
 
