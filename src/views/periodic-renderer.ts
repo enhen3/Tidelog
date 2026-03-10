@@ -22,6 +22,7 @@ export interface PeriodicHost {
     addSubTask(file: TFile, parentText: string, subTaskText: string): Promise<void>;
     editMdTask(file: TFile, oldText: string, newText: string): Promise<void>;
     deleteMdTask(file: TFile, taskText: string): Promise<void>;
+    setTaskIndent(file: TFile, taskText: string, newIndent: number): Promise<void>;
     reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void>;
     invalidateTabCache(tab: string): void;
     switchTab(tab: string): void;
@@ -698,6 +699,27 @@ export class PeriodicRenderer {
             e.stopPropagation();
             await h.deleteMdTask(file, task.text);
             row.remove();
+        });
+
+        // Indent / Outdent buttons
+        const indentWrap = row.createDiv('tl-task-indent-btns');
+        if (task.indent > 0) {
+            const outdentBtn = indentWrap.createEl('span', { cls: 'tl-task-indent-btn', text: '◁' });
+            outdentBtn.setAttribute('title', '提升为主任务');
+            outdentBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await h.setTaskIndent(file, task.text, task.indent - 1);
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            });
+        }
+        const indentBtn = indentWrap.createEl('span', { cls: 'tl-task-indent-btn', text: '▷' });
+        indentBtn.setAttribute('title', '降级为子任务');
+        indentBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await h.setTaskIndent(file, task.text, task.indent + 1);
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
         });
 
         // Add sub-task button

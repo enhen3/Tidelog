@@ -419,6 +419,31 @@ export class ChatView extends ItemView {
         }
     }
 
+    /** Change the indent level of a task (promote/demote) */
+    public async setTaskIndent(file: TFile, taskText: string, newIndent: number): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            const content = await this.app.vault.read(file);
+            const lines = content.split('\n');
+            const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^(\\s*)- (\\[[ x]\\] )${escaped}$`);
+            const indent = Math.max(0, newIndent);
+            const prefix = '  '.repeat(indent);
+            for (let i = 0; i < lines.length; i++) {
+                if (pat.test(lines[i])) {
+                    const m = lines[i].match(pat);
+                    if (m) {
+                        lines[i] = `${prefix}- ${m[2]}${taskText}`;
+                        break;
+                    }
+                }
+            }
+            await this.app.vault.modify(file, lines.join('\n'));
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
     /** Reorder all task lines in a markdown file by the given text order */
     public async reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void> {
         this._suppressRefresh = true;
