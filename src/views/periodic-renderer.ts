@@ -736,11 +736,13 @@ export class PeriodicRenderer {
         let nestTimer: ReturnType<typeof setTimeout> | null = null;
         let nestMode = false;
         let promoteMode = false;
+        let currentZone: 'left' | 'right' | null = null;
 
         const clearTimers = () => {
             if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
             nestMode = false;
             promoteMode = false;
+            currentZone = null;
             row.removeClass('tl-task-row-dragover');
             row.removeClass('tl-task-row-nest-hint');
             row.removeClass('tl-task-row-promote-hint');
@@ -748,7 +750,6 @@ export class PeriodicRenderer {
 
         row.addEventListener('dragstart', (e) => {
             e.dataTransfer?.setData('text/plain', task.text);
-            e.dataTransfer?.setData('text/indent', String(task.indent));
             row.addClass('tl-task-row-dragging');
         });
         row.addEventListener('dragend', () => {
@@ -758,28 +759,29 @@ export class PeriodicRenderer {
             e.preventDefault();
             const rect = row.getBoundingClientRect();
             const offsetX = e.clientX - rect.left;
-            const isLeftZone = offsetX < 30;
+            const zone: 'left' | 'right' = offsetX < 30 ? 'left' : 'right';
 
-            if (isLeftZone && !promoteMode && !nestMode) {
-                // Left-edge: start promote timer
-                if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
-                row.removeClass('tl-task-row-dragover');
+            // If already in a mode or same zone, just keep it
+            if (nestMode || promoteMode) return;
+            if (zone === currentZone) return;
+
+            // Zone changed — clear old timer and start new one
+            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+            row.removeClass('tl-task-row-dragover');
+            row.removeClass('tl-task-row-nest-hint');
+            row.removeClass('tl-task-row-promote-hint');
+            currentZone = zone;
+
+            if (zone === 'left') {
                 nestTimer = setTimeout(() => {
                     promoteMode = true;
-                    nestMode = false;
-                    row.removeClass('tl-task-row-dragover');
-                    row.removeClass('tl-task-row-nest-hint');
                     row.addClass('tl-task-row-promote-hint');
                 }, 300);
-            } else if (!isLeftZone && !nestMode && !promoteMode) {
-                // Right area: start nest timer
-                if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+            } else {
                 row.addClass('tl-task-row-dragover');
                 nestTimer = setTimeout(() => {
                     nestMode = true;
-                    promoteMode = false;
                     row.removeClass('tl-task-row-dragover');
-                    row.removeClass('tl-task-row-promote-hint');
                     row.addClass('tl-task-row-nest-hint');
                 }, 300);
             }
