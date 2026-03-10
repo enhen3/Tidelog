@@ -342,11 +342,12 @@ export class ChatView extends ItemView {
      * Append a new task to a markdown file.
      * Inserts after the last existing task line, or at the end.
      */
-    public async addMdTask(file: TFile, taskText: string): Promise<void> {
+    public async addMdTask(file: TFile, taskText: string, indent = 0): Promise<void> {
         this._suppressRefresh = true;
         try {
             let content = await this.app.vault.read(file);
-            const newLine = `- [ ] ${taskText}`;
+            const prefix = '  '.repeat(indent);
+            const newLine = `${prefix}- [ ] ${taskText}`;
             const lines = content.split('\n');
 
             // Find the last task line index
@@ -358,11 +359,76 @@ export class ChatView extends ItemView {
             }
 
             if (lastTaskIdx >= 0) {
-                // Insert after the last task
                 lines.splice(lastTaskIdx + 1, 0, newLine);
             } else {
-                // No tasks found — append at end
                 lines.push(newLine);
+            }
+
+            await this.app.vault.modify(file, lines.join('\n'));
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
+    /** Edit a task's text in a markdown file */
+    public async editMdTask(file: TFile, oldText: string, newText: string): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            let content = await this.app.vault.read(file);
+            const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^(\\s*- \\[[ x]\\] )${escaped}$`, 'm');
+            content = content.replace(pat, `$1${newText}`);
+            await this.app.vault.modify(file, content);
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
+    /** Delete a task line from a markdown file */
+    public async deleteMdTask(file: TFile, taskText: string): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            let content = await this.app.vault.read(file);
+            const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            content = content.replace(pat, '');
+            await this.app.vault.modify(file, content);
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
+    /** Reorder tasks in a markdown file by replacing the task block */
+    public async reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            let content = await this.app.vault.read(file);
+            const lines = content.split('\n');
+            // Collect task lines and their positions
+            const taskLines: { idx: number; line: string; text: string }[] = [];
+            for (let i = 0; i < lines.length; i++) {
+                const m = lines[i].match(/^(\s*- \[[ x]\] )(.+)$/);
+                if (m) taskLines.push({ idx: i, line: lines[i], text: m[2] });
+            }
+            if (taskLines.length < 2) return;
+
+            // Build reordered task lines
+            const reordered: string[] = [];
+            for (const txt of orderedTexts) {
+                const found = taskLines.find(t => t.text === txt);
+                if (found) reordered.push(found.line);
+            }
+            // Add any tasks not in the ordered list at the end
+            for (const t of taskLines) {
+                if (!orderedTexts.includes(t.text)) reordered.push(t.line);
+            }
+
+            // Replace task lines in-place
+            let ri = 0;
+            for (const t of taskLines) {
+                if (ri < reordered.length) {
+                    lines[t.idx] = reordered[ri++];
+                }
             }
 
             await this.app.vault.modify(file, lines.join('\n'));

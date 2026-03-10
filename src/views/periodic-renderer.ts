@@ -18,7 +18,10 @@ export interface PeriodicHost {
     periodicMonthOffset: number;
     parseMdTasks(content: string): { text: string; done: boolean; isTask: boolean; section: string; indent: number }[];
     toggleMdTask(file: TFile, taskText: string, wasDone: boolean): Promise<void>;
-    addMdTask(file: TFile, taskText: string): Promise<void>;
+    addMdTask(file: TFile, taskText: string, indent?: number): Promise<void>;
+    editMdTask(file: TFile, oldText: string, newText: string): Promise<void>;
+    deleteMdTask(file: TFile, taskText: string): Promise<void>;
+    reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void>;
     invalidateTabCache(tab: string): void;
     switchTab(tab: string): void;
 }
@@ -140,7 +143,8 @@ export class PeriodicRenderer {
         previewHeader.createEl('span', { cls: 'tl-periodic-preview-date', text: `${dateStr} ${dayName}` });
 
         if (!file || !(file instanceof TFile)) {
-            preview.createDiv({ cls: 'tl-periodic-preview-empty', text: '暂无日记' });
+            // Show task input even for future/empty dates — auto-create file
+            this.renderTaskInputForDate(preview, date);
             const createBtn = preview.createEl('button', { cls: 'tl-periodic-open-btn', text: '+ 创建日记' });
             createBtn.addEventListener('click', async () => {
                 const f = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
@@ -621,16 +625,24 @@ export class PeriodicRenderer {
     }
 
     // ──────────────────────────────────────────────────────
-    // Shared task renderer & input
+    // Shared task renderer & input (Things/TickTick style)
     // ──────────────────────────────────────────────────────
 
     private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile): void {
         const h = this.host;
         const row = container.createDiv(`tl-periodic-task-row ${task.done ? 'tl-periodic-task-row-done' : ''}`);
+        row.setAttribute('draggable', 'true');
+        row.dataset.taskText = task.text;
         if (task.indent > 0) {
             row.style.paddingLeft = `${12 + task.indent * 16}px`;
             row.style.fontSize = '12px';
         }
+
+        // Drag handle
+        const handle = row.createEl('span', { cls: 'tl-task-drag-handle', text: '⡇' });
+        handle.addEventListener('mousedown', () => row.setAttribute('draggable', 'true'));
+
+        // Checkbox
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = task.done;
         cb.addEventListener('click', async (e) => {
@@ -643,15 +655,132 @@ export class PeriodicRenderer {
             label.style.textDecoration = task.done ? 'line-through' : '';
             label.style.opacity = task.done ? '0.5' : '';
         });
+
+        // Label (double-click to edit)
         const label = row.createEl('span', { cls: 'tl-periodic-task-text', text: task.text });
         if (task.done) {
             label.style.textDecoration = 'line-through';
             label.style.opacity = '0.5';
         }
+        label.addEventListener('dblclick', () => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = task.text;
+            input.className = 'tl-task-edit-input';
+            label.replaceWith(input);
+            input.focus();
+            input.select();
+            const save = async () => {
+                const newText = input.value.trim();
+                if (newText && newText !== task.text) {
+                    await h.editMdTask(file, task.text, newText);
+                    task.text = newText;
+                }
+                const newLabel = document.createElement('span');
+                newLabel.className = 'tl-periodic-task-text';
+                newLabel.textContent = task.text;
+                input.replaceWith(newLabel);
+                // Re-attach dblclick listener
+                newLabel.addEventListener('dblclick', () => label.dispatchEvent(new Event('dblclick')));
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', (e: KeyboardEvent) => {
+                if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+                if (e.key === 'Escape') { input.value = task.text; input.blur(); }
+            });
+        });
+
+        // Delete button
+        const delBtn = row.createEl('span', { cls: 'tl-task-delete-btn', text: '×' });
+        delBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await h.deleteMdTask(file, task.text);
+            row.remove();
+        });
+
+        // Drag & drop handlers
+        row.addEventListener('dragstart', (e) => {
+            e.dataTransfer?.setData('text/plain', task.text);
+            row.addClass('tl-task-row-dragging');
+        });
+        row.addEventListener('dragend', () => {
+            row.removeClass('tl-task-row-dragging');
+        });
+        row.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            row.addClass('tl-task-row-dragover');
+        });
+        row.addEventListener('dragleave', () => {
+            row.removeClass('tl-task-row-dragover');
+        });
+        row.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            row.removeClass('tl-task-row-dragover');
+            const draggedText = e.dataTransfer?.getData('text/plain');
+            if (!draggedText || draggedText === task.text) return;
+            // Collect current order from DOM
+            const parent = row.parentElement;
+            if (!parent) return;
+            const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
+            const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
+            // Move dragged item to drop position
+            const fromIdx = texts.indexOf(draggedText);
+            const toIdx = texts.indexOf(task.text);
+            if (fromIdx >= 0 && toIdx >= 0) {
+                texts.splice(fromIdx, 1);
+                texts.splice(toIdx, 0, draggedText);
+                await h.reorderMdTasks(file, texts);
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            }
+        });
     }
 
-    /** Inline task-add input */
+    /** Inline task-add input with Tab for sub-task indent */
     private renderTaskInput(container: HTMLElement, file: TFile): void {
+        const h = this.host;
+        const row = container.createDiv('tl-periodic-task-input-row');
+        let indent = 0;
+        const indentIndicator = row.createEl('span', { cls: 'tl-task-indent-indicator' });
+        const input = row.createEl('input', {
+            type: 'text',
+            cls: 'tl-periodic-task-input',
+            attr: { placeholder: '添加任务... (Tab 缩进)' },
+        });
+        const addBtn = row.createEl('button', {
+            cls: 'tl-periodic-task-add-btn',
+            text: '+',
+        });
+
+        const updateIndent = () => {
+            indentIndicator.setText(indent > 0 ? '└'.repeat(indent) + ' ' : '');
+            input.style.paddingLeft = indent > 0 ? `${indent * 12}px` : '';
+        };
+
+        const doAdd = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            await h.addMdTask(file, text, indent);
+            indent = 0;
+            updateIndent();
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
+        };
+
+        addBtn.addEventListener('click', doAdd);
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                indent = e.shiftKey ? Math.max(0, indent - 1) : Math.min(3, indent + 1);
+                updateIndent();
+            }
+        });
+    }
+
+    /** Task input that auto-creates the daily note file */
+    private renderTaskInputForDate(container: HTMLElement, date: moment.Moment): void {
         const h = this.host;
         const row = container.createDiv('tl-periodic-task-input-row');
         const input = row.createEl('input', {
@@ -668,8 +797,9 @@ export class PeriodicRenderer {
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
+            // Auto-create daily note if needed
+            const file = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
             await h.addMdTask(file, text);
-            // Re-render the current view
             h.invalidateTabCache('kanban');
             h.switchTab('kanban');
         };
