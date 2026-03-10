@@ -2668,71 +2668,126 @@
 	transition: transform 0.15s ease;
 }
 
+/* ── Apple Reminders-style task rows ── */
 .tl-periodic-task-row {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 5px 12px;
-	font-size: 13px;
-	transition: background 0.1s;
+	padding: 8px 12px;
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: var(--tl-text-primary);
+	border-bottom: 0.5px solid var(--tl-border);
+	transition: background 0.2s ease;
+	position: relative;
+}
+
+.tl-periodic-task-row:last-child {
+	border-bottom: none;
 }
 
 .tl-periodic-task-row:hover {
-	background: var(--background-modifier-hover);
+	background: rgba(0, 0, 0, 0.02);
 }
 
+.theme-dark .tl-periodic-task-row:hover {
+	background: rgba(255, 255, 255, 0.03);
+}
+
+/* Apple-style circular checkbox */
 .tl-periodic-task-row input[type='checkbox'] {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 20px;
+	height: 20px;
+	border: 1.5px solid var(--tl-accent);
+	border-radius: 50%;
 	margin: 0;
 	flex-shrink: 0;
+	cursor: pointer;
+	position: relative;
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.tl-periodic-task-row input[type='checkbox']:checked {
+	background: var(--tl-accent);
+	border-color: var(--tl-accent);
+}
+
+.tl-periodic-task-row input[type='checkbox']:checked::after {
+	content: '';
+	position: absolute;
+	left: 6px;
+	top: 2.5px;
+	width: 5px;
+	height: 10px;
+	border: solid white;
+	border-width: 0 1.5px 1.5px 0;
+	transform: rotate(45deg);
+}
+
+.tl-periodic-task-row input[type='checkbox']:hover {
+	border-color: var(--tl-accent);
+	box-shadow: 0 0 0 3px var(--tl-accent-light);
 }
 
 .tl-periodic-task-text {
 	flex: 1;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	cursor: default;
 }
 
 .tl-periodic-task-row-done {
-	opacity: 0.5;
+	opacity: 0.45;
 }
 
-/* Sub-task visual hierarchy */
+.tl-periodic-task-row-done .tl-periodic-task-text {
+	text-decoration: line-through;
+}
+
+/* ── Sub-task: clean Apple indent ── */
 .tl-periodic-task-subtask {
-	font-size: 12px;
-	color: var(--tl-text-secondary);
-	border-left: 2px solid var(--tl-accent-light);
-	margin-left: 18px;
-	padding-top: 3px;
-	padding-bottom: 3px;
+	padding-left: 40px !important;
+	font-size: 12.5px;
+	border-bottom-color: transparent;
 }
 
-.tl-periodic-task-subtask .tl-periodic-task-text {
-	opacity: 0.85;
+.tl-periodic-task-subtask+.tl-periodic-task-row:not(.tl-periodic-task-subtask) {
+	border-top: 0.5px solid var(--tl-border);
 }
 
-.tl-periodic-task-subtask .tl-task-drag-handle {
-	font-size: 10px;
+.tl-periodic-task-subtask input[type='checkbox'] {
+	width: 16px;
+	height: 16px;
 }
 
-/* Things-style task interaction elements */
+.tl-periodic-task-subtask input[type='checkbox']:checked::after {
+	left: 4.5px;
+	top: 1.5px;
+	width: 4px;
+	height: 8px;
+}
+
+/* ── Action controls (hover-reveal) ── */
 .tl-task-drag-handle {
 	cursor: grab;
 	opacity: 0;
-	font-size: 12px;
+	font-size: 11px;
 	color: var(--tl-text-tertiary);
 	user-select: none;
 	flex-shrink: 0;
-	width: 14px;
+	width: 12px;
 	text-align: center;
-	transition: opacity 0.15s ease;
+	transition: opacity 0.2s ease;
 }
 
 .tl-periodic-task-row:hover .tl-task-drag-handle {
-	opacity: 0.5;
+	opacity: 0.35;
 }
 
 .tl-task-drag-handle:hover {
-	opacity: 1 !important;
+	opacity: 0.7 !important;
 }
 
 .tl-task-drag-handle:active {
@@ -2742,42 +2797,43 @@
 .tl-task-delete-btn {
 	opacity: 0;
 	cursor: pointer;
-	color: #e55;
-	font-size: 16px;
-	font-weight: 600;
+	color: var(--tl-text-tertiary);
+	font-size: 15px;
+	font-weight: 400;
 	flex-shrink: 0;
 	width: 20px;
 	text-align: center;
 	margin-left: auto;
-	transition: opacity 0.15s ease, transform 0.15s ease;
+	transition: opacity 0.2s ease, color 0.15s ease;
 }
 
 .tl-periodic-task-row:hover .tl-task-delete-btn {
-	opacity: 0.6;
+	opacity: 0.4;
 }
 
 .tl-task-delete-btn:hover {
 	opacity: 1 !important;
-	transform: scale(1.2);
+	color: #ff3b30;
 }
 
 .tl-task-edit-input {
 	flex: 1;
-	padding: 1px 4px;
-	border: 1px solid var(--tl-accent);
-	border-radius: 3px;
-	background: var(--tl-surface);
+	padding: 2px 6px;
+	border: none;
+	border-bottom: 1.5px solid var(--tl-accent);
+	border-radius: 0;
+	background: transparent;
 	color: var(--tl-text-primary);
-	font-size: 12.5px;
+	font-size: 13px;
 	outline: none;
 }
 
 .tl-task-row-dragging {
-	opacity: 0.4;
+	opacity: 0.3;
 }
 
 .tl-task-row-dragover {
-	border-top: 2px solid var(--tl-accent);
+	box-shadow: 0 -2px 0 0 var(--tl-accent);
 }
 
 .tl-task-indent-indicator {
@@ -2790,19 +2846,19 @@
 	opacity: 0;
 	cursor: pointer;
 	color: var(--tl-accent);
-	font-size: 14px;
-	font-weight: 700;
+	font-size: 13px;
+	font-weight: 500;
 	flex-shrink: 0;
 	width: 18px;
 	height: 18px;
 	line-height: 18px;
 	text-align: center;
 	border-radius: 50%;
-	transition: opacity 0.15s ease, background 0.15s ease;
+	transition: opacity 0.2s ease, background 0.15s ease;
 }
 
 .tl-periodic-task-row:hover .tl-task-sub-btn {
-	opacity: 0.5;
+	opacity: 0.4;
 }
 
 .tl-task-sub-btn:hover {
@@ -2812,12 +2868,12 @@
 
 .tl-subtask-input-row {
 	display: flex;
-	padding: 3px 8px 3px 36px;
+	padding: 4px 12px 4px 48px;
 }
 
 .tl-subtask-input {
 	flex: 1;
-	font-size: 12px;
+	font-size: 12.5px;
 	border-color: var(--tl-accent) !important;
 }
 
