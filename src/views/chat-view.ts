@@ -419,37 +419,54 @@ export class ChatView extends ItemView {
         }
     }
 
-    /** Reorder tasks in a markdown file by replacing the task block */
+    /** Reorder tasks in a markdown file, keeping parent+children groups together */
     public async reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void> {
         this._suppressRefresh = true;
         try {
-            let content = await this.app.vault.read(file);
+            const content = await this.app.vault.read(file);
             const lines = content.split('\n');
-            // Collect task lines and their positions
-            const taskLines: { idx: number; line: string; text: string }[] = [];
-            for (let i = 0; i < lines.length; i++) {
-                const m = lines[i].match(/^(\s*- \[[ x]\] )(.+)$/);
-                if (m) taskLines.push({ idx: i, line: lines[i], text: m[2] });
-            }
-            if (taskLines.length < 2) return;
 
-            // Build reordered task lines
-            const reordered: string[] = [];
+            // Build task groups: each top-level task + its indented children
+            type TaskGroup = { parentText: string; lines: { idx: number; line: string }[] };
+            const groups: TaskGroup[] = [];
+            const taskIndices: number[] = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const topMatch = lines[i].match(/^- \[[ x]\] (.+)$/);
+                if (topMatch) {
+                    const group: TaskGroup = { parentText: topMatch[1], lines: [{ idx: i, line: lines[i] }] };
+                    taskIndices.push(i);
+                    // Collect indented children below
+                    for (let j = i + 1; j < lines.length; j++) {
+                        if (lines[j].match(/^\s+- \[[ x]\] /)) {
+                            group.lines.push({ idx: j, line: lines[j] });
+                            taskIndices.push(j);
+                        } else {
+                            break;
+                        }
+                    }
+                    groups.push(group);
+                }
+            }
+            if (groups.length < 2) return;
+
+            // Reorder groups by orderedTexts
+            const reordered: TaskGroup[] = [];
             for (const txt of orderedTexts) {
-                const found = taskLines.find(t => t.text === txt);
-                if (found) reordered.push(found.line);
+                const found = groups.find(g => g.parentText === txt);
+                if (found && !reordered.includes(found)) reordered.push(found);
             }
-            // Add any tasks not in the ordered list at the end
-            for (const t of taskLines) {
-                if (!orderedTexts.includes(t.text)) reordered.push(t.line);
+            // Append any groups not mentioned
+            for (const g of groups) {
+                if (!reordered.includes(g)) reordered.push(g);
             }
+
+            // Flatten reordered groups into lines
+            const flatReordered = reordered.flatMap(g => g.lines.map(l => l.line));
 
             // Replace task lines in-place
-            let ri = 0;
-            for (const t of taskLines) {
-                if (ri < reordered.length) {
-                    lines[t.idx] = reordered[ri++];
-                }
+            for (let i = 0; i < taskIndices.length && i < flatReordered.length; i++) {
+                lines[taskIndices[i]] = flatReordered[i];
             }
 
             await this.app.vault.modify(file, lines.join('\n'));

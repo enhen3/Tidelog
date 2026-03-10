@@ -632,8 +632,11 @@ export class PeriodicRenderer {
     private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile): void {
         const h = this.host;
         const row = container.createDiv(`tl-periodic-task-row ${task.done ? 'tl-periodic-task-row-done' : ''}`);
-        row.setAttribute('draggable', 'true');
         row.dataset.taskText = task.text;
+        // Only parent tasks are draggable
+        if (task.indent === 0) {
+            row.setAttribute('draggable', 'true');
+        }
         if (task.indent > 0) {
             row.addClass('tl-periodic-task-subtask');
             row.style.paddingLeft = `${20 + task.indent * 20}px`;
@@ -749,12 +752,13 @@ export class PeriodicRenderer {
         row.addEventListener('drop', async (e) => {
             e.preventDefault();
             row.removeClass('tl-task-row-dragover');
+            if (task.indent > 0) return; // sub-tasks don't accept drops
             const draggedText = e.dataTransfer?.getData('text/plain');
             if (!draggedText || draggedText === task.text) return;
-            // Collect current order from DOM
             const parent = row.parentElement;
             if (!parent) return;
-            const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
+            // Only collect parent (non-subtask) rows
+            const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row:not(.tl-periodic-task-subtask)'));
             const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
             // Move dragged item to drop position
             const fromIdx = texts.indexOf(draggedText);
