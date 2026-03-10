@@ -67,7 +67,7 @@ export default class TideLogPlugin extends Plugin {
         addIcon('tidelog-wave', `<path d="M8 50 Q20 30 32 50 Q44 70 56 50 Q68 30 80 50 Q92 70 96 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 70 Q16 50 28 70 Q40 90 52 70 Q64 50 76 70 Q88 90 96 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="22" r="8" fill="currentColor"/><path d="M42 22 Q50 8 58 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
 
         // Add ribbon icons
-        this.addRibbonIcon('tidelog-wave', 'TideLog「潮记」', () => {
+        this.addRibbonIcon('tidelog-wave', 'TideLog', () => {
             this.activateChatView();
         });
 

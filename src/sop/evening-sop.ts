@@ -227,15 +227,15 @@ ${this.questionFlow[0].initialMessage}`;
             const provider = this.plugin.getAIProvider();
             let response = '';
 
-            const transitionPrompt = `用户在"${currentQuestion.sectionName}"环节说：
-"${content}"
+            const transitionPrompt = `用户在"${currentQuestion.sectionName}"环节说："${content}"
 
-回应要求（不超过 3 句话）：
+<response_guide>
 - 简短回答 → 温和接纳即可
-- 有内容的分享 → 先共情（"你提到……让我注意到……"），可追问一个问题
-- 完整有洞察的分享 → 肯定用户的觉察力
+- 有内容的分享 → 先共情（"你提到……"），可追问一个问题
+- 完整有洞察的分享 → 肯定觉察力
+</response_guide>
 
-让用户感到"被听见"。`;
+不超过 3 句话。让用户感到"被听见"。`;
 
             this.messages.push({
                 role: 'user',

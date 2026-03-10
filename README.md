@@ -174,7 +174,7 @@ MIT — see [LICENSE](./LICENSE)
 <details>
 <summary>🇨🇳 中文说明</summary>
 
-# 🌊 TideLog「潮记」
+# 🌊 TideLog
 
 > AI 引导的每日潮流 — 计划、记录、反思
 
