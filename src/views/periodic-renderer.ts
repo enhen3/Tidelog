@@ -635,8 +635,8 @@ export class PeriodicRenderer {
         row.setAttribute('draggable', 'true');
         row.dataset.taskText = task.text;
         if (task.indent > 0) {
-            row.style.paddingLeft = `${12 + task.indent * 16}px`;
-            row.style.fontSize = '12px';
+            row.addClass('tl-periodic-task-subtask');
+            row.style.paddingLeft = `${20 + task.indent * 20}px`;
         }
 
         // Drag handle
