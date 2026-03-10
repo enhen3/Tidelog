@@ -15,5 +15,8 @@ Thumbs.db
 *.swp
 *.swo
 
+# ESLint cache
+.eslintcache
+
 # Obsidian test vault (local only)
 # Don't commit the vault itself

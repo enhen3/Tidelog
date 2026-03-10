@@ -11,7 +11,8 @@ import {
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
-import { AIProviderType, DEFAULT_EVENING_QUESTIONS, EveningQuestionConfig } from '../types';
+import { AIProviderType, EveningQuestionConfig } from '../types';
+import { DEFAULT_EVENING_QUESTIONS } from '../constants';
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;

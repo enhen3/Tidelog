@@ -103,8 +103,8 @@ export class MorningSOP {
         const evaluationPrompt = `用户今天的计划：
 ${todayPlan}
 
-请简短评价这个计划的可行性（2-3句话），然后问用户是否确认这个计划。
-如果计划看起来太多或太少，温和地指出。`;
+快速评估（2-3 句话）：任务量是否现实？有没有一件今天必须推进的核心任务？有什么可以更具体的地方？
+合理就肯定后确认；有优化空间就像战友一样直接说。`;
 
         this.messages.push({
             role: 'user',

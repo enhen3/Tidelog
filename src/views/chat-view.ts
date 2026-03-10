@@ -157,7 +157,7 @@ export class ChatView extends ItemView {
         const buttons = container.createDiv('tl-header-buttons');
 
         const morningBtn = buttons.createEl('button', {
-            cls: 'tl-mode-btn',
+            cls: 'tl-mode-btn tl-mode-btn-plan',
             attr: { 'aria-label': 'Plan：规划今日' },
         });
         setIcon(morningBtn, 'sun');
@@ -165,7 +165,7 @@ export class ChatView extends ItemView {
         morningBtn.addEventListener('click', () => this.startSOP('morning'));
 
         const eveningBtn = buttons.createEl('button', {
-            cls: 'tl-mode-btn',
+            cls: 'tl-mode-btn tl-mode-btn-review',
             attr: { 'aria-label': 'Review：回顾今天' },
         });
         setIcon(eveningBtn, 'moon');
@@ -173,7 +173,7 @@ export class ChatView extends ItemView {
         eveningBtn.addEventListener('click', () => this.startSOP('evening'));
 
         const insightBtn = buttons.createEl('button', {
-            cls: 'tl-mode-btn',
+            cls: 'tl-mode-btn tl-mode-btn-insight',
             attr: { 'aria-label': 'TideLog Talk：自由对话' },
         });
         setIcon(insightBtn, 'lightbulb');

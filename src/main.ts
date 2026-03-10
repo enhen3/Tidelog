@@ -10,7 +10,8 @@ import {
     addIcon,
 } from 'obsidian';
 
-import { TideLogSettings, DEFAULT_SETTINGS } from './types';
+import { TideLogSettings } from './types';
+import { DEFAULT_SETTINGS } from './constants';
 import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
 import { KanbanView, KANBAN_VIEW_TYPE } from './views/kanban-view';
@@ -19,7 +20,7 @@ import { DashboardView, DASHBOARD_VIEW_TYPE } from './views/dashboard-view';
 import { VaultManager } from './services/vault-manager';
 import { TemplateManager } from './services/template-manager';
 import { InsightService } from './services/insight-service';
-import { createAIProvider } from './services/ai-provider';
+import { createAIProvider } from './ai/ai-provider';
 import { TaskRegistryService } from './services/task-registry';
 import { KanbanService } from './services/kanban-service';
 import { FileLinkService } from './services/file-linker';

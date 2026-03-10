@@ -227,15 +227,15 @@ ${this.questionFlow[0].initialMessage}`;
             const provider = this.plugin.getAIProvider();
             let response = '';
 
-            const transitionPrompt = `用户刚刚回答了"${currentQuestion.sectionName}"环节：
+            const transitionPrompt = `用户在"${currentQuestion.sectionName}"环节说：
 "${content}"
 
-请：
-1. 简短回应用户的分享（1-2句话，表示理解和支持）
-2. 如果有值得追问的点，可以追问一个问题
-3. 如果回答足够完整，给予肯定后准备进入下一环节
+回应要求（不超过 3 句话）：
+- 简短回答 → 温和接纳即可
+- 有内容的分享 → 先共情（"你提到……让我注意到……"），可追问一个问题
+- 完整有洞察的分享 → 肯定用户的觉察力
 
-回复要简洁，不超过3句话。`;
+让用户感到"被听见"。`;
 
             this.messages.push({
                 role: 'user',
