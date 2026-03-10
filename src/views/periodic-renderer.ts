@@ -18,6 +18,7 @@ export interface PeriodicHost {
     periodicMonthOffset: number;
     parseMdTasks(content: string): { text: string; done: boolean; isTask: boolean; section: string; indent: number }[];
     toggleMdTask(file: TFile, taskText: string, wasDone: boolean): Promise<void>;
+    addMdTask(file: TFile, taskText: string): Promise<void>;
     invalidateTabCache(tab: string): void;
     switchTab(tab: string): void;
 }
@@ -205,6 +206,11 @@ export class PeriodicRenderer {
             preview.createDiv({ cls: 'tl-periodic-preview-empty', text: '暂无任务' });
         }
 
+        // Add task input
+        if (file instanceof TFile) {
+            this.renderTaskInput(preview, file);
+        }
+
         // Review / Reflection section
         this.renderReviewSection(preview, content);
 
@@ -364,6 +370,7 @@ export class PeriodicRenderer {
                 for (const task of tasks) {
                     this.renderTask(taskSection, task, weekFile);
                 }
+                this.renderTaskInput(taskSection, weekFile);
             }
         }
 
@@ -580,6 +587,7 @@ export class PeriodicRenderer {
                 for (const task of tasks) {
                     this.renderTask(taskSection, task, monthFile);
                 }
+                this.renderTaskInput(taskSection, monthFile);
             }
         }
 
@@ -613,7 +621,7 @@ export class PeriodicRenderer {
     }
 
     // ──────────────────────────────────────────────────────
-    // Shared task renderer
+    // Shared task renderer & input
     // ──────────────────────────────────────────────────────
 
     private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile): void {
@@ -640,5 +648,35 @@ export class PeriodicRenderer {
             label.style.textDecoration = 'line-through';
             label.style.opacity = '0.5';
         }
+    }
+
+    /** Inline task-add input */
+    private renderTaskInput(container: HTMLElement, file: TFile): void {
+        const h = this.host;
+        const row = container.createDiv('tl-periodic-task-input-row');
+        const input = row.createEl('input', {
+            type: 'text',
+            cls: 'tl-periodic-task-input',
+            attr: { placeholder: '添加任务...' },
+        });
+        const addBtn = row.createEl('button', {
+            cls: 'tl-periodic-task-add-btn',
+            text: '+',
+        });
+
+        const doAdd = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            await h.addMdTask(file, text);
+            // Re-render the current view
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
+        };
+
+        addBtn.addEventListener('click', doAdd);
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+        });
     }
 }

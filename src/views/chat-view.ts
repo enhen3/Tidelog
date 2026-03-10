@@ -339,6 +339,39 @@ export class ChatView extends ItemView {
     }
 
     /**
+     * Append a new task to a markdown file.
+     * Inserts after the last existing task line, or at the end.
+     */
+    public async addMdTask(file: TFile, taskText: string): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            let content = await this.app.vault.read(file);
+            const newLine = `- [ ] ${taskText}`;
+            const lines = content.split('\n');
+
+            // Find the last task line index
+            let lastTaskIdx = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].match(/^\s*- \[[ x]\] /)) {
+                    lastTaskIdx = i;
+                }
+            }
+
+            if (lastTaskIdx >= 0) {
+                // Insert after the last task
+                lines.splice(lastTaskIdx + 1, 0, newLine);
+            } else {
+                // No tasks found — append at end
+                lines.push(newLine);
+            }
+
+            await this.app.vault.modify(file, lines.join('\n'));
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
+    /**
      * Extract emotion/energy scores from a daily note's body content.
      * Checks:
      *   1. **精力状态**: N/10  (morning energy)
