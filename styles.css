@@ -2765,15 +2765,6 @@
 	transition: all 0.2s ease;
 }
 
-.tl-task-row-nest-hint::after {
-	content: '↳ 嵌套为子任务';
-	position: absolute;
-	right: 12px;
-	font-size: 10px;
-	color: var(--tl-accent);
-	opacity: 0.8;
-}
-
 /* ── Action controls (hover-reveal) ── */
 .tl-task-drag-handle {
 	cursor: grab;

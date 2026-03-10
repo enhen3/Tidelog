@@ -754,7 +754,7 @@ export class PeriodicRenderer {
                     nestMode = true;
                     row.removeClass('tl-task-row-dragover');
                     row.addClass('tl-task-row-nest-hint');
-                }, 500);
+                }, 300);
             }
         });
         row.addEventListener('dragleave', () => {
