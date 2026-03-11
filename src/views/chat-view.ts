@@ -156,14 +156,6 @@ export class ChatView extends ItemView {
     private renderSOPButtons(container: HTMLElement): void {
         const buttons = container.createDiv('tl-header-buttons');
 
-        const morningBtn = buttons.createEl('button', {
-            cls: 'tl-mode-btn tl-mode-btn-plan',
-            attr: { 'aria-label': 'Plan：规划今日' },
-        });
-        setIcon(morningBtn, 'sun');
-        morningBtn.createSpan({ text: 'Plan' });
-        morningBtn.addEventListener('click', () => this.startSOP('morning'));
-
         const eveningBtn = buttons.createEl('button', {
             cls: 'tl-mode-btn tl-mode-btn-review',
             attr: { 'aria-label': 'Review：回顾今天' },
@@ -190,8 +182,8 @@ export class ChatView extends ItemView {
         this.tabBarEl = tabBarWrap.createDiv('tl-tab-bar');
 
         const tabs: { id: SidebarTab; icon: string; label: string }[] = [
-            { id: 'chat', icon: '💬', label: 'TideLog Talk' },
             { id: 'kanban', icon: '📅', label: '计划' },
+            { id: 'chat', icon: '💬', label: 'TideLog Talk' },
             { id: 'review', icon: '📊', label: '仪表盘' },
         ];
 
@@ -579,7 +571,6 @@ export class ChatView extends ItemView {
 
 我是你的 AI 教练，帮助你建立持续成长的习惯。
 
-**☀️ Plan** — 对标计划，规划今日任务
 **🌙 Review** — 回顾一天，记录成就与情绪
 **💡 Insight** — 洞察分析，生成报告
 
@@ -650,6 +641,28 @@ export class ChatView extends ItemView {
         this.addAIMessage('开始晚间复盘...');
         await this.eveningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
+        });
+    }
+
+    /**
+     * Start chat with pre-filled context (called from dashboard)
+     */
+    public startChatWithContext(context: string): void {
+        this.switchTab('chat', true);
+        this.sopContext = {
+            type: 'none',
+            currentStep: 0,
+            responses: {},
+        };
+        this.messages = [];
+        this.messagesContainer.empty();
+        this.hideTaskInput();
+        this.addAIMessage('💬 来聊聊仪表盘上的内容吧！我已经了解了你的数据，请告诉我你想深入讨论什么：');
+        // Inject context as system-level background for the AI
+        this.messages.push({
+            role: 'system',
+            content: `以下是用户仪表盘上的摘要数据，请基于这些数据回答用户的问题：\n\n${context}`,
+            timestamp: Date.now(),
         });
     }
 

@@ -1792,6 +1792,28 @@
 	margin: var(--tl-sp-6) 0 0;
 }
 
+/* Dashboard "Chat about this" button */
+.tl-dash-chat-btn {
+	display: block;
+	width: calc(100% - 24px);
+	margin: 16px 12px;
+	padding: 10px 0;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--tl-accent);
+	background: var(--background-secondary);
+	border: 1px solid var(--tl-accent-light);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.tl-dash-chat-btn:hover {
+	background: var(--tl-accent-light);
+	color: #fff;
+	border-color: var(--tl-accent);
+}
+
 .tl-dash-insight-line {
 	font-size: var(--tl-fs-callout);
 	line-height: 1.5;

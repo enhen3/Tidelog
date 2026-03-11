@@ -19,6 +19,7 @@ export interface ReviewHost {
     parseNoteScores(content: string): number | null;
     switchTab(tab: string): void;
     invalidateTabCache(tab: string): void;
+    startChatWithContext(context: string): void;
 }
 
 export class ReviewRenderer {
@@ -489,5 +490,19 @@ export class ReviewRenderer {
             if (principle) ppBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle });
             if (pattern) ppBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });
         }
+
+        // "Chat about this" button at the very bottom
+        const chatBtn = panel.createEl('button', {
+            cls: 'tl-dash-chat-btn',
+            text: '💬 想聊一聊这个',
+        });
+        chatBtn.addEventListener('click', () => {
+            // Gather dashboard context summary
+            const contextParts: string[] = [];
+            if (principle) contextParts.push(`用户原则：${principle}`);
+            if (pattern) contextParts.push(`行为模式：${pattern}`);
+            contextParts.push(`仪表盘时间：${moment().format('YYYY-MM-DD')}`);
+            h.startChatWithContext(contextParts.join('\n'));
+        });
     }
 }
