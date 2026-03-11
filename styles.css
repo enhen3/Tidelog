@@ -3125,6 +3125,18 @@
 	border-top: 1px solid var(--background-modifier-border);
 }
 
+/* ---- AI Planning Suggestion ---- */
+.tl-plan-suggestion {
+	padding: 8px 14px;
+	font-size: 12px;
+	color: var(--tl-text-secondary);
+	font-style: italic;
+	border-left: 2px solid var(--tl-accent-light);
+	margin: 6px 12px;
+	line-height: 1.5;
+	opacity: 0.75;
+}
+
 /* ---- Open/Create Button ---- */
 .tl-periodic-open-btn {
 	padding: 8px 12px;

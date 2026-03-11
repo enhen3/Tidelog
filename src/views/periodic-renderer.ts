@@ -155,31 +155,8 @@ export class PeriodicRenderer {
             return;
         }
 
+        // Parse content (skip frontmatter for task extraction)
         const content = await h.app.vault.read(file);
-
-        // Status & emotion
-        let emotionScore: number | null = null;
-        let status = '';
-        if (content.startsWith('---')) {
-            const end = content.indexOf('---', 3);
-            if (end > 0) {
-                const fm = content.substring(4, end);
-                const em = fm.match(/emotion_score:\s*(\d+)/);
-                if (em) emotionScore = parseInt(em[1], 10);
-                const sm = fm.match(/status:\s*(\S+)/);
-                if (sm) status = sm[1];
-            }
-        }
-
-        const meta = previewHeader.createDiv('tl-periodic-preview-meta');
-        if (emotionScore) {
-            const hue = Math.round(((emotionScore - 1) / 9) * 120);
-            const badge = meta.createEl('span', { cls: 'tl-periodic-emotion-badge tl-dynamic-bg', text: `心情 ${emotionScore}/10` });
-            badge.style.setProperty('--tl-bg', `hsl(${hue}, 55%, 60%)`);
-        }
-        if (status === 'completed') {
-            meta.createEl('span', { cls: 'tl-periodic-status-badge', text: '✓ 完成' });
-        }
 
         // Tasks
         const tasks = h.parseMdTasks(content).filter(t => t.isTask);
@@ -217,8 +194,11 @@ export class PeriodicRenderer {
             this.renderTaskInput(preview, file);
         }
 
-        // Review / Reflection section
-        this.renderReviewSection(preview, content);
+        // AI planning suggestion for today / future dates
+        const isCurrentOrFuture = date.isSameOrAfter(moment(), 'day');
+        if (isCurrentOrFuture) {
+            this.renderPlanSuggestion(preview);
+        }
 
         // Open note button
         const openBtn = preview.createDiv('tl-periodic-open-btn');
@@ -226,6 +206,27 @@ export class PeriodicRenderer {
         openBtn.addEventListener('click', () => {
             h.app.workspace.getLeaf().openFile(file);
         });
+    }
+
+    /** Show a random AI planning suggestion below the task list */
+    private renderPlanSuggestion(container: HTMLElement): void {
+        const tips = [
+            '💡 尝试用「2分钟法则」：能在2分钟内完成的事，立刻去做',
+            '💡 为最重要的任务预留上午的黄金时间段',
+            '💡 每天只选3个「必须完成」的任务，避免贪多',
+            '💡 大任务拆解为可执行的小步骤，降低启动阻力',
+            '💡 给每个任务设定具体的完成时间，而非模糊的「今天」',
+            '💡 先吃掉那只「青蛙」——从最难的任务开始',
+            '💡 在任务间留出5-10分钟缓冲时间',
+            '💡 用「如果…那么…」的形式规划，提高执行力',
+            '💡 上午适合深度工作，下午适合沟通会议',
+            '💡 完成一个任务后给自己一个小奖励，保持动力',
+            '💡 把「要做的事」转化为「想做的事」——找到任务的意义',
+            '💡 每周日花15分钟规划下周，减少每天的决策负担',
+        ];
+        const tip = tips[Math.floor(Math.random() * tips.length)];
+        const section = container.createDiv('tl-plan-suggestion');
+        section.createEl('span', { text: tip });
     }
 
     /** Extract and render 晚间复盘 sections from daily note content */
