@@ -377,11 +377,20 @@ export class ReviewRenderer {
             if (!scrollParent) return;
             const parentRect = scrollParent.getBoundingClientRect();
             const popRect = popover.getBoundingClientRect();
-            if (popRect.left < parentRect.left + 4) {
-                const shift = parentRect.left + 4 - popRect.left;
+
+            // Top clipping: flip popover below the cell
+            if (popRect.top < parentRect.top) {
+                popover.style.bottom = 'auto';
+                popover.style.top = '100%';
+            }
+
+            // Left/right clipping
+            const popRect2 = popover.getBoundingClientRect();
+            if (popRect2.left < parentRect.left + 4) {
+                const shift = parentRect.left + 4 - popRect2.left;
                 popover.style.left = `calc(50% + ${shift}px)`;
-            } else if (popRect.right > parentRect.right - 4) {
-                const shift = popRect.right - parentRect.right + 4;
+            } else if (popRect2.right > parentRect.right - 4) {
+                const shift = popRect2.right - parentRect.right + 4;
                 popover.style.left = `calc(50% - ${shift}px)`;
             }
         });
