@@ -370,14 +370,18 @@ export class PeriodicRenderer {
 
             // Tasks from weekly plan
             const tasks = h.parseMdTasks(content).filter(t => t.isTask);
+            const taskSection = preview.createDiv('tl-periodic-task-section');
             if (tasks.length > 0) {
-                const taskSection = preview.createDiv('tl-periodic-task-section');
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: `📝 周任务 (${tasks.length})` });
                 for (const task of tasks) {
                     this.renderTask(taskSection, task, weekFile);
                 }
-                this.renderTaskInput(taskSection, weekFile);
             }
+            this.renderTaskInput(taskSection, weekFile);
+        } else {
+            // No weekly file — show task input that auto-creates file
+            const taskSection = preview.createDiv('tl-periodic-task-section');
+            this.renderTaskInputForWeek(taskSection, weekStart, weekLabel);
         }
 
         // Aggregate daily tasks for this week
@@ -587,14 +591,18 @@ export class PeriodicRenderer {
 
             // Tasks from monthly plan
             const tasks = h.parseMdTasks(content).filter(t => t.isTask);
+            const taskSection = preview.createDiv('tl-periodic-task-section');
             if (tasks.length > 0) {
-                const taskSection = preview.createDiv('tl-periodic-task-section');
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: `📝 月任务 (${tasks.length})` });
                 for (const task of tasks) {
                     this.renderTask(taskSection, task, monthFile);
                 }
-                this.renderTaskInput(taskSection, monthFile);
             }
+            this.renderTaskInput(taskSection, monthFile);
+        } else {
+            // No monthly file — show task input that auto-creates file
+            const taskSection = preview.createDiv('tl-periodic-task-section');
+            this.renderTaskInputForMonth(taskSection, date);
         }
 
         // Monthly stats: count daily notes + tasks in this month
@@ -874,6 +882,69 @@ export class PeriodicRenderer {
             input.value = '';
             // Auto-create daily note if needed
             const file = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
+            await h.addMdTask(file, text);
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
+        };
+
+        addBtn.addEventListener('click', doAdd);
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+        });
+    }
+
+    /** Task input that auto-creates the weekly plan file */
+    private renderTaskInputForWeek(container: HTMLElement, weekStart: moment.Moment, weekLabel: string): void {
+        const h = this.host;
+        const row = container.createDiv('tl-periodic-task-input-row');
+        const input = row.createEl('input', {
+            type: 'text',
+            cls: 'tl-periodic-task-input',
+            attr: { placeholder: '添加周任务...' },
+        });
+        const addBtn = row.createEl('button', {
+            cls: 'tl-periodic-task-add-btn',
+            text: '+',
+        });
+
+        const doAdd = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
+            const file = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
+            await h.addMdTask(file, text);
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
+        };
+
+        addBtn.addEventListener('click', doAdd);
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+        });
+    }
+
+    /** Task input that auto-creates the monthly plan file */
+    private renderTaskInputForMonth(container: HTMLElement, date: moment.Moment): void {
+        const h = this.host;
+        const monthStr = date.format('YYYY-MM');
+        const row = container.createDiv('tl-periodic-task-input-row');
+        const input = row.createEl('input', {
+            type: 'text',
+            cls: 'tl-periodic-task-input',
+            attr: { placeholder: '添加月任务...' },
+        });
+        const addBtn = row.createEl('button', {
+            cls: 'tl-periodic-task-add-btn',
+            text: '+',
+        });
+
+        const doAdd = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(monthStr);
+            const file = await h.plugin.vaultManager.getOrCreateMonthlyPlan(date.toDate(), tmpl);
             await h.addMdTask(file, text);
             h.invalidateTabCache('kanban');
             h.switchTab('kanban');
