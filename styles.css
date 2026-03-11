@@ -298,7 +298,7 @@
 	flex-direction: column;
 	gap: var(--tl-sp-16);
 	scroll-behavior: smooth;
-	background: var(--tl-gradient-ocean);
+	background: var(--background-primary);
 }
 
 .tl-message {
@@ -1134,6 +1134,7 @@
 	padding: var(--tl-sp-8) var(--tl-sp-16) var(--tl-sp-6);
 	background: var(--tl-surface-raised);
 	border-bottom: 0.5px solid var(--tl-border);
+	justify-content: center;
 }
 
 /* Base kanban container */
@@ -1621,7 +1622,7 @@
 	border-radius: 8px;
 }
 
-/* ---- Apple Watch Activity Ring (SVG) ---- */
+/* ---- Interlocking Activity Ring (SVG) ---- */
 .tl-cal-ring-svg {
 	display: block;
 	margin: 0 auto;
@@ -1631,6 +1632,24 @@
 	font-size: var(--tl-fs-caption);
 	font-weight: var(--tl-fw-semibold);
 	fill: var(--text-normal);
+}
+
+.tl-cal-ring-arc-active {
+	animation: tl-ring-draw 0.8s var(--tl-ease) both;
+}
+
+.tl-cal-ring-complete-dot {
+	animation: tl-ring-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tl-ring-draw {
+	from { stroke-dashoffset: 88; }
+	to { stroke-dashoffset: 0; }
+}
+
+@keyframes tl-ring-pulse {
+	0%, 100% { opacity: 0.7; r: 2.5; }
+	50% { opacity: 1; r: 3; }
 }
 
 .tl-cal-dots {
@@ -1795,23 +1814,22 @@
 /* Dashboard "Chat about this" button */
 .tl-dash-chat-btn {
 	display: block;
-	width: calc(100% - 24px);
-	margin: 16px 12px;
-	padding: 10px 0;
-	font-size: 13px;
-	font-weight: 500;
+	width: calc(100% - var(--tl-sp-24));
+	margin: var(--tl-sp-16) var(--tl-sp-12);
+	padding: var(--tl-sp-10) 0;
+	font-size: var(--tl-fs-callout);
+	font-weight: var(--tl-fw-medium);
 	color: var(--tl-accent);
-	background: var(--background-secondary);
-	border: 1px solid var(--tl-accent-light);
-	border-radius: 8px;
+	background: var(--tl-surface);
+	border: 0.5px solid var(--tl-accent-light);
+	border-radius: var(--tl-radius-sm);
 	cursor: pointer;
-	transition: all 0.15s ease;
+	transition: all var(--tl-duration-fast) ease;
 }
 
 .tl-dash-chat-btn:hover {
 	background: var(--tl-accent-light);
-	color: #fff;
-	border-color: var(--tl-accent);
+	border-color: color-mix(in srgb, var(--tl-accent) 30%, transparent);
 }
 
 .tl-dash-insight-line {
@@ -3149,25 +3167,25 @@
 
 /* ---- AI Planning Suggestion ---- */
 .tl-plan-suggestion {
-	margin: 10px 12px;
-	padding: 10px 14px;
-	background: var(--background-secondary);
-	border-radius: 8px;
-	border: 1px solid var(--background-modifier-border);
+	margin: var(--tl-sp-10) var(--tl-sp-12);
+	padding: var(--tl-sp-10) var(--tl-sp-12);
+	background: var(--tl-surface);
+	border-radius: var(--tl-radius-sm);
+	border: 0.5px solid var(--tl-border);
 }
 
 .tl-plan-suggestion-header {
-	font-size: 12px;
-	font-weight: 600;
+	font-size: var(--tl-fs-footnote);
+	font-weight: var(--tl-fw-semibold);
 	color: var(--tl-text-secondary);
-	margin-bottom: 6px;
+	margin-bottom: var(--tl-sp-6);
 }
 
 .tl-plan-suggestion-line {
-	font-size: 12.5px;
+	font-size: var(--tl-fs-footnote);
 	color: var(--tl-text-secondary);
 	line-height: 1.6;
-	padding: 2px 0;
+	padding: var(--tl-sp-2) 0;
 }
 
 /* ---- Open/Create Button ---- */

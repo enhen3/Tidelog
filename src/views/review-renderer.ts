@@ -113,56 +113,60 @@ export class ReviewRenderer {
 
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
 
-            // Premium split-ring SVG with gradients and glow
+            // Premium interlocking ring with gradient blend at junctions
             const hasPlan = data?.hasPlan ?? false;
             const hasReview = data?.hasReview ?? false;
             const hasData = !!data;
 
             const svgNS = 'http://www.w3.org/2000/svg';
             const svg = document.createElementNS(svgNS, 'svg');
-            svg.setAttribute('width', '32');
-            svg.setAttribute('height', '32');
-            svg.setAttribute('viewBox', '0 0 32 32');
+            svg.setAttribute('width', '36');
+            svg.setAttribute('height', '36');
+            svg.setAttribute('viewBox', '0 0 36 36');
             svg.setAttribute('class', 'tl-cal-ring-svg');
 
-            const cx = 16, cy = 16, r = 12;
+            const cx = 18, cy = 18, r = 14;
             const fullC = 2 * Math.PI * r;
-            const arcLen = fullC * 174 / 360; // 174° each half (3° gap on each junction)
-            const gapLen = fullC - arcLen;
             const uid = `cr${d}`;
 
-            // Define gradients + glow filter
+            // Define gradient definitions
             const defs = document.createElementNS(svgNS, 'defs');
 
-            // Plan gradient (green light → deep)
+            // Plan arc gradient: teal → gold blend at tail
             const pg = document.createElementNS(svgNS, 'linearGradient');
             pg.setAttribute('id', `${uid}pg`);
-            pg.setAttribute('x1', '0'); pg.setAttribute('y1', '0');
-            pg.setAttribute('x2', '0'); pg.setAttribute('y2', '1');
-            const pgs1 = document.createElementNS(svgNS, 'stop');
-            pgs1.setAttribute('offset', '0%'); pgs1.setAttribute('stop-color', '#5AABB8');
-            const pgs2 = document.createElementNS(svgNS, 'stop');
-            pgs2.setAttribute('offset', '100%'); pgs2.setAttribute('stop-color', '#2D7A8E');
-            pg.appendChild(pgs1); pg.appendChild(pgs2); defs.appendChild(pg);
+            pg.setAttribute('gradientUnits', 'userSpaceOnUse');
+            pg.setAttribute('x1', '18'); pg.setAttribute('y1', '4');
+            pg.setAttribute('x2', '18'); pg.setAttribute('y2', '32');
+            for (const [offset, color] of [['0%', '#3B99AD'], ['60%', '#4EAAB8'], ['85%', '#8DB89A'], ['100%', '#C5B97E']] as const) {
+                const stop = document.createElementNS(svgNS, 'stop');
+                stop.setAttribute('offset', offset);
+                stop.setAttribute('stop-color', color);
+                pg.appendChild(stop);
+            }
+            defs.appendChild(pg);
 
-            // Review gradient (blue light → deep)
+            // Review arc gradient: gold → teal blend at tail
             const rg = document.createElementNS(svgNS, 'linearGradient');
             rg.setAttribute('id', `${uid}rg`);
-            rg.setAttribute('x1', '0'); rg.setAttribute('y1', '1');
-            rg.setAttribute('x2', '0'); rg.setAttribute('y2', '0');
-            const rgs1 = document.createElementNS(svgNS, 'stop');
-            rgs1.setAttribute('offset', '0%'); rgs1.setAttribute('stop-color', '#E8D5A0');
-            const rgs2 = document.createElementNS(svgNS, 'stop');
-            rgs2.setAttribute('offset', '100%'); rgs2.setAttribute('stop-color', '#B8956A');
-            rg.appendChild(rgs1); rg.appendChild(rgs2); defs.appendChild(rg);
+            rg.setAttribute('gradientUnits', 'userSpaceOnUse');
+            rg.setAttribute('x1', '18'); rg.setAttribute('y1', '32');
+            rg.setAttribute('x2', '18'); rg.setAttribute('y2', '4');
+            for (const [offset, color] of [['0%', '#D4B978'], ['60%', '#CCAA6B'], ['85%', '#8DB89A'], ['100%', '#5AABB8']] as const) {
+                const stop = document.createElementNS(svgNS, 'stop');
+                stop.setAttribute('offset', offset);
+                stop.setAttribute('stop-color', color);
+                rg.appendChild(stop);
+            }
+            defs.appendChild(rg);
 
-            // Glow filter
+            // Soft glow filter for active arcs
             const gf = document.createElementNS(svgNS, 'filter');
             gf.setAttribute('id', `${uid}gl`);
-            gf.setAttribute('x', '-30%'); gf.setAttribute('y', '-30%');
-            gf.setAttribute('width', '160%'); gf.setAttribute('height', '160%');
+            gf.setAttribute('x', '-40%'); gf.setAttribute('y', '-40%');
+            gf.setAttribute('width', '180%'); gf.setAttribute('height', '180%');
             const gb = document.createElementNS(svgNS, 'feGaussianBlur');
-            gb.setAttribute('stdDeviation', '1.5'); gb.setAttribute('result', 'g');
+            gb.setAttribute('stdDeviation', '1.8'); gb.setAttribute('result', 'g');
             gf.appendChild(gb);
             const gm = document.createElementNS(svgNS, 'feMerge');
             const gm1 = document.createElementNS(svgNS, 'feMergeNode');
@@ -174,72 +178,77 @@ export class ReviewRenderer {
 
             svg.appendChild(defs);
 
-            // Mood fill (center soft glow)
+            // Mood fill (center radial glow)
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
                 const moodCircle = document.createElementNS(svgNS, 'circle');
                 moodCircle.setAttribute('cx', `${cx}`);
                 moodCircle.setAttribute('cy', `${cy}`);
-                moodCircle.setAttribute('r', '8');
-                moodCircle.setAttribute('fill', `hsla(${hue}, 55%, 72%, 0.3)`);
+                moodCircle.setAttribute('r', '9');
+                moodCircle.setAttribute('fill', `hsla(${hue}, 55%, 72%, 0.25)`);
                 svg.appendChild(moodCircle);
             }
 
             if (hasData) {
-                // Background track (subtle depth ring)
+                // Background track
                 const track = document.createElementNS(svgNS, 'circle');
                 track.setAttribute('cx', `${cx}`);
                 track.setAttribute('cy', `${cy}`);
                 track.setAttribute('r', `${r}`);
                 track.setAttribute('fill', 'none');
                 track.setAttribute('stroke', 'var(--background-modifier-border)');
-                track.setAttribute('stroke-width', '3');
-                track.setAttribute('opacity', '0.35');
+                track.setAttribute('stroke-width', '3.5');
+                track.setAttribute('opacity', '0.25');
                 svg.appendChild(track);
 
-                // Quarter arc params: each quarter = 84° (with 3° gap on each side of junction)
-                const qArcLen = fullC * 84 / 360;
-                const qGapLen = fullC - qArcLen;
+                // Interlocking arc params
+                // Each half = 175° (5° total gap distributed across 2 junction points)
+                const halfArcDeg = 175;
+                const halfArcLen = fullC * halfArcDeg / 360;
+                const halfGapLen = fullC - halfArcLen;
 
-                // Helper to create a quarter arc
-                const makeQ = (rotateDeg: number, strokeColor: string, hasGlow: boolean, dimmed: boolean) => {
+                const makeArc = (rotateDeg: number, stroke: string, active: boolean) => {
                     const arc = document.createElementNS(svgNS, 'circle');
                     arc.setAttribute('cx', `${cx}`);
                     arc.setAttribute('cy', `${cy}`);
                     arc.setAttribute('r', `${r}`);
                     arc.setAttribute('fill', 'none');
-                    arc.setAttribute('stroke', strokeColor);
-                    arc.setAttribute('stroke-width', '3');
+                    arc.setAttribute('stroke', stroke);
+                    arc.setAttribute('stroke-width', active ? '3.5' : '2.5');
                     arc.setAttribute('stroke-linecap', 'round');
-                    arc.setAttribute('stroke-dasharray', `${qArcLen} ${qGapLen}`);
+                    arc.setAttribute('stroke-dasharray', `${halfArcLen} ${halfGapLen}`);
                     arc.setAttribute('transform', `rotate(${rotateDeg} ${cx} ${cy})`);
-                    if (hasGlow) arc.setAttribute('filter', `url(#${uid}gl)`);
-                    if (dimmed) arc.setAttribute('opacity', '0.45');
+                    if (active) {
+                        arc.setAttribute('filter', `url(#${uid}gl)`);
+                        arc.classList.add('tl-cal-ring-arc-active');
+                    } else {
+                        arc.setAttribute('opacity', '0.3');
+                        arc.setAttribute('stroke-dasharray', '3 4');
+                    }
                     return arc;
                 };
 
-                const planColor = hasPlan ? `url(#${uid}pg)` : 'var(--background-modifier-border)';
-                const revColor = hasReview ? `url(#${uid}rg)` : 'var(--background-modifier-border)';
+                // Plan half (left side: 9→3 o'clock, starting at 177.5° = 180 - 2.5°)
+                const planStroke = hasPlan ? `url(#${uid}pg)` : 'var(--background-modifier-border)';
+                // Review half (right side: 3→9 o'clock, starting at 357.5° = 360 - 2.5°)
+                const revStroke = hasReview ? `url(#${uid}rg)` : 'var(--background-modifier-border)';
 
-                // INTERLOCKING LAYER ORDER:
-                // At 12 o'clock: Plan overlaps Review
-                // At 6 o'clock:  Review overlaps Plan
-                //
-                // Layer 1 (bottom): Review top-right quarter (12→3 o'clock)
-                //   rotate: 12 o'clock = 270° from default 3-o'clock, +3° gap = 273°
-                svg.appendChild(makeQ(273, revColor, hasReview, !hasReview));
+                // Layer 1 (bottom): Review arc
+                svg.appendChild(makeArc(-2.5, revStroke, hasReview));
+                // Layer 2 (top): Plan arc — overlaps review at top junction
+                svg.appendChild(makeArc(177.5, planStroke, hasPlan));
 
-                // Layer 2: Plan bottom-left quarter (6→9 o'clock)
-                //   rotate: 6 o'clock = 90° from default, +3° gap = 93°
-                svg.appendChild(makeQ(93, planColor, hasPlan, !hasPlan));
-
-                // Layer 3: Plan top-left quarter (9→12 o'clock) — OVER review at 12 o'clock
-                //   rotate: 9 o'clock = 180°, +3° gap = 183°
-                svg.appendChild(makeQ(183, planColor, hasPlan, !hasPlan));
-
-                // Layer 4 (top): Review bottom-right quarter (3→6 o'clock) — OVER plan at 6 o'clock
-                //   rotate: 3 o'clock = 0°, +3° gap = 3°
-                svg.appendChild(makeQ(3, revColor, hasReview, !hasReview));
+                // Completion dot at top junction (12 o'clock) when both are done
+                if (hasPlan && hasReview) {
+                    const dot = document.createElementNS(svgNS, 'circle');
+                    dot.setAttribute('cx', `${cx}`);
+                    dot.setAttribute('cy', `${cy - r}`);
+                    dot.setAttribute('r', '2.5');
+                    dot.setAttribute('fill', '#8DB89A'); // blended teal-gold
+                    dot.setAttribute('filter', `url(#${uid}gl)`);
+                    dot.classList.add('tl-cal-ring-complete-dot');
+                    svg.appendChild(dot);
+                }
             }
 
             // Date number
