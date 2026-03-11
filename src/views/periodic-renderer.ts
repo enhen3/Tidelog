@@ -147,6 +147,10 @@ export class PeriodicRenderer {
         if (!file || !(file instanceof TFile)) {
             // Show task input even for future/empty dates — auto-create file
             this.renderTaskInputForDate(preview, date);
+            // AI suggestion for today / future
+            if (date.isSameOrAfter(moment(), 'day')) {
+                this.renderPlanSuggestion(preview);
+            }
             const createBtn = preview.createEl('button', { cls: 'tl-periodic-open-btn', text: '+ 创建日记' });
             createBtn.addEventListener('click', async () => {
                 const f = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
@@ -208,25 +212,52 @@ export class PeriodicRenderer {
         });
     }
 
-    /** Show a random AI planning suggestion below the task list */
+    /** Show AI planning suggestion — loads from cached file, falls back to static tips */
     private renderPlanSuggestion(container: HTMLElement): void {
+        const h = this.host;
+        const section = container.createDiv('tl-plan-suggestion');
+        section.createDiv({ cls: 'tl-plan-suggestion-header', text: '🤖 AI 计划建议' });
+
+        // Try to load from cached AI suggestions
+        const path = `${h.plugin.settings.archiveFolder}/plan_suggestions.md`;
+        const file = h.app.vault.getAbstractFileByPath(path);
+        if (file && file instanceof TFile) {
+            h.app.vault.read(file).then(content => {
+                // Strip frontmatter
+                let body = content;
+                if (body.startsWith('---')) {
+                    const end = body.indexOf('---', 3);
+                    if (end > 0) body = body.substring(end + 3);
+                }
+                const lines = body.trim().split('\n').filter(l => l.trim());
+                if (lines.length > 0) {
+                    section.empty();
+                    section.createDiv({ cls: 'tl-plan-suggestion-header', text: '🤖 AI 计划建议' });
+                    for (const line of lines) {
+                        section.createDiv({ cls: 'tl-plan-suggestion-line', text: line.trim() });
+                    }
+                    return;
+                }
+                this.showFallbackTip(section);
+            }).catch(() => this.showFallbackTip(section));
+        } else {
+            this.showFallbackTip(section);
+        }
+    }
+
+    private showFallbackTip(section: HTMLElement): void {
         const tips = [
             '💡 尝试用「2分钟法则」：能在2分钟内完成的事，立刻去做',
             '💡 为最重要的任务预留上午的黄金时间段',
             '💡 每天只选3个「必须完成」的任务，避免贪多',
             '💡 大任务拆解为可执行的小步骤，降低启动阻力',
-            '💡 给每个任务设定具体的完成时间，而非模糊的「今天」',
             '💡 先吃掉那只「青蛙」——从最难的任务开始',
             '💡 在任务间留出5-10分钟缓冲时间',
-            '💡 用「如果…那么…」的形式规划，提高执行力',
             '💡 上午适合深度工作，下午适合沟通会议',
             '💡 完成一个任务后给自己一个小奖励，保持动力',
-            '💡 把「要做的事」转化为「想做的事」——找到任务的意义',
-            '💡 每周日花15分钟规划下周，减少每天的决策负担',
         ];
         const tip = tips[Math.floor(Math.random() * tips.length)];
-        const section = container.createDiv('tl-plan-suggestion');
-        section.createEl('span', { text: tip });
+        section.createDiv({ cls: 'tl-plan-suggestion-line', text: tip });
     }
 
     /** Extract and render 晚间复盘 sections from daily note content */

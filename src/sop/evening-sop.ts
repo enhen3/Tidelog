@@ -3,6 +3,7 @@
  */
 
 import TideLogPlugin from '../main';
+import { TFile } from 'obsidian';
 import { SOPContext, ChatMessage, EveningQuestionType, EveningQuestionConfig } from '../types';
 import {
     getBaseContextPrompt,
@@ -460,9 +461,55 @@ ${this.questionFlow[0].initialMessage}`;
             console.error('[Evening SOP] Failed to sync kanban:', error);
         }
 
+        // Generate AI planning suggestions for tomorrow (runs in background)
+        this.generatePlanSuggestions(context).catch(err => {
+            console.error('[Evening SOP] Failed to generate plan suggestions:', err);
+        });
+
         // Reset context
         context.type = 'none';
         context.currentStep = 0;
+    }
+
+    /**
+     * Generate AI-based planning suggestions from evening review and save to file
+     */
+    private async generatePlanSuggestions(context: SOPContext): Promise<void> {
+        try {
+            const provider = this.plugin.getAIProvider();
+            if (!provider) return;
+
+            // Gather review responses
+            const responses = context.responses || {};
+            let reviewSummary = '';
+            for (const [key, val] of Object.entries(responses)) {
+                if (val && typeof val === 'string' && val.trim()) {
+                    reviewSummary += `【${key}】${val.trim()}\n`;
+                }
+            }
+            if (!reviewSummary) return;
+
+            const systemPrompt = `基于用户的晚间复盘内容，为用户明天的计划提供3条简短、个性化、有行动力的建议。每条建议以"💡"开头，不超过30字，要具体可执行（不要泛泛而谈）。直接输出建议，不要加前言。`;
+
+            const messages: ChatMessage[] = [
+                { role: 'user', content: `我的今日复盘：\n${reviewSummary}`, timestamp: Date.now() }
+            ];
+
+            const suggestions = await provider.sendMessage(messages, systemPrompt, () => {});
+
+            if (suggestions && suggestions.trim()) {
+                const path = `${this.plugin.settings.archiveFolder}/plan_suggestions.md`;
+                const file = this.plugin.app.vault.getAbstractFileByPath(path);
+                const content = `---\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
+                if (file) {
+                    await this.plugin.app.vault.modify(file as TFile, content);
+                } else {
+                    await this.plugin.app.vault.create(path, content);
+                }
+            }
+        } catch (e) {
+            console.error('[Evening SOP] Plan suggestion generation failed:', e);
+        }
     }
 
     /**
