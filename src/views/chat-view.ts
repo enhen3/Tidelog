@@ -102,10 +102,7 @@ export class ChatView extends ItemView {
         container.empty();
         container.addClass('tl-chat-container');
 
-        // Header (title only)
-        this.renderHeader(container);
-
-        // Tab bar
+        // Tab bar (top-level navigation — no header)
         this.renderTabBar(container);
 
         // Tab content area
@@ -118,8 +115,8 @@ export class ChatView extends ItemView {
         this.renderInputArea(this.chatPanel);
         this.showWelcomeMessage();
 
-        // Switch to chat tab by default
-        this.switchTab('chat');
+        // Switch to Plan tab by default
+        this.switchTab('kanban');
 
         // Live refresh: re-render kanban when vault files change
         this.vaultModifyRef = this.app.vault.on('modify', (file) => {
@@ -158,7 +155,6 @@ export class ChatView extends ItemView {
 
         const eveningBtn = buttons.createEl('button', {
             cls: 'tl-mode-btn tl-mode-btn-review',
-            attr: { 'aria-label': 'Review：回顾今天' },
         });
         setIcon(eveningBtn, 'moon');
         eveningBtn.createSpan({ text: 'Review' });
@@ -166,7 +162,6 @@ export class ChatView extends ItemView {
 
         const insightBtn = buttons.createEl('button', {
             cls: 'tl-mode-btn tl-mode-btn-insight',
-            attr: { 'aria-label': 'TideLog Talk：自由对话' },
         });
         setIcon(insightBtn, 'lightbulb');
         insightBtn.createSpan({ text: 'Insight' });
@@ -181,10 +176,10 @@ export class ChatView extends ItemView {
         const tabBarWrap = container.createDiv('tl-tab-bar-wrap');
         this.tabBarEl = tabBarWrap.createDiv('tl-tab-bar');
 
-        const tabs: { id: SidebarTab; icon: string; label: string }[] = [
-            { id: 'kanban', icon: '📅', label: '计划' },
-            { id: 'chat', icon: '💬', label: 'TideLog Talk' },
-            { id: 'review', icon: '📊', label: '仪表盘' },
+        const tabs: { id: SidebarTab; emoji: string; label: string }[] = [
+            { id: 'kanban', emoji: '☀️', label: 'Plan' },
+            { id: 'chat', emoji: '🌙', label: 'Review' },
+            { id: 'review', emoji: '🌓', label: 'Insights' },
         ];
 
         for (const tab of tabs) {
@@ -192,7 +187,7 @@ export class ChatView extends ItemView {
                 cls: `tl-tab-btn ${tab.id === this.activeTab ? 'tl-tab-btn-active' : ''}`,
                 attr: { 'data-tab': tab.id },
             });
-            btn.createEl('span', { cls: 'tl-tab-btn-icon', text: tab.icon });
+            btn.createEl('span', { cls: 'tl-tab-btn-icon', text: tab.emoji });
             btn.createEl('span', { cls: 'tl-tab-btn-label', text: tab.label });
             btn.addEventListener('click', () => this.switchTab(tab.id, true));
         }

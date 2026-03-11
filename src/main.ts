@@ -66,6 +66,15 @@ export default class TideLogPlugin extends Plugin {
         // Register custom tide icon for ribbon
         addIcon('tidelog-wave', `<path d="M8 50 Q20 30 32 50 Q44 70 56 50 Q68 30 80 50 Q92 70 96 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 70 Q16 50 28 70 Q40 90 52 70 Q64 50 76 70 Q88 90 96 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="22" r="8" fill="currentColor"/><path d="M42 22 Q50 8 58 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
 
+        // Plan: sunrise over horizon — new day, new plan
+        addIcon('tidelog-plan', `<circle cx="50" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="5"/><line x1="50" y1="28" x2="50" y2="18" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="72" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="28" y1="50" x2="18" y2="50" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="82" y1="50" x2="72" y2="50" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="34.4" y1="34.4" x2="27.4" y2="27.4" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="65.6" y1="34.4" x2="72.6" y2="27.4" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="34.4" y1="65.6" x2="27.4" y2="72.6" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><line x1="65.6" y1="65.6" x2="72.6" y2="72.6" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>`);
+
+        // Review: crescent moon — evening reflection
+        addIcon('tidelog-review', `<path d="M60 20 A30 30 0 1 0 60 80 A22 22 0 1 1 60 20Z" fill="currentColor"/><circle cx="72" cy="28" r="2.5" fill="currentColor"/><circle cx="82" cy="44" r="1.8" fill="currentColor"/><circle cx="76" cy="60" r="2" fill="currentColor"/>`);
+
+        // Insights: eclipsed sun — plan meets review, synthesis
+        addIcon('tidelog-insights', `<circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="5"/><path d="M50 28 A22 22 0 0 1 50 72 A14 14 0 0 0 50 28Z" fill="currentColor"/><line x1="50" y1="18" x2="50" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="92" x2="50" y2="82" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="18" y1="50" x2="8" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="92" y1="50" x2="82" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
+
         // Add ribbon icons
         this.addRibbonIcon('tidelog-wave', 'TideLog', () => {
             this.activateChatView();

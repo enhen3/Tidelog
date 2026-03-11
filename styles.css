@@ -271,9 +271,9 @@
 	color: var(--tl-text-secondary);
 }
 .tl-mode-btn-insight:hover {
-	background: var(--tl-accent-light);
-	color: var(--tl-accent);
-	border-color: color-mix(in srgb, var(--tl-accent) 15%, transparent);
+	background: var(--tl-review-light);
+	color: var(--tl-review);
+	border-color: color-mix(in srgb, var(--tl-review) 18%, transparent);
 }
 
 .tl-mode-btn svg {
@@ -1043,22 +1043,19 @@
 	}
 }
 
-/* --- Tab bar: iOS Segmented Control × Brand --- */
+/* --- Tab bar: Pill capsule navigation --- */
 
 .tl-tab-bar-wrap {
 	background: color-mix(in srgb, var(--tl-surface-raised) 90%, transparent);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	padding: var(--tl-sp-6) var(--tl-sp-12) var(--tl-sp-6);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	padding: var(--tl-sp-10) var(--tl-sp-12) var(--tl-sp-8);
 }
 
 .tl-tab-bar {
 	display: flex;
-	gap: 2px;
-	padding: 3px;
-	background: color-mix(in srgb, var(--tl-accent) 4%, var(--tl-surface));
-	border-radius: var(--tl-radius-md);
-	border: 0.5px solid var(--tl-border);
+	gap: var(--tl-sp-8);
+	justify-content: center;
 }
 
 .tl-tab-btn {
@@ -1066,34 +1063,73 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: var(--tl-sp-4);
-	padding: var(--tl-sp-6) var(--tl-sp-4);
-	border: none;
+	gap: var(--tl-sp-6);
+	padding: var(--tl-sp-8) var(--tl-sp-12);
+	border: 0.5px solid transparent;
 	background: transparent;
 	color: var(--tl-text-tertiary);
 	font-size: var(--tl-fs-footnote);
 	font-weight: var(--tl-fw-medium);
 	cursor: pointer;
-	border-radius: 7px;
+	border-radius: var(--tl-radius-pill);
 	transition: all var(--tl-duration-fast) var(--tl-ease);
 	position: relative;
-	z-index: 1;
 }
 
 .tl-tab-btn:hover {
 	color: var(--tl-text-secondary);
+	background: color-mix(in srgb, var(--tl-accent) 4%, transparent);
 }
 
 .tl-tab-btn-active {
-	background: var(--tl-surface-card);
-	color: var(--tl-accent);
 	font-weight: var(--tl-fw-semibold);
-	box-shadow: var(--tl-shadow-sm), 0 1px 3px rgba(59, 142, 165, 0.08);
-	z-index: 2;
+}
+
+/* Plan: blue → white gradient */
+.tl-tab-btn-active[data-tab="kanban"] {
+	background: var(--tl-plan-light);
+	border-color: color-mix(in srgb, var(--tl-plan) 18%, transparent);
+	box-shadow: 0 1px 4px rgba(59, 142, 165, 0.12);
+}
+.tl-tab-btn-active[data-tab="kanban"] .tl-tab-btn-label {
+	background: linear-gradient(135deg, var(--tl-plan) 20%, color-mix(in srgb, var(--tl-plan) 45%, white) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* Review: gold → white gradient */
+.tl-tab-btn-active[data-tab="chat"] {
+	background: var(--tl-review-light);
+	border-color: color-mix(in srgb, var(--tl-review) 20%, transparent);
+	box-shadow: 0 1px 4px rgba(212, 185, 120, 0.15);
+}
+.tl-tab-btn-active[data-tab="chat"] .tl-tab-btn-label {
+	background: linear-gradient(135deg, var(--tl-review) 20%, color-mix(in srgb, var(--tl-review) 45%, white) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* Insights: blue → gold fusion gradient */
+.tl-tab-btn-active[data-tab="review"] {
+	background: linear-gradient(135deg, var(--tl-plan-light) 0%, var(--tl-review-light) 100%);
+	border-color: color-mix(in srgb, var(--tl-plan) 10%, color-mix(in srgb, var(--tl-review) 10%, transparent));
+	box-shadow: 0 1px 4px rgba(59, 142, 165, 0.08), 0 1px 4px rgba(212, 185, 120, 0.08);
+}
+.tl-tab-btn-active[data-tab="review"] .tl-tab-btn-label {
+	background: linear-gradient(135deg, var(--tl-plan) 0%, var(--tl-review) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
 }
 
 .tl-tab-btn-icon {
-	font-size: var(--tl-fs-body);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 15px;
+	line-height: 1;
 }
 
 .tl-tab-btn-label {
@@ -1106,7 +1142,6 @@
 	flex-direction: column;
 	overflow: hidden;
 	min-height: 0;
-	border-top: 1px solid var(--tl-border);
 }
 
 .tl-tab-panel {
@@ -1523,10 +1558,9 @@
 .tl-cal-header {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 12px;
+	justify-content: space-between;
 	margin-bottom: 0;
-	padding: 10px 12px;
+	padding: var(--tl-sp-8) var(--tl-sp-4);
 }
 
 .tl-cal-title {
@@ -1538,13 +1572,13 @@
 }
 
 .tl-cal-nav-btn {
-	background: var(--interactive-normal);
+	background: var(--tl-surface-card);
 	border: 0.5px solid var(--tl-border);
 	border-radius: var(--tl-radius-sm);
 	padding: var(--tl-sp-4) var(--tl-sp-12);
 	cursor: pointer;
 	color: var(--tl-text-secondary);
-	font-size: var(--tl-fs-title1);
+	font-size: var(--tl-fs-title2);
 	transition: all var(--tl-duration-fast) var(--tl-ease);
 }
 
@@ -2619,42 +2653,43 @@
 
 /* ---- Calendar Selector ---- */
 .tl-periodic-selector {
-	margin-bottom: 10px;
+	margin-bottom: var(--tl-sp-8);
 }
 
 .tl-periodic-cal-nav {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	padding: 4px 0;
+	justify-content: space-between;
+	padding: var(--tl-sp-4) 0;
 }
 
 .tl-periodic-nav-btn {
-	border: none;
-	background: none;
-	font-size: var(--tl-fs-title3);
+	background: var(--tl-surface-card);
+	border: 0.5px solid var(--tl-border);
+	border-radius: var(--tl-radius-sm);
+	padding: var(--tl-sp-4) var(--tl-sp-12);
+	font-size: var(--tl-fs-title2);
 	cursor: pointer;
-	padding: 2px 8px;
-	border-radius: 4px;
-	color: var(--text-muted);
+	color: var(--tl-text-secondary);
+	transition: all var(--tl-duration-fast) var(--tl-ease);
 }
 
 .tl-periodic-nav-btn:hover {
-	background: var(--background-modifier-hover);
+	background: var(--tl-surface-card);
+	color: var(--tl-text-primary);
 }
 
 .tl-periodic-cal-title {
 	font-weight: var(--tl-fw-semibold);
-	font-size: var(--tl-fs-callout);
+	font-size: var(--tl-fs-body);
 }
 
 /* ---- Mini Calendar ---- */
 .tl-periodic-mini-cal {
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
-	gap: 1px;
-	padding: 4px;
+	gap: 2px;
+	padding: var(--tl-sp-4);
 }
 
 .tl-periodic-cal-wd {
@@ -2662,21 +2697,21 @@
 	font-size: var(--tl-fs-caption);
 	font-weight: var(--tl-fw-semibold);
 	opacity: 0.5;
-	padding: 2px 0;
+	padding: var(--tl-sp-4) 0;
 }
 
 .tl-periodic-cal-cell {
 	text-align: center;
 	font-size: var(--tl-fs-footnote);
-	padding: 5px 0;
-	border-radius: 6px;
+	padding: var(--tl-sp-6) 0;
+	border-radius: var(--tl-radius-sm);
 	cursor: pointer;
-	transition: all 0.1s ease;
+	transition: all var(--tl-duration-fast) var(--tl-ease);
 	position: relative;
 }
 
 .tl-periodic-cal-cell:hover {
-	background: var(--background-modifier-hover);
+	background: color-mix(in srgb, var(--tl-accent) 8%, transparent);
 }
 
 .tl-periodic-cal-cell-empty {
@@ -2711,7 +2746,7 @@
 }
 
 .tl-periodic-cal-cell-week-highlight {
-	background: color-mix(in srgb, var(--tl-accent) 15%, transparent);
+	background: color-mix(in srgb, var(--tl-accent) 12%, transparent);
 }
 
 /* ---- Month Grid (3×4) ---- */
