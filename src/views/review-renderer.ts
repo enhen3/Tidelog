@@ -132,13 +132,13 @@ export class ReviewRenderer {
             // Define gradient definitions
             const defs = document.createElementNS(svgNS, 'defs');
 
-            // Plan arc gradient: teal → gold blend at tail
+            // Plan arc gradient: pure teal depth (light → deep)
             const pg = document.createElementNS(svgNS, 'linearGradient');
             pg.setAttribute('id', `${uid}pg`);
             pg.setAttribute('gradientUnits', 'userSpaceOnUse');
-            pg.setAttribute('x1', '18'); pg.setAttribute('y1', '4');
-            pg.setAttribute('x2', '18'); pg.setAttribute('y2', '32');
-            for (const [offset, color] of [['0%', '#3B99AD'], ['60%', '#4EAAB8'], ['85%', '#8DB89A'], ['100%', '#C5B97E']] as const) {
+            pg.setAttribute('x1', '4'); pg.setAttribute('y1', '18');
+            pg.setAttribute('x2', '32'); pg.setAttribute('y2', '18');
+            for (const [offset, color] of [['0%', '#5ABECC'], ['50%', '#3B8EA5'], ['100%', '#2D7088']] as const) {
                 const stop = document.createElementNS(svgNS, 'stop');
                 stop.setAttribute('offset', offset);
                 stop.setAttribute('stop-color', color);
@@ -146,13 +146,13 @@ export class ReviewRenderer {
             }
             defs.appendChild(pg);
 
-            // Review arc gradient: gold → teal blend at tail
+            // Review arc gradient: pure warm gold depth (light → deep)
             const rg = document.createElementNS(svgNS, 'linearGradient');
             rg.setAttribute('id', `${uid}rg`);
             rg.setAttribute('gradientUnits', 'userSpaceOnUse');
-            rg.setAttribute('x1', '18'); rg.setAttribute('y1', '32');
-            rg.setAttribute('x2', '18'); rg.setAttribute('y2', '4');
-            for (const [offset, color] of [['0%', '#D4B978'], ['60%', '#CCAA6B'], ['85%', '#8DB89A'], ['100%', '#5AABB8']] as const) {
+            rg.setAttribute('x1', '32'); rg.setAttribute('y1', '18');
+            rg.setAttribute('x2', '4'); rg.setAttribute('y2', '18');
+            for (const [offset, color] of [['0%', '#E8D5A0'], ['50%', '#D4B978'], ['100%', '#B89A58']] as const) {
                 const stop = document.createElementNS(svgNS, 'stop');
                 stop.setAttribute('offset', offset);
                 stop.setAttribute('stop-color', color);
@@ -228,27 +228,15 @@ export class ReviewRenderer {
                     return arc;
                 };
 
-                // Plan half (left side: 9→3 o'clock, starting at 177.5° = 180 - 2.5°)
+                // Plan half (left side: 9→3 o'clock)
                 const planStroke = hasPlan ? `url(#${uid}pg)` : 'var(--background-modifier-border)';
-                // Review half (right side: 3→9 o'clock, starting at 357.5° = 360 - 2.5°)
+                // Review half (right side: 3→9 o'clock)
                 const revStroke = hasReview ? `url(#${uid}rg)` : 'var(--background-modifier-border)';
 
                 // Layer 1 (bottom): Review arc
                 svg.appendChild(makeArc(-2.5, revStroke, hasReview));
                 // Layer 2 (top): Plan arc — overlaps review at top junction
                 svg.appendChild(makeArc(177.5, planStroke, hasPlan));
-
-                // Completion dot at top junction (12 o'clock) when both are done
-                if (hasPlan && hasReview) {
-                    const dot = document.createElementNS(svgNS, 'circle');
-                    dot.setAttribute('cx', `${cx}`);
-                    dot.setAttribute('cy', `${cy - r}`);
-                    dot.setAttribute('r', '2.5');
-                    dot.setAttribute('fill', '#8DB89A'); // blended teal-gold
-                    dot.setAttribute('filter', `url(#${uid}gl)`);
-                    dot.classList.add('tl-cal-ring-complete-dot');
-                    svg.appendChild(dot);
-                }
             }
 
             // Date number
@@ -382,6 +370,21 @@ export class ReviewRenderer {
         });
 
         anchor.appendChild(popover);
+
+        // Clamp popover within the scroll container so it doesn't clip at edges
+        requestAnimationFrame(() => {
+            const scrollParent = anchor.closest('.tl-review-scroll') || anchor.closest('.tl-sidebar');
+            if (!scrollParent) return;
+            const parentRect = scrollParent.getBoundingClientRect();
+            const popRect = popover.getBoundingClientRect();
+            if (popRect.left < parentRect.left + 4) {
+                const shift = parentRect.left + 4 - popRect.left;
+                popover.style.left = `calc(50% + ${shift}px)`;
+            } else if (popRect.right > parentRect.right - 4) {
+                const shift = popRect.right - parentRect.right + 4;
+                popover.style.left = `calc(50% - ${shift}px)`;
+            }
+        });
     }
 
     // --- Dashboard section ---
@@ -437,6 +440,16 @@ export class ReviewRenderer {
                 const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整月报 →' });
                 link.addEventListener('click', () => {
                     h.app.workspace.getLeaf().openFile(mFile as TFile);
+                });
+
+                // Chat about monthly insight button
+                const insightText = Array.from(mBody.querySelectorAll('.tl-dash-insight-line')).map(el => el.textContent).join('\n');
+                const chatBtn = mBody.createEl('button', {
+                    cls: 'tl-dash-chat-btn',
+                    text: '💬 想聊一聊这个',
+                });
+                chatBtn.addEventListener('click', () => {
+                    h.startChatWithContext(`以下是 ${monthKey} 月报洞察的摘要：\n${insightText}`);
                 });
             } catch { /* skip */ }
         } else {
@@ -499,19 +512,5 @@ export class ReviewRenderer {
             if (principle) ppBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle });
             if (pattern) ppBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });
         }
-
-        // "Chat about this" button at the very bottom
-        const chatBtn = panel.createEl('button', {
-            cls: 'tl-dash-chat-btn',
-            text: '💬 想聊一聊这个',
-        });
-        chatBtn.addEventListener('click', () => {
-            // Gather dashboard context summary
-            const contextParts: string[] = [];
-            if (principle) contextParts.push(`用户原则：${principle}`);
-            if (pattern) contextParts.push(`行为模式：${pattern}`);
-            contextParts.push(`仪表盘时间：${moment().format('YYYY-MM-DD')}`);
-            h.startChatWithContext(contextParts.join('\n'));
-        });
     }
 }

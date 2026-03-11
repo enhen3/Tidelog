@@ -1814,17 +1814,17 @@
 /* Dashboard "Chat about this" button */
 .tl-dash-chat-btn {
 	display: block;
-	width: calc(100% - var(--tl-sp-24));
-	margin: var(--tl-sp-16) var(--tl-sp-12);
-	padding: var(--tl-sp-10) 0;
-	font-size: var(--tl-fs-callout);
-	font-weight: var(--tl-fw-medium);
+	width: 100%;
+	margin: 10px 0 0;
+	padding: 8px 0;
+	font-size: 12.5px;
+	font-weight: 500;
 	color: var(--tl-accent);
-	background: var(--tl-surface);
-	border: 0.5px solid var(--tl-accent-light);
-	border-radius: var(--tl-radius-sm);
+	background: var(--background-primary);
+	border: 1px solid var(--tl-accent-light);
+	border-radius: 6px;
 	cursor: pointer;
-	transition: all var(--tl-duration-fast) ease;
+	transition: all 0.15s ease;
 }
 
 .tl-dash-chat-btn:hover {
