@@ -212,15 +212,16 @@ export class PeriodicRenderer {
         });
     }
 
-    /** Show planning suggestion — AI cache for today, date-seeded tips for future */
+    /** Show planning suggestion — AI cache for today/tomorrow, date-seeded tips for future */
     private renderPlanSuggestion(container: HTMLElement, date: moment.Moment): void {
         const h = this.host;
         const isToday = date.isSame(moment(), 'day');
+        const isTomorrow = date.isSame(moment().add(1, 'day'), 'day');
         const section = container.createDiv('tl-plan-suggestion');
 
-        if (isToday) {
-            // Today: try loading AI-generated suggestions from last night's review
-            section.createDiv({ cls: 'tl-plan-suggestion-header', text: '🤖 基于昨日复盘的建议' });
+        if (isToday || isTomorrow) {
+            // Today/Tomorrow: try loading AI-generated suggestions from last night's review
+            section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? '🤖 基于昨日复盘的建议' : '🤖 来自复盘的建议' });
             const path = `${h.plugin.settings.archiveFolder}/plan_suggestions.md`;
             const file = h.app.vault.getAbstractFileByPath(path);
             if (file && file instanceof TFile) {
@@ -233,7 +234,7 @@ export class PeriodicRenderer {
                     const lines = body.trim().split('\n').filter(l => l.trim());
                     if (lines.length > 0) {
                         section.empty();
-                        section.createDiv({ cls: 'tl-plan-suggestion-header', text: '🤖 基于昨日复盘的建议' });
+                        section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? '🤖 基于昨日复盘的建议' : '🤖 来自复盘的建议' });
                         for (const line of lines) {
                             section.createDiv({ cls: 'tl-plan-suggestion-line', text: line.trim() });
                         }

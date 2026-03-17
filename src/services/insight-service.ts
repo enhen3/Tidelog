@@ -6,6 +6,7 @@
 import { moment, TFile } from 'obsidian';
 import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
+import { formatAPIError } from '../utils/error-formatter';
 import {
     getBaseContextPrompt,
     WEEKLY_INSIGHT_PROMPT,
@@ -81,15 +82,17 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
                 }
             );
 
-            // Save report to archive
-            await this.saveInsightReport('weekly', weekStart, fullResponse);
+            // Save report to archive (strip extraction tags before saving)
+            const cleanReport = this.stripExtractionTags(fullResponse);
+            await this.saveInsightReport('weekly', weekStart, cleanReport);
 
-            // Extract patterns if AI mentions them
+            // Extract patterns and principles from structured tags
             await this.extractAndSavePatterns(fullResponse);
+            await this.extractAndSavePrinciples(fullResponse);
 
             onComplete(fullResponse);
         } catch (error) {
-            onChunk(`\n\n❌ 生成报告时出错：${error}`);
+            onChunk(`\n\n${formatAPIError(error, this.plugin.settings.activeProvider)}`);
             onComplete('');
         }
     }
@@ -158,15 +161,17 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
                 }
             );
 
-            // Save report
-            await this.saveInsightReport('monthly', monthStart, fullResponse);
+            // Save report (strip extraction tags)
+            const cleanReport = this.stripExtractionTags(fullResponse);
+            await this.saveInsightReport('monthly', monthStart, cleanReport);
 
-            // Extract patterns
+            // Extract patterns and principles
             await this.extractAndSavePatterns(fullResponse);
+            await this.extractAndSavePrinciples(fullResponse);
 
             onComplete(fullResponse);
         } catch (error) {
-            onChunk(`\n\n❌ 生成报告时出错：${error}`);
+            onChunk(`\n\n${formatAPIError(error, this.plugin.settings.activeProvider)}`);
             onComplete('');
         }
     }
@@ -221,9 +226,13 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
             // Extract and save updated profile from <profile_update> tag
             await this.extractAndSaveProfile(fullResponse);
 
+            // Extract patterns and principles
+            await this.extractAndSavePatterns(fullResponse);
+            await this.extractAndSavePrinciples(fullResponse);
+
             onComplete?.(fullResponse);
         } catch (error) {
-            onChunk(`\n\n❌ 生成建议时出错：${error}`);
+            onChunk(`\n\n${formatAPIError(error, this.plugin.settings.activeProvider)}`);
             onComplete?.('');
         }
     }
@@ -240,9 +249,13 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${date}-画像更新.md`;
             const header = `# 用户画像更新分析\n\n> 生成于 ${moment().format('YYYY-MM-DD HH:mm')}\n\n`;
 
-            // Remove <profile_update> section from the saved analysis
-            // (that part goes to user_profile.md directly)
-            const analysisOnly = content.replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '').trim();
+            // Remove <profile_update> and extraction tags from the saved analysis
+            // (profile goes to user_profile.md, patterns/principles to their files)
+            const analysisOnly = content
+                .replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '')
+                .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
+                .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
+                .trim();
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {
@@ -353,22 +366,49 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
     }
 
     /**
-     * Try to extract patterns AI mentions and save them
+     * Extract patterns from <new_patterns> tag and save
      */
-    private async extractAndSavePatterns(report: string): Promise<void> {
-        // Look for pattern-related content in the report
-        const patternSection = report.match(/(?:模式发现|模式深度分析)([\s\S]*?)(?=###|$)/);
-        if (patternSection && patternSection[1]) {
-            // Extract bullet points from the pattern section
-            const bulletPoints = patternSection[1].match(/- (.+)/g);
-            if (bulletPoints && bulletPoints.length > 0) {
-                for (const bullet of bulletPoints.slice(0, 3)) {
-                    const text = bullet.replace(/^- /, '').trim();
-                    if (text.length > 10 && text.length < 200) {
-                        await this.plugin.vaultManager.addPattern(text);
-                    }
-                }
+    private async extractAndSavePatterns(response: string): Promise<void> {
+        const match = response.match(/<new_patterns>([\s\S]*?)<\/new_patterns>/);
+        if (!match || !match[1].trim() || match[1].trim() === '无') return;
+
+        const bullets = match[1].match(/- (.+)/g);
+        if (!bullets) return;
+
+        for (const bullet of bullets.slice(0, 5)) {
+            const text = bullet.replace(/^- /, '').trim();
+            if (text.length > 5 && text.length < 200) {
+                await this.plugin.vaultManager.addPattern(text);
             }
         }
+    }
+
+    /**
+     * Extract principles from <new_principles> tag and save
+     */
+    private async extractAndSavePrinciples(response: string): Promise<void> {
+        const match = response.match(/<new_principles>([\s\S]*?)<\/new_principles>/);
+        if (!match || !match[1].trim() || match[1].trim() === '无') return;
+
+        const bullets = match[1].match(/- (.+)/g);
+        if (!bullets) return;
+
+        for (const bullet of bullets.slice(0, 3)) {
+            const text = bullet.replace(/^- /, '').trim();
+            if (text.length > 5 && text.length < 200) {
+                await this.plugin.vaultManager.addPrinciple(text);
+            }
+        }
+    }
+
+    /**
+     * Strip extraction tags from report content (users shouldn't see these)
+     */
+    private stripExtractionTags(content: string): string {
+        return content
+            .replace(/<extraction>[\s\S]*?<\/extraction>/g, '')
+            .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
+            .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
+            .trim();
     }
 }

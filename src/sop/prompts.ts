@@ -425,7 +425,21 @@ export const WEEKLY_INSIGHT_PROMPT = `<task>生成本周洞察报告</task>
 - 用具体事例和数字支撑论点
 - 建议具体到"明天就能开始做"
 - 数据不足如实说明
-</writing_rules>`;
+</writing_rules>
+
+<extraction>
+在报告最后，请提取本次发现的新模式和新原则，分别用标签包裹：
+
+<new_patterns>
+- 每条新发现的行为/情绪/思维模式一行，简洁描述
+</new_patterns>
+
+<new_principles>
+- 每条可复用的原则一行，具体可操作
+</new_principles>
+
+如果没有新发现，对应标签内写"无"即可。
+</extraction>`;
 
 /**
  * Monthly insight
@@ -472,7 +486,21 @@ export const MONTHLY_INSIGHT_PROMPT = `<task>生成本月深度洞察报告</tas
 - 跨周对比是月报的核心价值
 - 建议具体到可立即行动
 - 数据不足如实说明
-</writing_rules>`;
+</writing_rules>
+
+<extraction>
+在报告最后，请提取本次发现的新模式和新原则，分别用标签包裹：
+
+<new_patterns>
+- 每条新发现的行为/情绪/思维模式一行
+</new_patterns>
+
+<new_principles>
+- 每条可复用的原则一行
+</new_principles>
+
+如果没有新发现，对应标签内写"无"即可。
+</extraction>`;
 
 /**
  * Profile suggestion
@@ -543,4 +571,12 @@ export const PROFILE_SUGGESTION_PROMPT = `<task>用户画像更新分析</task>
 ## 基本信息
 ...（保留并更新的完整画像内容）
 </profile_update>
+
+<new_patterns>
+- 从日记中发现的新行为/情绪模式
+</new_patterns>
+
+<new_principles>
+- 从分析中提炼的可复用原则
+</new_principles>
 </example>`;

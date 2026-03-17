@@ -2,7 +2,7 @@
  * Vault Manager - Handles file and folder operations
  */
 
-import { App, TFile, TFolder, moment } from 'obsidian';
+import { App, CachedMetadata, TFile, TFolder, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
 
 export class VaultManager {
@@ -88,13 +88,20 @@ export class VaultManager {
         const dateStr = date.format('YYYY-MM-DD');
         const weekday = date.format('dddd');
         const weekRef = this.getWeekRef(date);
+        const monthRef = date.format('YYYY-MM');
 
         return `---
 type: daily
 date: ${dateStr}
+weekday: ${weekday}
+tags:
+  - daily
 emotion_score:
 status: todo
+tasks_total: 0
+tasks_done: 0
 weekly_ref: "[[${weekRef}]]"
+monthly_ref: "[[${monthRef}]]"
 ---
 
 # ${dateStr} ${weekday}
@@ -121,76 +128,34 @@ weekly_ref: "[[${weekRef}]]"
     }
 
     /**
-     * Update YAML frontmatter fields in a daily note
+     * Update YAML frontmatter fields using Obsidian's processFrontMatter API
      */
     async updateDailyNoteYAML(
         filePath: string,
-        fields: Record<string, string | number | null>
+        fields: Record<string, unknown>
     ): Promise<void> {
         const file = this.app.vault.getAbstractFileByPath(filePath);
-        if (!file) return;
+        if (!file || !(file instanceof TFile)) return;
 
-        const content = await this.app.vault.read(file as TFile);
-
-        // Check for existing frontmatter
-        if (!content.startsWith('---')) {
-            // No frontmatter — prepend minimal YAML
-            const yamlLines = ['---'];
+        await this.app.fileManager.processFrontMatter(file, (fm) => {
             for (const [key, value] of Object.entries(fields)) {
-                if (value === null || value === undefined || value === '') {
-                    yamlLines.push(`${key}:`);
-                } else if (typeof value === 'string' && value.includes('[[')) {
-                    yamlLines.push(`${key}: "${value}"`);
-                } else {
-                    yamlLines.push(`${key}: ${value}`);
-                }
+                fm[key] = value;
             }
-            yamlLines.push('---');
-            const newContent = yamlLines.join('\n') + '\n' + content;
-            await this.app.vault.modify(file as TFile, newContent);
-            return;
-        }
+        });
+    }
 
-        // Parse existing frontmatter
-        const endIndex = content.indexOf('---', 3);
-        if (endIndex === -1) return;
+    /**
+     * Get parsed frontmatter from metadataCache (zero I/O)
+     */
+    getFrontmatter(file: TFile): Record<string, unknown> | undefined {
+        return this.app.metadataCache.getFileCache(file)?.frontmatter;
+    }
 
-        const firstNewline = content.indexOf('\n', 0);
-        if (firstNewline === -1 || firstNewline >= endIndex) return;
-        const yamlBlock = content.substring(firstNewline + 1, endIndex);
-        const rest = content.substring(endIndex + 3);
-        const yamlLines = yamlBlock.split('\n');
-
-        for (const [key, value] of Object.entries(fields)) {
-            let found = false;
-            for (let i = 0; i < yamlLines.length; i++) {
-                if (yamlLines[i].startsWith(`${key}:`)) {
-                    if (value === null || value === undefined || value === '') {
-                        yamlLines[i] = `${key}:`;
-                    } else if (typeof value === 'string' && value.includes('[[')) {
-                        yamlLines[i] = `${key}: "${value}"`;
-                    } else {
-                        yamlLines[i] = `${key}: ${value}`;
-                    }
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                let line: string;
-                if (value === null || value === undefined || value === '') {
-                    line = `${key}:`;
-                } else if (typeof value === 'string' && value.includes('[[')) {
-                    line = `${key}: "${value}"`;
-                } else {
-                    line = `${key}: ${value}`;
-                }
-                yamlLines.push(line);
-            }
-        }
-
-        const newContent = '---\n' + yamlLines.join('\n') + '---' + rest;
-        await this.app.vault.modify(file as TFile, newContent);
+    /**
+     * Get full file cache from metadataCache (zero I/O)
+     */
+    getFileCache(file: TFile): CachedMetadata | null {
+        return this.app.metadataCache.getFileCache(file);
     }
 
     /**
@@ -211,7 +176,7 @@ weekly_ref: "[[${weekRef}]]"
         const file = this.app.vault.getAbstractFileByPath(path);
 
         if (file && file instanceof TFile) {
-            return await this.app.vault.read(file);
+            return await this.app.vault.cachedRead(file);
         }
 
         return null;
@@ -276,7 +241,7 @@ weekly_ref: "[[${weekRef}]]"
         const file = this.app.vault.getAbstractFileByPath(path);
 
         if (file && file instanceof TFile) {
-            return await this.app.vault.read(file);
+            return await this.app.vault.cachedRead(file);
         }
 
         return null;
@@ -290,7 +255,7 @@ weekly_ref: "[[${weekRef}]]"
         const file = this.app.vault.getAbstractFileByPath(path);
 
         if (file && file instanceof TFile) {
-            return await this.app.vault.read(file);
+            return await this.app.vault.cachedRead(file);
         }
 
         return null;
@@ -465,7 +430,7 @@ weekly_ref: "[[${weekRef}]]"
             const file = this.app.vault.getAbstractFileByPath(filePath);
             if (!file || !(file instanceof TFile)) return null;
 
-            const content = await this.app.vault.read(file);
+            const content = await this.app.vault.cachedRead(file);
             const lines = content.split('\n');
             let inSection = false;
             const sectionLines: string[] = [];
@@ -498,7 +463,7 @@ weekly_ref: "[[${weekRef}]]"
             const path = `${this.settings.archiveFolder}/patterns.md`;
             const file = this.app.vault.getAbstractFileByPath(path);
             if (!file || !(file instanceof TFile)) return null;
-            return await this.app.vault.read(file);
+            return await this.app.vault.cachedRead(file);
         } catch {
             return null;
         }
@@ -526,8 +491,19 @@ weekly_ref: "[[${weekRef}]]"
 
             if (file && file instanceof TFile) {
                 try {
-                    const content = await this.app.vault.read(file);
-                    for (const line of content.split('\n')) {
+                    const cache = this.app.metadataCache.getFileCache(file);
+                    if (!cache?.listItems) continue;
+
+                    // Only read file if there are unchecked tasks
+                    const unchecked = cache.listItems.filter(item => item.task === ' ');
+                    if (unchecked.length === 0) continue;
+
+                    const content = await this.app.vault.cachedRead(file);
+                    for (const item of unchecked) {
+                        const line = content.substring(
+                            item.position.start.offset,
+                            item.position.end.offset
+                        );
                         const m = line.match(/^- \[ \] (.+)$/);
                         if (m) {
                             result.push({ text: m[1].trim(), date: dateStr, filePath: path });
@@ -545,7 +521,7 @@ weekly_ref: "[[${weekRef}]]"
      */
     async addTaskToDaily(taskText: string, date?: Date): Promise<void> {
         const file = await this.getOrCreateDailyNote(date);
-        const content = await this.app.vault.read(file);
+        const content = await this.app.vault.cachedRead(file);
         const taskLine = `- [ ] ${taskText}`;
 
         // Try to insert under ## 晨间计划

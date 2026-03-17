@@ -7,6 +7,7 @@ import { MarkdownRenderer } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App, Component } from 'obsidian';
 import type { ChatMessage, SOPContext } from '../types';
+import { formatAPIError } from '../utils/error-formatter';
 import type { MorningSOP } from '../sop/morning-sop';
 import type { EveningSOP } from '../sop/evening-sop';
 
@@ -234,67 +235,8 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
             });
         } catch (error) {
             messageEl.empty();
-            const errMsg = String(error).toLowerCase();
-            const activeProvider = h.plugin.settings.activeProvider;
-            const providerLabel = activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1);
-
-            if (errMsg.includes('402') || errMsg.includes('credits') || errMsg.includes('balance') || errMsg.includes('quota') || errMsg.includes('billing') || errMsg.includes('payment')) {
-                MarkdownRenderer.render(
-                    h.app,
-                    `💳 **API 额度不足**\n\n你的 ${providerLabel} 账户余额不足或已用完。\n\n**解决方法：**\n- 登录 ${providerLabel} 后台充值或购买额度\n- 或在 TideLog 设置中切换到其他 AI 提供商`,
-                    messageEl,
-                    '',
-                    h
-                );
-            } else if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('unauthorized') || errMsg.includes('invalid.*key') || errMsg.includes('permission')) {
-                MarkdownRenderer.render(
-                    h.app,
-                    `🔑 **API Key 无效或已过期**\n\n请检查 Obsidian 设置 → TideLog 中的 ${providerLabel} API Key 是否正确。`,
-                    messageEl,
-                    '',
-                    h
-                );
-            } else if (errMsg.includes('429') || errMsg.includes('rate') || errMsg.includes('too many')) {
-                MarkdownRenderer.render(
-                    h.app,
-                    `⏳ **请求过于频繁**\n\n${providerLabel} 的速率限制已达上限，请稍后再试。`,
-                    messageEl,
-                    '',
-                    h
-                );
-            } else if (errMsg.includes('404') || errMsg.includes('model not found') || errMsg.includes('not found')) {
-                MarkdownRenderer.render(
-                    h.app,
-                    `🔍 **模型不可用**\n\n当前配置的 AI 模型无法访问。请在 TideLog 设置中检查模型名称是否正确。`,
-                    messageEl,
-                    '',
-                    h
-                );
-            } else if (errMsg.includes('500') || errMsg.includes('502') || errMsg.includes('503') || errMsg.includes('server') || errMsg.includes('internal')) {
-                MarkdownRenderer.render(
-                    h.app,
-                    `🔧 **AI 服务暂时不可用**\n\n${providerLabel} 服务端出现问题，请稍后重试。`,
-                    messageEl,
-                    '',
-                    h
-                );
-            } else if (errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('failed to fetch') || errMsg.includes('econnrefused') || errMsg.includes('timeout')) {
-                MarkdownRenderer.render(
-                    h.app,
-                    `🌐 **网络连接失败**\n\n请检查网络连接后重试。如果使用代理，请确认代理设置正确。`,
-                    messageEl,
-                    '',
-                    h
-                );
-            } else {
-                MarkdownRenderer.render(
-                    h.app,
-                    `⚠️ **发生了意外错误**\n\n请检查 ${providerLabel} 的 API 设置是否正确，或尝试切换到其他 AI 提供商。\n\n如果问题持续，请重启 Obsidian 后重试。`,
-                    messageEl,
-                    '',
-                    h
-                );
-            }
+            const friendlyMsg = formatAPIError(error, this.host.plugin.settings.activeProvider);
+            MarkdownRenderer.render(h.app, friendlyMsg, messageEl, '', h);
             messageEl.addClass('tl-message-error');
         }
 
@@ -345,9 +287,13 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
             },
             (fullReport: string) => {
                 if (fullReport) {
-                    // Final render
+                    // Final render — strip extraction tags
                     messageEl.empty();
-                    MarkdownRenderer.render(h.app, fullReport, messageEl, '', h);
+                    const cleanReport = fullReport
+                        .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
+                        .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
+                        .trim();
+                    MarkdownRenderer.render(h.app, cleanReport, messageEl, '', h);
                     h.addAIMessage('📁 报告已保存到 `03-Archive/Insights/` 目录。');
                 }
                 h.scrollToBottom();
@@ -370,8 +316,12 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
             (chunk: string) => {
                 fullContent += chunk;
                 messageEl.empty();
-                // Hide <profile_update> tags from display
-                const displayContent = fullContent.replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '').trim();
+                // Hide <profile_update> and extraction tags from display
+                const displayContent = fullContent
+                    .replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '')
+                    .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
+                    .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
+                    .trim();
                 MarkdownRenderer.render(h.app, displayContent, messageEl, '', h);
                 h.scrollToBottom();
             },
