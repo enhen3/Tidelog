@@ -6,7 +6,7 @@
 // Plugin Settings
 // =============================================================================
 
-export type AIProviderType = 'openrouter' | 'anthropic' | 'gemini' | 'openai' | 'custom';
+export type AIProviderType = 'openrouter' | 'anthropic' | 'gemini' | 'openai' | 'siliconflow' | 'custom';
 
 export interface ProviderConfig {
     apiKey: string;
@@ -23,6 +23,7 @@ export interface TideLogSettings {
         anthropic: ProviderConfig;
         gemini: ProviderConfig;
         openai: ProviderConfig;
+        siliconflow: ProviderConfig;
         custom: ProviderConfig;
     };
 

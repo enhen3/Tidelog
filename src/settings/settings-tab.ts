@@ -41,6 +41,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .addOption('anthropic', 'Anthropic Claude')
                     .addOption('gemini', 'Google Gemini')
                     .addOption('openai', 'OpenAI')
+                    .addOption('siliconflow', 'SiliconFlow 硅基流动')
                     .addOption('custom', '自定义 (OpenAI 兼容)')
                     .setValue(this.plugin.settings.activeProvider)
                     .onChange(async (value) => {
@@ -333,6 +334,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             anthropic: 'Anthropic Claude',
             gemini: 'Google Gemini',
             openai: 'OpenAI',
+            siliconflow: 'SiliconFlow',
             custom: '自定义',
         };
         return names[provider];
@@ -347,6 +349,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             anthropic: 'claude-sonnet-4-20250514',
             gemini: 'gemini-2.0-flash',
             openai: 'gpt-4o',
+            siliconflow: 'deepseek-ai/DeepSeek-V3',
             custom: 'deepseek-chat',
         };
         return placeholders[provider];
@@ -385,6 +388,14 @@ export class TideLogSettingTab extends PluginSettingTab {
                     'gpt-4o': 'GPT-4o (推荐)',
                     'gpt-4o-mini': 'GPT-4o Mini',
                     'gpt-4-turbo': 'GPT-4 Turbo',
+                };
+            case 'siliconflow':
+                return {
+                    'deepseek-ai/DeepSeek-V3': 'DeepSeek V3 (推荐)',
+                    'Qwen/Qwen3-235B-A22B': 'Qwen3 235B (强大)',
+                    'Qwen/Qwen3-30B-A3B': 'Qwen3 30B (快速)',
+                    'deepseek-ai/DeepSeek-R1': 'DeepSeek R1 (推理)',
+                    'THUDM/GLM-4-9B-Chat': 'GLM-4 9B Chat',
                 };
             case 'custom':
                 // No presets — user types the model ID

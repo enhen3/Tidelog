@@ -234,24 +234,51 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
             });
         } catch (error) {
             messageEl.empty();
-            const errMsg = String(error);
-            if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized')) {
+            const errMsg = String(error).toLowerCase();
+            const activeProvider = h.plugin.settings.activeProvider;
+            const providerLabel = activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1);
+
+            if (errMsg.includes('402') || errMsg.includes('credits') || errMsg.includes('balance') || errMsg.includes('quota') || errMsg.includes('billing') || errMsg.includes('payment')) {
                 MarkdownRenderer.render(
                     h.app,
-                    `🔑 **API Key 无效或已过期**\n\n请检查 Obsidian 设置 → TideLog 中的 API Key 是否正确。`,
+                    `💳 **API 额度不足**\n\n你的 ${providerLabel} 账户余额不足或已用完。\n\n**解决方法：**\n- 登录 ${providerLabel} 后台充值或购买额度\n- 或在 TideLog 设置中切换到其他 AI 提供商`,
                     messageEl,
                     '',
                     h
                 );
-            } else if (errMsg.includes('429') || errMsg.includes('rate')) {
+            } else if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('unauthorized') || errMsg.includes('invalid.*key') || errMsg.includes('permission')) {
                 MarkdownRenderer.render(
                     h.app,
-                    `⏳ **请求过于频繁**\n\n请稍后再试，或切换到其他 AI 提供商。`,
+                    `🔑 **API Key 无效或已过期**\n\n请检查 Obsidian 设置 → TideLog 中的 ${providerLabel} API Key 是否正确。`,
                     messageEl,
                     '',
                     h
                 );
-            } else if (errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('Failed to fetch')) {
+            } else if (errMsg.includes('429') || errMsg.includes('rate') || errMsg.includes('too many')) {
+                MarkdownRenderer.render(
+                    h.app,
+                    `⏳ **请求过于频繁**\n\n${providerLabel} 的速率限制已达上限，请稍后再试。`,
+                    messageEl,
+                    '',
+                    h
+                );
+            } else if (errMsg.includes('404') || errMsg.includes('model not found') || errMsg.includes('not found')) {
+                MarkdownRenderer.render(
+                    h.app,
+                    `🔍 **模型不可用**\n\n当前配置的 AI 模型无法访问。请在 TideLog 设置中检查模型名称是否正确。`,
+                    messageEl,
+                    '',
+                    h
+                );
+            } else if (errMsg.includes('500') || errMsg.includes('502') || errMsg.includes('503') || errMsg.includes('server') || errMsg.includes('internal')) {
+                MarkdownRenderer.render(
+                    h.app,
+                    `🔧 **AI 服务暂时不可用**\n\n${providerLabel} 服务端出现问题，请稍后重试。`,
+                    messageEl,
+                    '',
+                    h
+                );
+            } else if (errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('failed to fetch') || errMsg.includes('econnrefused') || errMsg.includes('timeout')) {
                 MarkdownRenderer.render(
                     h.app,
                     `🌐 **网络连接失败**\n\n请检查网络连接后重试。如果使用代理，请确认代理设置正确。`,
@@ -260,7 +287,13 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
                     h
                 );
             } else {
-                messageEl.createSpan({ text: `抱歉，发生了错误：${error}` });
+                MarkdownRenderer.render(
+                    h.app,
+                    `⚠️ **发生了意外错误**\n\n请检查 ${providerLabel} 的 API 设置是否正确，或尝试切换到其他 AI 提供商。\n\n如果问题持续，请重启 Obsidian 后重试。`,
+                    messageEl,
+                    '',
+                    h
+                );
             }
             messageEl.addClass('tl-message-error');
         }
@@ -331,14 +364,26 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
 
         const messageEl = h.createMessageElement('ai');
         const insightService = h.plugin.insightService;
+        let fullContent = '';
 
-        insightService.generateProfileSuggestions((chunk: string) => {
-            messageEl.empty();
-            const existing = messageEl.getAttribute('data-content') || '';
-            const newContent = existing + chunk;
-            messageEl.setAttribute('data-content', newContent);
-            MarkdownRenderer.render(h.app, newContent, messageEl, '', h);
-            h.scrollToBottom();
-        });
+        insightService.generateProfileSuggestions(
+            (chunk: string) => {
+                fullContent += chunk;
+                messageEl.empty();
+                // Hide <profile_update> tags from display
+                const displayContent = fullContent.replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '').trim();
+                MarkdownRenderer.render(h.app, displayContent, messageEl, '', h);
+                h.scrollToBottom();
+            },
+            (fullResponse: string) => {
+                if (fullResponse) {
+                    // Show save confirmation
+                    const hasUpdate = /<profile_update>/.test(fullResponse);
+                    if (hasUpdate) {
+                        h.addAIMessage('✅ 用户画像已自动更新，分析记录已保存。你可以在 `user_profile` 文件中查看最新画像。');
+                    }
+                }
+            }
+        );
     }
 }

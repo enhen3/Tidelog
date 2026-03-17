@@ -175,7 +175,8 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
      * Generate profile update suggestions
      */
     async generateProfileSuggestions(
-        onChunk: (chunk: string) => void
+        onChunk: (chunk: string) => void,
+        onComplete?: (fullResponse: string) => void
     ): Promise<void> {
         const today = moment();
         const twoWeeksAgo = today.clone().subtract(14, 'days');
@@ -184,6 +185,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
 
         if (dailyNotes.length < 7) {
             onChunk('⚠️ 数据不足（需要至少 7 天的日记），暂时无法生成用户画像建议。');
+            onComplete?.('');
             return;
         }
 
@@ -206,9 +208,73 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
 
         try {
             const provider = this.plugin.getAIProvider();
-            await provider.sendMessage(messages, systemPrompt, onChunk);
+            let fullResponse = '';
+
+            await provider.sendMessage(messages, systemPrompt, (chunk) => {
+                fullResponse += chunk;
+                onChunk(chunk);
+            });
+
+            // Save full analysis to Insights for history tracking
+            await this.saveProfileAnalysis(fullResponse);
+
+            // Extract and save updated profile from <profile_update> tag
+            await this.extractAndSaveProfile(fullResponse);
+
+            onComplete?.(fullResponse);
         } catch (error) {
             onChunk(`\n\n❌ 生成建议时出错：${error}`);
+            onComplete?.('');
+        }
+    }
+
+    /**
+     * Save profile analysis to Insights folder for history tracking
+     */
+    private async saveProfileAnalysis(content: string): Promise<void> {
+        if (!content.trim()) return;
+
+        try {
+            await this.plugin.vaultManager.ensureInsightsFolder();
+            const date = moment().format('YYYY-MM-DD');
+            const filePath = `${this.plugin.settings.archiveFolder}/Insights/${date}-画像更新.md`;
+            const header = `# 用户画像更新分析\n\n> 生成于 ${moment().format('YYYY-MM-DD HH:mm')}\n\n`;
+
+            // Remove <profile_update> section from the saved analysis
+            // (that part goes to user_profile.md directly)
+            const analysisOnly = content.replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '').trim();
+
+            const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
+            if (existingFile instanceof TFile) {
+                await this.plugin.app.vault.modify(existingFile, header + analysisOnly);
+            } else {
+                await this.plugin.app.vault.create(filePath, header + analysisOnly);
+            }
+        } catch (error) {
+            console.error('Failed to save profile analysis:', error);
+        }
+    }
+
+    /**
+     * Extract profile content from <profile_update> tag and save to user_profile.md
+     */
+    private async extractAndSaveProfile(response: string): Promise<void> {
+        const match = response.match(/<profile_update>([\s\S]*?)<\/profile_update>/);
+        if (!match || !match[1].trim()) return;
+
+        const newProfileContent = match[1].trim();
+
+        try {
+            const profilePath = `${this.plugin.settings.archiveFolder}/user_profile.md`;
+            const existingFile = this.plugin.app.vault.getAbstractFileByPath(profilePath);
+
+            if (existingFile instanceof TFile) {
+                await this.plugin.app.vault.modify(existingFile, newProfileContent);
+            } else {
+                await this.plugin.app.vault.create(profilePath, newProfileContent);
+            }
+        } catch (error) {
+            console.error('Failed to save updated user profile:', error);
         }
     }
 

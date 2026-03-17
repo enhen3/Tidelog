@@ -5,6 +5,7 @@
 import TideLogPlugin from '../main';
 import { SOPContext, ChatMessage } from '../types';
 import { getBaseContextPrompt, MORNING_PROMPT } from './prompts';
+import { formatAPIError } from '../utils/error-formatter';
 
 export class MorningSOP {
     private plugin: TideLogPlugin;
@@ -126,7 +127,7 @@ ${todayPlan}
             onMessage(response + '\n\n确认这个计划吗？（回复"确认"或者调整你的计划）');
             context.currentStep = 2;
         } catch (error) {
-            onMessage(`评估出错：${error}\n\n请确认你的计划，或调整后重新输入。`);
+            onMessage(formatAPIError(error, this.plugin.settings.activeProvider) + '\n\n请确认你的计划，或调整后重新输入。');
             context.currentStep = 2;
         }
     }
@@ -246,7 +247,7 @@ ${formattedPlan}
 
             onMessage(response);
         } catch (error) {
-            onMessage(`抱歉，发生了错误：${error}`);
+            onMessage(formatAPIError(error, this.plugin.settings.activeProvider));
         }
     }
 }

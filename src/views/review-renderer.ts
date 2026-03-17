@@ -455,7 +455,7 @@ export class ReviewRenderer {
                 const insightText = Array.from(mBody.querySelectorAll('.tl-dash-insight-line')).map(el => el.textContent).join('\n');
                 const chatBtn = mBody.createEl('button', {
                     cls: 'tl-dash-chat-btn',
-                    text: '💬 想聊一聊这个',
+                    text: '💬 聊聊这个洞察',
                 });
                 chatBtn.addEventListener('click', () => {
                     h.startChatWithContext(`以下是 ${monthKey} 月报洞察的摘要：\n${insightText}`);

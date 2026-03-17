@@ -28,6 +28,12 @@ export function createAIProvider(settings: TideLogSettings): AIProvider {
             return new GeminiProvider(config.apiKey, config.model);
         case 'openai':
             return new OpenAIProvider(config.apiKey, config.model);
+        case 'siliconflow':
+            return new CustomProvider(
+                config.apiKey,
+                config.model,
+                config.baseUrl || 'https://api.siliconflow.cn/v1'
+            );
         case 'custom':
             return new CustomProvider(
                 config.apiKey,

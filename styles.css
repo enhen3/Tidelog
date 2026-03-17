@@ -353,6 +353,11 @@
 	box-shadow: var(--tl-shadow-sm);
 }
 
+/* Review tab context: AI avatar uses gold */
+.tl-tab-panel-chat .tl-message-ai .tl-message-avatar {
+	background: linear-gradient(135deg, #D4B978 0%, #B89A58 100%);
+}
+
 .tl-message-avatar svg {
 	width: 16px;
 	height: 16px;
@@ -1847,10 +1852,12 @@
 
 /* Dashboard "Chat about this" button */
 .tl-dash-chat-btn {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	width: 100%;
 	margin: 10px 0 0;
-	padding: 8px 0;
+	padding: 10px 0;
 	font-size: 12.5px;
 	font-weight: 500;
 	color: var(--tl-accent);
@@ -2654,6 +2661,11 @@
 /* ---- Calendar Selector ---- */
 .tl-periodic-selector {
 	margin-bottom: var(--tl-sp-8);
+	background: var(--tl-surface-card);
+	border: 0.5px solid var(--tl-border);
+	border-radius: var(--tl-radius-md);
+	padding: var(--tl-sp-8) var(--tl-sp-8) var(--tl-sp-4);
+	box-shadow: var(--tl-shadow-sm);
 }
 
 .tl-periodic-cal-nav {

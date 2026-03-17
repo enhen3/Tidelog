@@ -17,6 +17,7 @@ import {
     PRINCIPLE_EXTRACT_PROMPT,
     FREE_WRITING_PROMPT,
 } from './prompts';
+import { formatAPIError } from '../utils/error-formatter';
 
 interface QuestionConfig {
     type: EveningQuestionType;
@@ -113,15 +114,7 @@ export class EveningSOP {
         const optionalCount = this.questionFlow.filter(q => !q.required).length;
 
         // Send initial message
-        const welcomeMessage = `晚上好！🌙 让我们开始今天的晚间复盘。
-
-这个过程有 ${requiredCount} 个必答问题${optionalCount > 0 ? `和 ${optionalCount} 个选答问题` : ''}，大约需要 10-15 分钟。
-每个问题回答后，我会立即保存到你的日记中。
-
-${todayPlanContent ? '我已读取了你今天的计划，会帮助你回顾。\n' : ''}
-准备好了吗？让我们开始！
-
----
+        const welcomeMessage = `🌙 辛苦了，一起来回顾一下今天吧。
 
 ${this.questionFlow[0].initialMessage}`;
 
@@ -261,7 +254,7 @@ ${this.questionFlow[0].initialMessage}`;
             // Move to next question after response
             await this.moveToNextQuestion(context, onMessage, response);
         } catch (error) {
-            onMessage(`保存成功！\n\n${error ? `(AI 回复出错: ${error})` : ''}`);
+            onMessage(`保存成功！\n\n${error ? formatAPIError(error, this.plugin.settings.activeProvider) : ''}`);
             await this.moveToNextQuestion(context, onMessage);
         }
     }
