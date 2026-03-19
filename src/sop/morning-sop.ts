@@ -34,7 +34,7 @@ export class MorningSOP {
         context.userProfileContent = userProfile || undefined;
 
         // Send initial message - go directly to task input
-        let initialMessage = `早上好！☀️ 让我们开始今天的晨间计划。\n\n`;
+        let initialMessage = `早上好！☀️ 让我们开始今天的计划。\n\n`;
         if (weeklyPlan) {
             initialMessage += '我已经读取了你的本周计划，会帮助你对标今日任务。\n\n';
         }
@@ -156,7 +156,7 @@ ${formattedPlan}
 
         await this.plugin.vaultManager.appendToSection(
             dailyNote.path,
-            '晨间计划',
+            '计划',
             content
         );
 
@@ -192,7 +192,7 @@ ${formattedPlan}
     private formatAsTasks(text: string): string {
         // Tasks come pre-separated by newlines from the multi-task input UI
         const items = text.split('\n')
-            .map((line) => line.replace(/^\d+[\.、．\)）]\s*/, '').trim())
+            .map((line) => line.replace(/^\d+[.、．)）]\s*/, '').trim())
             .filter((item) => item.length > 0);
 
         return items

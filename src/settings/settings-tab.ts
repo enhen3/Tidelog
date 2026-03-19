@@ -44,10 +44,9 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .addOption('siliconflow', 'SiliconFlow 硅基流动')
                     .addOption('custom', '自定义 (OpenAI 兼容)')
                     .setValue(this.plugin.settings.activeProvider)
-                    .onChange(async (value) => {
+                    .onChange((value) => {
                         this.plugin.settings.activeProvider = value as AIProviderType;
-                        await this.plugin.saveSettings();
-                        this.display(); // Refresh to show relevant settings
+                        void this.plugin.saveSettings().then(() => this.display());
                     })
             );
 
@@ -66,9 +65,9 @@ export class TideLogSettingTab extends PluginSettingTab {
                 text
                     .setPlaceholder('01-Daily')
                     .setValue(this.plugin.settings.dailyFolder)
-                    .onChange(async (value) => {
+                    .onChange((value) => {
                         this.plugin.settings.dailyFolder = value;
-                        await this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                     })
             );
 
@@ -79,9 +78,9 @@ export class TideLogSettingTab extends PluginSettingTab {
                 text
                     .setPlaceholder('02-Plan')
                     .setValue(this.plugin.settings.planFolder)
-                    .onChange(async (value) => {
+                    .onChange((value) => {
                         this.plugin.settings.planFolder = value;
-                        await this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                     })
             );
 
@@ -92,9 +91,9 @@ export class TideLogSettingTab extends PluginSettingTab {
                 text
                     .setPlaceholder('03-Archive')
                     .setValue(this.plugin.settings.archiveFolder)
-                    .onChange(async (value) => {
+                    .onChange((value) => {
                         this.plugin.settings.archiveFolder = value;
-                        await this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                     })
             );
 
@@ -111,55 +110,14 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .setLimits(0, 12, 1)
                     .setValue(this.plugin.settings.dayBoundaryHour)
                     .setDynamicTooltip()
-                    .onChange(async (value) => {
+                    .onChange((value) => {
                         this.plugin.settings.dayBoundaryHour = value;
-                        await this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                     })
             );
 
         // =================================================================
-        // SOP Settings
-        // =================================================================
-        new Setting(containerEl).setName('SOP workflow').setHeading();
-
-        new Setting(containerEl)
-            .setName('启用晨间复盘')
-            .setDesc('开启晨间计划引导流程')
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.enableMorningSOP)
-                    .onChange(async (value) => {
-                        this.plugin.settings.enableMorningSOP = value;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName('启用晚间复盘')
-            .setDesc('开启晚间复盘引导流程')
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.enableEveningSOP)
-                    .onChange(async (value) => {
-                        this.plugin.settings.enableEveningSOP = value;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName('包含选问问题')
-            .setDesc('在晚间复盘中包含可选的深度问题')
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.includeOptionalQuestions)
-                    .onChange(async (value) => {
-                        this.plugin.settings.includeOptionalQuestions = value;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        // =================================================================
-        // Evening Question Editor (compact)
+        // Evening Question Editor
         // =================================================================
         this.renderEveningQuestions(containerEl);
     }
@@ -182,9 +140,9 @@ export class TideLogSettingTab extends PluginSettingTab {
                 text
                     .setPlaceholder('https://api.deepseek.com/v1')
                     .setValue(config.baseUrl || '')
-                    .onChange(async (value) => {
+                    .onChange((value) => {
                         this.plugin.settings.providers[provider].baseUrl = value;
-                        await this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                     });
             });
 
@@ -202,10 +160,12 @@ export class TideLogSettingTab extends PluginSettingTab {
                     cls: 'tl-preset-btn',
                     text: label,
                 });
-                btn.addEventListener('click', async () => {
-                    this.plugin.settings.providers[provider].baseUrl = url;
-                    await this.plugin.saveSettings();
-                    this.display();
+                btn.addEventListener('click', () => {
+                    void (async () => {
+                        this.plugin.settings.providers[provider].baseUrl = url;
+                        await this.plugin.saveSettings();
+                        this.display();
+                    })();
                 });
             }
         }
@@ -223,9 +183,9 @@ export class TideLogSettingTab extends PluginSettingTab {
             text
                 .setPlaceholder('输入 API Key...')
                 .setValue(config.apiKey)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.providers[provider].apiKey = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 });
         });
 
@@ -262,11 +222,10 @@ export class TideLogSettingTab extends PluginSettingTab {
                 }
                 // If current model is in presets, select it; otherwise leave at manual
                 dropdown.setValue(models[config.model] ? config.model : '');
-                dropdown.onChange(async (value) => {
+                dropdown.onChange((value) => {
                     if (value) {
                         this.plugin.settings.providers[provider].model = value;
-                        await this.plugin.saveSettings();
-                        this.display();
+                        void this.plugin.saveSettings().then(() => this.display());
                     }
                 });
             });
@@ -277,9 +236,9 @@ export class TideLogSettingTab extends PluginSettingTab {
             text
                 .setPlaceholder(this.getModelPlaceholder(provider))
                 .setValue(config.model)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.providers[provider].model = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 });
         });
 
@@ -291,36 +250,38 @@ export class TideLogSettingTab extends PluginSettingTab {
                 button
                     .setButtonText('🔗 测试连接')
                     .setCta()
-                    .onClick(async () => {
-                        button.setButtonText('⏳ 测试中...');
-                        button.setDisabled(true);
+                    .onClick(() => {
+                        void (async () => {
+                            button.setButtonText('⏳ 测试中...');
+                            button.setDisabled(true);
 
-                        try {
-                            const aiProvider = this.plugin.getAIProvider();
-                            const success = await aiProvider.testConnection();
+                            try {
+                                const aiProvider = this.plugin.getAIProvider();
+                                const success = await aiProvider.testConnection();
 
-                            if (success) {
-                                new Notice('✅ 连接成功！API Key 有效');
-                                button.setButtonText('✅ 连接成功');
-                                setTimeout(() => {
-                                    button.setButtonText('🔗 测试连接');
-                                }, 2000);
-                            } else {
-                                new Notice('❌ 连接失败，请检查 API Key 是否正确');
-                                button.setButtonText('❌ 连接失败');
+                                if (success) {
+                                    new Notice('✅ 连接成功！API Key 有效');
+                                    button.setButtonText('✅ 连接成功');
+                                    setTimeout(() => {
+                                        button.setButtonText('🔗 测试连接');
+                                    }, 2000);
+                                } else {
+                                    new Notice('❌ 连接失败，请检查 API Key 是否正确');
+                                    button.setButtonText('❌ 连接失败');
+                                    setTimeout(() => {
+                                        button.setButtonText('🔗 测试连接');
+                                    }, 2000);
+                                }
+                            } catch (error) {
+                                new Notice(`❌ 错误: ${error}`);
+                                button.setButtonText('❌ 出错了');
                                 setTimeout(() => {
                                     button.setButtonText('🔗 测试连接');
                                 }, 2000);
                             }
-                        } catch (error) {
-                            new Notice(`❌ 错误: ${error}`);
-                            button.setButtonText('❌ 出错了');
-                            setTimeout(() => {
-                                button.setButtonText('🔗 测试连接');
-                            }, 2000);
-                        }
 
-                        button.setDisabled(false);
+                            button.setDisabled(false);
+                        })();
                     })
             );
     }
@@ -404,123 +365,164 @@ export class TideLogSettingTab extends PluginSettingTab {
                 return {};
         }
     }
-
     /**
-     * Render the evening question editor — compact collapsible rows
+     * Render the evening question editor — drag-and-drop, toggle, expand
      */
     private renderEveningQuestions(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName('Evening review questions').setHeading();
+        new Setting(containerEl).setName('复盘问题').setHeading();
 
-        // Reset button
-        new Setting(containerEl)
-            .setName('恢复默认问题')
-            .setDesc('将所有问题恢复为初始默认值')
-            .addButton((button) =>
-                button
-                    .setButtonText('🔄 恢复默认')
-                    .onClick(async () => {
-                        this.plugin.settings.eveningQuestions = [...DEFAULT_EVENING_QUESTIONS];
-                        await this.plugin.saveSettings();
-                        new Notice('已恢复默认问题设置');
-                        this.display();
-                    })
-            );
-
-        // Compact question list
         const questions = this.plugin.settings.eveningQuestions;
 
+        // Question list container for drag-and-drop
+        const listEl = containerEl.createDiv('tl-q-list');
+
+        let dragIdx: number | null = null;
+
         questions.forEach((question, index) => {
-            // --- Collapsed row: [toggle] #N sectionName [badge] [expand] ---
-            const badge = question.required ? '必问' : '选问';
-            const badgeCls = question.required ? 'tl-badge-required' : 'tl-badge-optional';
-            const label = `#${index + 1} ${question.sectionName}`;
+            const row = listEl.createDiv('tl-q-row');
+            row.setAttribute('draggable', 'true');
+            row.dataset.index = String(index);
 
-            const rowSetting = new Setting(containerEl)
-                .setName(label)
-                .addExtraButton((btn) => {
-                    btn.setIcon('chevron-down')
-                        .setTooltip('展开编辑')
-                        .onClick(() => {
-                            // Toggle detail panel
-                            const detailEl = rowSetting.settingEl.nextElementSibling;
-                            if (detailEl && detailEl.hasClass('tl-q-detail')) {
-                                detailEl.remove();
-                                btn.setIcon('chevron-down');
-                            } else {
-                                this.renderQuestionDetail(rowSetting.settingEl, question, index);
-                                btn.setIcon('chevron-up');
-                            }
-                        });
-                })
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(question.enabled)
-                        .onChange(async (value) => {
-                            this.plugin.settings.eveningQuestions[index].enabled = value;
-                            await this.plugin.saveSettings();
-                        })
-                );
+            // --- Drag handle ---
+            const handle = row.createEl('span', { cls: 'tl-q-drag-handle', text: '\u2847' });
+            handle.setAttribute('title', '\u62d6\u62fd\u8c03\u6574\u987a\u5e8f');
 
-            // Add badge to the name element
-            const nameEl = rowSetting.nameEl;
-            nameEl.createSpan({
-                text: ` ${badge}`,
-                cls: `tl-badge ${badgeCls}`,
+            // --- Expand triangle ---
+            const triangle = row.createEl('span', { cls: 'tl-q-triangle' });
+            triangle.textContent = '\u25b6';
+
+            // --- Name (static text, replaced by input when expanded) ---
+            const nameEl = row.createEl('span', { cls: 'tl-q-name', text: question.sectionName || '\u672a\u547d\u540d' });
+
+            // --- Spacer ---
+            row.createEl('span', { cls: 'tl-q-spacer' });
+
+            // --- Delete button ---
+            const deleteBtn = row.createEl('span', { cls: 'tl-q-icon-btn tl-q-icon-delete' });
+            deleteBtn.innerHTML = '\u2715';
+            deleteBtn.setAttribute('title', '\u5220\u9664');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                void (async () => {
+                    this.plugin.settings.eveningQuestions.splice(index, 1);
+                    await this.plugin.saveSettings();
+                    this.display();
+                })();
             });
 
-            // Dim disabled items
-            if (!question.enabled) {
-                rowSetting.settingEl.addClass('tl-q-disabled');
-            }
+            // --- Expand/collapse ---
+            const toggleExpand = (e: Event) => {
+                e.stopPropagation();
+                const existing = row.nextElementSibling;
+                if (existing && existing.hasClass('tl-q-detail')) {
+                    // Collapse: sync name back and restore static text
+                    existing.remove();
+                    triangle.textContent = '\u25b6';
+                    triangle.removeClass('tl-q-triangle-open');
+                    // Replace input with span
+                    const currentInput = row.querySelector('.tl-q-name-input') as HTMLInputElement;
+                    if (currentInput) {
+                        const newSpan = document.createElement('span');
+                        newSpan.className = 'tl-q-name';
+                        newSpan.textContent = currentInput.value || '\u672a\u547d\u540d';
+                        currentInput.replaceWith(newSpan);
+                    }
+                } else {
+                    // Expand: replace name span with editable input
+                    triangle.textContent = '\u25bc';
+                    triangle.addClass('tl-q-triangle-open');
+                    const nameSpan = row.querySelector('.tl-q-name');
+                    if (nameSpan) {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'tl-q-name-input';
+                        input.value = question.sectionName;
+                        input.placeholder = '\u8f93\u5165\u7ae0\u8282\u540d\u2026';
+                        input.addEventListener('input', () => {
+                            this.plugin.settings.eveningQuestions[index].sectionName = input.value;
+                            void this.plugin.saveSettings();
+                        });
+                        // Prevent drag when clicking input
+                        input.addEventListener('mousedown', (ev) => ev.stopPropagation());
+                        nameSpan.replaceWith(input);
+                    }
+                    this.renderQuestionDetail(row, question, index);
+                }
+            };
+
+            triangle.addEventListener('click', toggleExpand);
+            nameEl.addEventListener('click', toggleExpand);
+
+            // --- Drag events ---
+            row.addEventListener('dragstart', (e) => {
+                dragIdx = index;
+                row.addClass('tl-q-dragging');
+                e.dataTransfer?.setData('text/plain', String(index));
+            });
+
+            row.addEventListener('dragend', () => {
+                dragIdx = null;
+                row.removeClass('tl-q-dragging');
+                listEl.querySelectorAll('.tl-q-dragover').forEach(el => el.removeClass('tl-q-dragover'));
+            });
+
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (dragIdx !== null && dragIdx !== index) {
+                    row.addClass('tl-q-dragover');
+                }
+            });
+
+            row.addEventListener('dragleave', () => {
+                row.removeClass('tl-q-dragover');
+            });
+
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.removeClass('tl-q-dragover');
+                if (dragIdx === null || dragIdx === index) return;
+
+                void (async () => {
+                    const items = this.plugin.settings.eveningQuestions;
+                    const [moved] = items.splice(dragIdx!, 1);
+                    items.splice(index, 0, moved);
+                    await this.plugin.saveSettings();
+                    this.display();
+                })();
+            });
+        });
+
+        // --- Add question link ---
+        const addLink = listEl.createEl('span', { cls: 'tl-q-add-link', text: '+ \u6dfb\u52a0' });
+        addLink.addEventListener('click', () => {
+            const newQ: EveningQuestionConfig = {
+                type: 'free_writing',
+                sectionName: '',
+                initialMessage: '',
+                required: false,
+                enabled: true,
+            };
+            this.plugin.settings.eveningQuestions.push(newQ);
+            void this.plugin.saveSettings().then(() => this.display());
         });
     }
 
     /**
-     * Render expanded detail panel for a question (inserted after the row)
+     * Render detail panel — only the textarea for question content
      */
     private renderQuestionDetail(afterEl: HTMLElement, question: EveningQuestionConfig, index: number): void {
         const detailEl = document.createElement('div');
         detailEl.addClass('tl-q-detail');
         afterEl.after(detailEl);
 
-        // Section name
-        new Setting(detailEl)
-            .setName('日记章节名')
-            .addText((text) =>
-                text
-                    .setValue(question.sectionName)
-                    .onChange(async (value) => {
-                        this.plugin.settings.eveningQuestions[index].sectionName = value;
-                        await this.plugin.saveSettings();
-                    })
-            );
-
-        // Question text (textarea)
-        const messageSetting = new Setting(detailEl)
-            .setName('提问内容');
-
-        const textareaEl = messageSetting.controlEl.createEl('textarea', {
-            cls: 'tl-question-textarea',
+        // Only the question textarea
+        const textareaEl = detailEl.createEl('textarea', { cls: 'tl-q-detail-textarea' });
+        (textareaEl as HTMLTextAreaElement).value = question.initialMessage;
+        (textareaEl as HTMLTextAreaElement).placeholder = '\u8f93\u5165 AI \u5411\u7528\u6237\u63d0\u7684\u95ee\u9898\u2026';
+        (textareaEl as HTMLTextAreaElement).rows = 3;
+        textareaEl.addEventListener('input', () => {
+            this.plugin.settings.eveningQuestions[index].initialMessage = (textareaEl as HTMLTextAreaElement).value;
+            void this.plugin.saveSettings();
         });
-        textareaEl.value = question.initialMessage;
-        textareaEl.rows = 3;
-        textareaEl.addEventListener('change', async () => {
-            this.plugin.settings.eveningQuestions[index].initialMessage = textareaEl.value;
-            await this.plugin.saveSettings();
-        });
-
-        // Required toggle
-        new Setting(detailEl)
-            .setName('必问')
-            .setDesc('必问题不可跳过')
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(question.required)
-                    .onChange(async (value) => {
-                        this.plugin.settings.eveningQuestions[index].required = value;
-                        await this.plugin.saveSettings();
-                        this.display();
-                    })
-            );
     }
 }

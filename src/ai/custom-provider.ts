@@ -23,7 +23,7 @@ export class CustomProvider extends BaseAIProvider {
     ): Promise<string> {
         const formattedMessages = this.formatMessages(messages, systemPrompt);
 
-        const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        const response = await this.makeRequest(`${this.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
@@ -32,22 +32,23 @@ export class CustomProvider extends BaseAIProvider {
             body: JSON.stringify({
                 model: this.model,
                 messages: formattedMessages,
-                stream: true,
             }),
         });
 
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`API error: ${response.status} - ${error}`);
+        if (response.status >= 400) {
+            throw new Error(`API error: ${response.status} - ${response.text}`);
         }
 
-        return this.processStream(response, onChunk);
+        const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
+        const fullContent = data.choices?.[0]?.message?.content || '';
+
+        return this.simulateStream(fullContent, onChunk);
     }
 
     async testConnection(): Promise<boolean> {
         try {
             // Send a minimal request to verify API key + model
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.makeRequest(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
@@ -59,7 +60,7 @@ export class CustomProvider extends BaseAIProvider {
                     messages: [{ role: 'user', content: 'Hi' }],
                 }),
             });
-            return response.ok;
+            return response.status >= 200 && response.status < 300;
         } catch {
             return false;
         }

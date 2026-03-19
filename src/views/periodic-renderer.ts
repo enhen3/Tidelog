@@ -24,6 +24,8 @@ export interface PeriodicHost {
     deleteMdTask(file: TFile, taskText: string): Promise<void>;
     setTaskIndent(file: TFile, taskText: string, newIndent: number): Promise<void>;
     reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void>;
+    deferTaskToToday(sourceFile: TFile, taskText: string): Promise<void>;
+    moveTaskToDate(sourceFile: TFile, taskText: string, targetDate: Date): Promise<void>;
     invalidateTabCache(tab: string): void;
     switchTab(tab: string): void;
 }
@@ -116,9 +118,11 @@ export class PeriodicRenderer {
             const isToday = dateStr === todayStr;
             const isSelected = dateStr === selStr;
 
-            // Check if note exists
+            // Check if note exists AND has real content (tasks)
             const notePath = `${h.plugin.settings.dailyFolder}/${dateStr}.md`;
-            const hasNote = !!h.app.vault.getAbstractFileByPath(notePath);
+            const noteFile = h.app.vault.getAbstractFileByPath(notePath);
+            const hasNote = noteFile instanceof TFile
+                && (h.app.metadataCache.getFileCache(noteFile)?.listItems?.some(item => item.task !== undefined) ?? false);
 
             const cell = grid.createDiv(`tl-periodic-cal-cell ${isToday ? 'tl-periodic-cal-cell-today' : ''} ${isSelected ? 'tl-periodic-cal-cell-selected' : ''} ${hasNote ? 'tl-periodic-cal-cell-has-note' : ''}`);
             cell.setText(`${d}`);
@@ -152,9 +156,11 @@ export class PeriodicRenderer {
                 this.renderPlanSuggestion(preview, date);
             }
             const createBtn = preview.createEl('button', { cls: 'tl-periodic-open-btn', text: '+ 创建日记' });
-            createBtn.addEventListener('click', async () => {
-                const f = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
-                h.app.workspace.getLeaf().openFile(f);
+            createBtn.addEventListener('click', () => {
+                void (async () => {
+                    const f = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
+                    void h.app.workspace.getLeaf().openFile(f);
+                })();
             });
             return;
         }
@@ -172,7 +178,7 @@ export class PeriodicRenderer {
             if (inProgress.length > 0) {
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: `⏳ 进行中 (${inProgress.length})` });
                 for (const task of inProgress) {
-                    this.renderTask(taskSection, task, file);
+                    this.renderTask(taskSection, task, file, date);
                 }
             }
             if (completed.length > 0) {
@@ -186,7 +192,7 @@ export class PeriodicRenderer {
                     indicator.setText(collapsed ? '▸' : '▾');
                 });
                 for (const task of completed) {
-                    this.renderTask(doneBody, task, file);
+                    this.renderTask(doneBody, task, file, date);
                 }
             }
         } else {
@@ -208,7 +214,7 @@ export class PeriodicRenderer {
         const openBtn = preview.createDiv('tl-periodic-open-btn');
         openBtn.setText('打开日记 →');
         openBtn.addEventListener('click', () => {
-            h.app.workspace.getLeaf().openFile(file);
+            void h.app.workspace.getLeaf().openFile(file);
         });
     }
 
@@ -273,14 +279,14 @@ export class PeriodicRenderer {
         section.createDiv({ cls: 'tl-plan-suggestion-line', text: tip });
     }
 
-    /** Extract and render 晚间复盘 sections from daily note content */
+    /** Extract and render 复盘 sections from daily note content */
     private renderReviewSection(preview: HTMLElement, content: string): void {
-        // Find 晚间复盘 section — handle optional blank lines
-        const reviewIdx = content.indexOf('## 晚间复盘');
+        // Find 复盘 section — handle optional blank lines
+        const reviewIdx = content.indexOf('## 复盘');
         if (reviewIdx < 0) return;
 
-        // Get everything after "## 晚间复盘" until next --- or end
-        let reviewContent = content.substring(reviewIdx + '## 晚间复盘'.length);
+        // Get everything after "## 复盘" until next --- or end
+        let reviewContent = content.substring(reviewIdx + '## 复盘'.length);
         const endIdx = reviewContent.indexOf('\n---');
         if (endIdx > 0) reviewContent = reviewContent.substring(0, endIdx);
 
@@ -476,14 +482,16 @@ export class PeriodicRenderer {
         if (weekFile) {
             openBtn.setText('打开周计划 →');
             openBtn.addEventListener('click', () => {
-                h.app.workspace.getLeaf().openFile(weekFile as TFile);
+                if (weekFile instanceof TFile) void h.app.workspace.getLeaf().openFile(weekFile);
             });
         } else {
             openBtn.setText('+ 创建周计划');
-            openBtn.addEventListener('click', async () => {
-                const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
-                const f = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
-                h.app.workspace.getLeaf().openFile(f);
+            openBtn.addEventListener('click', () => {
+                void (async () => {
+                    const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
+                    const f = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
+                    void h.app.workspace.getLeaf().openFile(f);
+                })();
             });
         }
     }
@@ -538,7 +546,7 @@ export class PeriodicRenderer {
             const link = section.createDiv('tl-periodic-insight-link');
             link.setText('查看完整周报 →');
             link.addEventListener('click', () => {
-                h.app.workspace.getLeaf().openFile(insightFile!);
+                void h.app.workspace.getLeaf().openFile(insightFile!);
             });
         }
     }
@@ -667,14 +675,16 @@ export class PeriodicRenderer {
         if (monthFile) {
             openBtn.setText('打开月计划 →');
             openBtn.addEventListener('click', () => {
-                h.app.workspace.getLeaf().openFile(monthFile as TFile);
+                if (monthFile instanceof TFile) void h.app.workspace.getLeaf().openFile(monthFile);
             });
         } else {
             openBtn.setText('+ 创建月计划');
-            openBtn.addEventListener('click', async () => {
-                const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(monthStr);
-                const f = await h.plugin.vaultManager.getOrCreateMonthlyPlan(date.toDate(), tmpl);
-                h.app.workspace.getLeaf().openFile(f);
+            openBtn.addEventListener('click', () => {
+                void (async () => {
+                    const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(monthStr);
+                    const f = await h.plugin.vaultManager.getOrCreateMonthlyPlan(date.toDate(), tmpl);
+                    void h.app.workspace.getLeaf().openFile(f);
+                })();
             });
         }
     }
@@ -683,7 +693,7 @@ export class PeriodicRenderer {
     // Shared task renderer & input (Things/TickTick style)
     // ──────────────────────────────────────────────────────
 
-    private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile): void {
+    private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile, sourceDate?: moment.Moment): void {
         const h = this.host;
         const row = container.createDiv(`tl-periodic-task-row ${task.done ? 'tl-periodic-task-row-done' : ''}`);
         row.dataset.taskText = task.text;
@@ -701,14 +711,16 @@ export class PeriodicRenderer {
         // Checkbox
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = task.done;
-        cb.addEventListener('click', async (e) => {
+        cb.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
-            await h.toggleMdTask(file, task.text, task.done);
-            task.done = !task.done;
-            cb.checked = task.done;
-            row.toggleClass('tl-periodic-task-row-done', task.done);
-            label.toggleClass('tl-text-done', task.done);
+            void (async () => {
+                await h.toggleMdTask(file, task.text, task.done);
+                task.done = !task.done;
+                cb.checked = task.done;
+                row.toggleClass('tl-periodic-task-row-done', task.done);
+                label.toggleClass('tl-text-done', task.done);
+            })();
         });
 
         // Label (double-click to edit)
@@ -724,18 +736,20 @@ export class PeriodicRenderer {
             label.replaceWith(input);
             input.focus();
             input.select();
-            const save = async () => {
-                const newText = input.value.trim();
-                if (newText && newText !== task.text) {
-                    await h.editMdTask(file, task.text, newText);
-                    task.text = newText;
-                }
-                const newLabel = document.createElement('span');
-                newLabel.className = 'tl-periodic-task-text';
-                newLabel.textContent = task.text;
-                input.replaceWith(newLabel);
-                // Re-attach dblclick listener
-                newLabel.addEventListener('dblclick', () => label.dispatchEvent(new Event('dblclick')));
+            const save = () => {
+                void (async () => {
+                    const newText = input.value.trim();
+                    if (newText && newText !== task.text) {
+                        await h.editMdTask(file, task.text, newText);
+                        task.text = newText;
+                    }
+                    const newLabel = document.createElement('span');
+                    newLabel.className = 'tl-periodic-task-text';
+                    newLabel.textContent = task.text;
+                    input.replaceWith(newLabel);
+                    // Re-attach dblclick listener
+                    newLabel.addEventListener('dblclick', () => label.dispatchEvent(new Event('dblclick')));
+                })();
             };
             input.addEventListener('blur', save);
             input.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -746,10 +760,12 @@ export class PeriodicRenderer {
 
         // Delete button
         const delBtn = row.createEl('span', { cls: 'tl-task-delete-btn', text: '×' });
-        delBtn.addEventListener('click', async (e) => {
+        delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            await h.deleteMdTask(file, task.text);
-            row.remove();
+            void (async () => {
+                await h.deleteMdTask(file, task.text);
+                row.remove();
+            })();
         });
 
         // Add sub-task button
@@ -768,19 +784,138 @@ export class PeriodicRenderer {
             row.after(subRow);
             subInput.focus();
 
-            const doAddSub = async () => {
-                const text = subInput.value.trim();
-                subRow.remove();
-                if (!text) return;
-                await h.addSubTask(file, task.text, text);
-                h.invalidateTabCache('kanban');
-                h.switchTab('kanban');
+            const doAddSub = () => {
+                void (async () => {
+                    const text = subInput.value.trim();
+                    subRow.remove();
+                    if (!text) return;
+                    await h.addSubTask(file, task.text, text);
+                    h.invalidateTabCache('kanban');
+                    h.switchTab('kanban');
+                })();
             };
             subInput.addEventListener('blur', doAddSub);
             subInput.addEventListener('keydown', (ke: KeyboardEvent) => {
                 if (ke.key === 'Enter') { ke.preventDefault(); subInput.blur(); }
                 if (ke.key === 'Escape') { subInput.value = ''; subInput.blur(); }
             });
+        });
+
+        // Defer-to-today button — only for uncompleted tasks on past dates
+        if (sourceDate && !task.done && sourceDate.isBefore(moment(), 'day')) {
+            const deferBtn = row.createEl('span', { cls: 'tl-task-defer-btn', attr: { title: '顺延到今天' } });
+            setIcon(deferBtn, 'forward');
+            deferBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                void (async () => {
+                    await h.deferTaskToToday(file, task.text);
+                    row.remove();
+                })();
+            });
+        }
+
+        // Right-click context menu with date quick-change
+        row.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Remove any existing popup
+            document.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
+
+            const popup = document.createElement('div');
+            popup.className = 'tl-task-date-popup';
+
+            // Header
+            popup.createEl('div', { cls: 'tl-task-date-popup-header', text: '日期' });
+
+            // Button row
+            const btnRow = popup.createDiv('tl-task-date-popup-buttons');
+
+            const todayDate = moment();
+            const tomorrowDate = moment().add(1, 'day');
+            const nextWeekDate = moment().startOf('isoWeek').add(1, 'week');
+
+            // Today
+            const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: '今天' } });
+            const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(todayIcon, 'sun');
+            todayBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: '今天' });
+            todayBtn.addEventListener('click', () => {
+                popup.remove();
+                void (async () => {
+                    await h.moveTaskToDate(file, task.text, todayDate.toDate());
+                    row.remove();
+                })();
+            });
+
+            // Tomorrow
+            const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: '明天' } });
+            const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(tmrIcon, 'sunrise');
+            tmrBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: '明天' });
+            tmrBtn.addEventListener('click', () => {
+                popup.remove();
+                void (async () => {
+                    await h.moveTaskToDate(file, task.text, tomorrowDate.toDate());
+                    row.remove();
+                })();
+            });
+
+            // Next week
+            const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: '下周一' } });
+            const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(weekIcon, 'calendar-plus');
+            weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: '下周' });
+            weekBtn.addEventListener('click', () => {
+                popup.remove();
+                void (async () => {
+                    await h.moveTaskToDate(file, task.text, nextWeekDate.toDate());
+                    row.remove();
+                })();
+            });
+
+            // Custom date picker
+            const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: '自定义日期' } });
+            const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(customIcon, 'calendar-search');
+            customBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: '自定义' });
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'date';
+            hiddenInput.className = 'tl-task-date-hidden-input';
+            popup.appendChild(hiddenInput);
+            hiddenInput.addEventListener('change', () => {
+                popup.remove();
+                if (!hiddenInput.value) return;
+                const picked = new Date(hiddenInput.value + 'T00:00:00');
+                void (async () => {
+                    await h.moveTaskToDate(file, task.text, picked);
+                    row.remove();
+                })();
+            });
+            customBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                hiddenInput.showPicker();
+            });
+
+            document.body.appendChild(popup);
+
+            // Position the popup near the click
+            const popupWidth = 220;
+            const popupHeight = 100;
+            let left = e.clientX;
+            let top = e.clientY;
+            if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 8;
+            if (top + popupHeight > window.innerHeight) top = e.clientY - popupHeight;
+            popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
+
+            // Dismiss on outside click
+            const dismiss = (ev: MouseEvent) => {
+                if (!popup.contains(ev.target as Node)) {
+                    popup.remove();
+                    document.removeEventListener('click', dismiss, true);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', dismiss, true), 0);
         });
 
         // Drag & drop with hover-to-nest / drag-left-to-promote
@@ -840,7 +975,7 @@ export class PeriodicRenderer {
         row.addEventListener('dragleave', () => {
             clearTimers();
         });
-        row.addEventListener('drop', async (e) => {
+        row.addEventListener('drop', (e) => {
             e.preventDefault();
             const wasNest = nestMode;
             const wasPromote = promoteMode;
@@ -848,33 +983,35 @@ export class PeriodicRenderer {
             const draggedText = e.dataTransfer?.getData('text/plain');
             if (!draggedText || draggedText === task.text) return;
 
-            if (wasPromote) {
-                // Promote: make dragged task a top-level task
-                await h.setTaskIndent(file, draggedText, 0);
-                h.invalidateTabCache('kanban');
-                h.switchTab('kanban');
-            } else if (wasNest) {
-                // Nest: make dragged task a sub-task of this task
-                await h.deleteMdTask(file, draggedText);
-                await h.addSubTask(file, task.text, draggedText);
-                h.invalidateTabCache('kanban');
-                h.switchTab('kanban');
-            } else {
-                // Quick drop: reorder
-                const parent = row.parentElement;
-                if (!parent) return;
-                const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
-                const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
-                const fromIdx = texts.indexOf(draggedText);
-                const toIdx = texts.indexOf(task.text);
-                if (fromIdx >= 0 && toIdx >= 0) {
-                    texts.splice(fromIdx, 1);
-                    texts.splice(toIdx, 0, draggedText);
-                    await h.reorderMdTasks(file, texts);
+            void (async () => {
+                if (wasPromote) {
+                    // Promote: make dragged task a top-level task
+                    await h.setTaskIndent(file, draggedText, 0);
                     h.invalidateTabCache('kanban');
                     h.switchTab('kanban');
+                } else if (wasNest) {
+                    // Nest: make dragged task a sub-task of this task
+                    await h.deleteMdTask(file, draggedText);
+                    await h.addSubTask(file, task.text, draggedText);
+                    h.invalidateTabCache('kanban');
+                    h.switchTab('kanban');
+                } else {
+                    // Quick drop: reorder
+                    const parent = row.parentElement;
+                    if (!parent) return;
+                    const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
+                    const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
+                    const fromIdx = texts.indexOf(draggedText);
+                    const toIdx = texts.indexOf(task.text);
+                    if (fromIdx >= 0 && toIdx >= 0) {
+                        texts.splice(fromIdx, 1);
+                        texts.splice(toIdx, 0, draggedText);
+                        await h.reorderMdTasks(file, texts);
+                        h.invalidateTabCache('kanban');
+                        h.switchTab('kanban');
+                    }
                 }
-            }
+            })();
         });
     }
 
@@ -901,9 +1038,9 @@ export class PeriodicRenderer {
             h.switchTab('kanban');
         };
 
-        addBtn.addEventListener('click', doAdd);
+        addBtn.addEventListener('click', () => void doAdd());
         input.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+            if (e.key === 'Enter') { e.preventDefault(); void doAdd(); }
         });
     }
 
@@ -932,9 +1069,9 @@ export class PeriodicRenderer {
             h.switchTab('kanban');
         };
 
-        addBtn.addEventListener('click', doAdd);
+        addBtn.addEventListener('click', () => void doAdd());
         input.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+            if (e.key === 'Enter') { e.preventDefault(); void doAdd(); }
         });
     }
 
@@ -963,9 +1100,9 @@ export class PeriodicRenderer {
             h.switchTab('kanban');
         };
 
-        addBtn.addEventListener('click', doAdd);
+        addBtn.addEventListener('click', () => void doAdd());
         input.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+            if (e.key === 'Enter') { e.preventDefault(); void doAdd(); }
         });
     }
 
@@ -995,9 +1132,9 @@ export class PeriodicRenderer {
             h.switchTab('kanban');
         };
 
-        addBtn.addEventListener('click', doAdd);
+        addBtn.addEventListener('click', () => void doAdd());
         input.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+            if (e.key === 'Enter') { e.preventDefault(); void doAdd(); }
         });
     }
 }

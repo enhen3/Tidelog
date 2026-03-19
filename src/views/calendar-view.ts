@@ -63,7 +63,7 @@ export class CalendarView extends ItemView {
         const prevBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '‹' });
         prevBtn.addEventListener('click', () => {
             this.currentMonth.subtract(1, 'month');
-            this.render();
+            void this.render();
         });
 
         header.createEl('span', {
@@ -74,7 +74,7 @@ export class CalendarView extends ItemView {
         const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
         nextBtn.addEventListener('click', () => {
             this.currentMonth.add(1, 'month');
-            this.render();
+            void this.render();
         });
 
         // Legend
@@ -146,9 +146,9 @@ export class CalendarView extends ItemView {
                 cell.addClass('tl-cal-cell-clickable');
                 cell.addEventListener('click', () => {
                     const file = this.app.vault.getAbstractFileByPath(data.filePath!);
-                    if (file && file instanceof TFile) {
+                    if (file instanceof TFile) {
                         const leaf = this.app.workspace.getLeaf();
-                        leaf.openFile(file);
+                        void leaf.openFile(file);
                     }
                 });
             }

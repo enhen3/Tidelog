@@ -132,7 +132,7 @@ export class TaskRegistryService {
     }
 
     /**
-     * Get all tasks from a daily note (from the 晨间计划 section)
+     * Get all tasks from a daily note (from the 计划 section)
      */
     async getTasksForDate(date?: Date): Promise<TaskItem[]> {
         const { moment } = window;
@@ -146,7 +146,7 @@ export class TaskRegistryService {
         const filename = effectiveDate.format('YYYY-MM-DD');
         const path = `${this.settings.dailyFolder}/${filename}.md`;
 
-        return this.readTasks(path, '晨间计划');
+        return this.readTasks(path, '计划');
     }
 
     /**

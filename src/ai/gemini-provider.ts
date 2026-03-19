@@ -17,8 +17,9 @@ export class GeminiProvider extends BaseAIProvider {
         // Gemini uses a different format
         const contents = this.formatGeminiMessages(messages, systemPrompt);
 
-        const response = await fetch(
-            `${this.baseUrl}/models/${this.model}:streamGenerateContent?key=${this.apiKey}&alt=sse`,
+        // Use non-streaming endpoint
+        const response = await this.makeRequest(
+            `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`,
             {
                 method: 'POST',
                 headers: {
@@ -33,12 +34,16 @@ export class GeminiProvider extends BaseAIProvider {
             }
         );
 
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Gemini API error: ${response.status} - ${error}`);
+        if (response.status >= 400) {
+            throw new Error(`Gemini API error: ${response.status} - ${response.text}`);
         }
 
-        return this.processGeminiStream(response, onChunk);
+        const data = response.json as {
+            candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+        };
+        const fullContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        return this.simulateStream(fullContent, onChunk);
     }
 
     /**
@@ -72,56 +77,13 @@ export class GeminiProvider extends BaseAIProvider {
         return contents;
     }
 
-    /**
-     * Process Gemini's SSE stream format
-     */
-    private async processGeminiStream(
-        response: Response,
-        onChunk: StreamCallback
-    ): Promise<string> {
-        const reader = response.body?.getReader();
-        if (!reader) {
-            throw new Error('No response body');
-        }
-
-        const decoder = new TextDecoder();
-        let fullContent = '';
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    try {
-                        const parsed = JSON.parse(data);
-                        const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                        if (text) {
-                            fullContent += text;
-                            onChunk(text);
-                        }
-                    } catch {
-                        // Ignore parse errors
-                    }
-                }
-            }
-        }
-
-        return fullContent;
-    }
-
     async testConnection(): Promise<boolean> {
         try {
-            const response = await fetch(
-                `${this.baseUrl}/models?key=${this.apiKey}`
+            const response = await this.makeRequest(
+                `${this.baseUrl}/models?key=${this.apiKey}`,
+                {}
             );
-            return response.ok;
+            return response.status >= 200 && response.status < 300;
         } catch {
             return false;
         }

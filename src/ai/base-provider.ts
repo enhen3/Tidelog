@@ -3,6 +3,7 @@
  * Separated to avoid circular dependency with provider factory
  */
 
+import { requestUrl } from 'obsidian';
 import { AIProvider, ChatMessage, StreamCallback } from '../types';
 
 /**
@@ -27,73 +28,60 @@ export abstract class BaseAIProvider implements AIProvider {
     abstract testConnection(): Promise<boolean>;
 
     /**
-     * Parse SSE stream data
+     * Make an HTTP request using Obsidian's requestUrl (CORS-free, mobile-compatible)
      */
-    protected parseSSELine(line: string): string | null {
-        if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-                return null;
-            }
-            try {
-                const parsed = JSON.parse(data);
-                return parsed.choices?.[0]?.delta?.content || null;
-            } catch {
-                return null;
-            }
-        }
-        return null;
+    protected async makeRequest(url: string, options: {
+        method?: string;
+        headers?: Record<string, string>;
+        body?: string;
+    }): Promise<{ status: number; text: string; json: unknown }> {
+        const response = await requestUrl({
+            url,
+            method: options.method || 'GET',
+            headers: options.headers,
+            body: options.body,
+            throw: false,
+        });
+        return {
+            status: response.status,
+            text: response.text,
+            json: response.json,
+        };
     }
 
     /**
-     * Process a streaming response
+     * Simulate streaming by delivering the full response in small chunks.
+     * This provides a typewriter effect in the UI while using non-streaming API calls.
      */
-    protected async processStream(
-        response: Response,
-        onChunk: StreamCallback
-    ): Promise<string> {
-        const reader = response.body?.getReader();
-        if (!reader) {
-            throw new Error('No response body');
-        }
+    protected simulateStream(fullContent: string, onChunk: StreamCallback): Promise<string> {
+        return new Promise((resolve) => {
+            if (!fullContent) {
+                resolve('');
+                return;
+            }
 
-        const decoder = new TextDecoder();
-        let fullContent = '';
-        let buffer = '';
+            // Deliver in chunks of ~3-5 characters for a natural typing feel
+            const chunkSize = 4;
+            let index = 0;
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-
-            // Keep the last incomplete line in the buffer
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                const content = this.parseSSELine(line.trim());
-                if (content) {
-                    fullContent += content;
-                    onChunk(content);
+            const deliver = () => {
+                if (index < fullContent.length) {
+                    const end = Math.min(index + chunkSize, fullContent.length);
+                    const chunk = fullContent.substring(index, end);
+                    onChunk(chunk);
+                    index = end;
+                    setTimeout(deliver, 10);
+                } else {
+                    resolve(fullContent);
                 }
-            }
-        }
+            };
 
-        // Process any remaining content in buffer
-        if (buffer.trim()) {
-            const content = this.parseSSELine(buffer.trim());
-            if (content) {
-                fullContent += content;
-                onChunk(content);
-            }
-        }
-
-        return fullContent;
+            deliver();
+        });
     }
 
     /**
-     * Format messages for API request
+     * Format messages for API request (OpenAI-compatible format)
      */
     protected formatMessages(messages: ChatMessage[], systemPrompt: string): Array<{
         role: string;

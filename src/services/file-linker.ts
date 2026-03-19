@@ -57,8 +57,8 @@ export class FileLinkService {
             clearTimeout(this.debounceTimer);
         }
 
-        this.debounceTimer = setTimeout(async () => {
-            await this.syncDailyNoteToKanban(file);
+        this.debounceTimer = setTimeout(() => {
+            void this.syncDailyNoteToKanban(file);
         }, 800);
     }
 

@@ -61,8 +61,8 @@ export class ReviewRenderer {
                 tasks,
                 status,
                 filePath: file.path,
-                hasPlan: content.includes('## 晨间计划') && tasks.length > 0,
-                hasReview: content.includes('## 晚间复盘'),
+                hasPlan: content.includes('## 计划') && tasks.length > 0,
+                hasReview: content.includes('## 复盘'),
             };
         } catch { return null; }
     }
@@ -274,7 +274,7 @@ export class ReviewRenderer {
                 // Click to open note directly
                 cell.addEventListener('click', () => {
                     const f = h.app.vault.getAbstractFileByPath(data.filePath);
-                    if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
+                    if (f instanceof TFile) void h.app.workspace.getLeaf().openFile(f);
                 });
             }
         }
@@ -318,7 +318,7 @@ export class ReviewRenderer {
                     // Click to open note
                     strip.addEventListener('click', () => {
                         const f = h.app.vault.getAbstractFileByPath(data.filePath);
-                        if (f && f instanceof TFile) h.app.workspace.getLeaf().openFile(f);
+                        if (f instanceof TFile) void h.app.workspace.getLeaf().openFile(f);
                     });
                 }
                 // Stats at bottom
@@ -380,18 +380,17 @@ export class ReviewRenderer {
 
             // Top clipping: flip popover below the cell
             if (popRect.top < parentRect.top) {
-                popover.style.bottom = 'auto';
-                popover.style.top = '100%';
+                popover.setCssProps({ '--tl-pop-bottom': 'auto', '--tl-pop-top': '100%' });
             }
 
             // Left/right clipping
             const popRect2 = popover.getBoundingClientRect();
             if (popRect2.left < parentRect.left + 4) {
                 const shift = parentRect.left + 4 - popRect2.left;
-                popover.style.left = `calc(50% + ${shift}px)`;
+                popover.setCssProps({ '--tl-pop-left': `calc(50% + ${shift}px)` });
             } else if (popRect2.right > parentRect.right - 4) {
                 const shift = popRect2.right - parentRect.right + 4;
-                popover.style.left = `calc(50% - ${shift}px)`;
+                popover.setCssProps({ '--tl-pop-left': `calc(50% - ${shift}px)` });
             }
         });
     }
@@ -448,7 +447,7 @@ export class ReviewRenderer {
                 }
                 const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整月报 →' });
                 link.addEventListener('click', () => {
-                    h.app.workspace.getLeaf().openFile(mFile as TFile);
+                    if (mFile instanceof TFile) void h.app.workspace.getLeaf().openFile(mFile);
                 });
 
                 // Chat about monthly insight button
@@ -467,7 +466,8 @@ export class ReviewRenderer {
                 cls: 'tl-dash-generate-btn',
                 text: '✨ 生成当月洞察',
             });
-            genBtn.addEventListener('click', async () => {
+            genBtn.addEventListener('click', () => {
+                void (async () => {
                 genBtn.setText('⚙️ 正在生成...');
                 genBtn.disabled = true;
                 genBtn.addClass('tl-dash-generate-btn-loading');
@@ -485,6 +485,7 @@ export class ReviewRenderer {
                     genBtn.disabled = false;
                     genBtn.removeClass('tl-dash-generate-btn-loading');
                 }
+                })();
             });
         }
 

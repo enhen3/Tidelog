@@ -80,7 +80,7 @@ export class TaskInputManager {
             cls: 'tl-task-submit-btn',
             text: '✅ 确认提交',
         });
-        submitBtn.addEventListener('click', () => this.submitTasks());
+        submitBtn.addEventListener('click', () => void this.submitTasks());
 
         // Focus first empty input
         const firstEmpty = h.taskData.find((d) => !d.field.value);
@@ -327,7 +327,7 @@ export class TaskInputManager {
                 const content = `**精力状态**: ${energyLevel}/10\n\n${formattedTasks}\n\n---`;
                 await h.plugin.vaultManager.replaceSectionContent(
                     dailyNote.path,
-                    '晨间计划',
+                    '计划',
                     content
                 );
                 h.streamAIMessage(`✅ 完美！今日计划已写入到你的日记中。\n\n祝你度过高效的一天！🌟`);
@@ -348,7 +348,7 @@ export class TaskInputManager {
                 const content = energyLine + formattedTasks + '\n\n---';
                 await h.plugin.vaultManager.replaceSectionContent(
                     dailyNote.path,
-                    '晨间计划',
+                    '计划',
                     content
                 );
                 h.streamAIMessage('✅ 任务已更新到今日计划中！');

@@ -2,7 +2,7 @@
  * Template Manager - Creates and manages template files
  */
 
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import { TideLogSettings } from '../types';
 
 export class TemplateManager {
@@ -125,7 +125,7 @@ export class TemplateManager {
         if (!exists) {
             const content = `# 原则库
 
-> 这里记录你从经验中提炼出的人生原则。AI 会在晚间复盘时帮助你发现和提炼新原则。
+> 这里记录你从经验中提炼出的人生原则。AI 会在复盘时帮助你发现和提炼新原则。
 
 ## 决策类
 

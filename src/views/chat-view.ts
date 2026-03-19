@@ -216,7 +216,7 @@ export class ChatView extends ItemView {
             const renderDone = (tab === 'kanban')
                 ? this.renderKanbanTab(panel)
                 : this.renderReviewTab(panel);
-            renderDone.then(() => {
+            void renderDone.then(() => {
                 // Remove stale panels (keep the new one and chat)
                 this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => {
                     if (el !== panel) el.remove();
@@ -398,6 +398,56 @@ export class ChatView extends ItemView {
         }
     }
 
+    /** Defer a task from a source file to today's daily note */
+    public async deferTaskToToday(sourceFile: TFile, taskText: string): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            // Get or create today's daily note
+            const todayNote = await this.plugin.vaultManager.getOrCreateDailyNote();
+
+            // Add the task to today's note
+            await this.addMdTask(todayNote, taskText);
+
+            // Remove from source file
+            let content = await this.app.vault.read(sourceFile);
+            const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            content = content.replace(pat, '');
+            await this.app.vault.modify(sourceFile, content);
+
+            // Refresh the view
+            this.invalidateTabCache('kanban');
+            this.switchTab('kanban');
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
+    /** Move a task from a source file to a specific target date's daily note */
+    public async moveTaskToDate(sourceFile: TFile, taskText: string, targetDate: Date): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            const targetNote = await this.plugin.vaultManager.getOrCreateDailyNote(targetDate);
+
+            // Don't move if source and target are the same file
+            if (sourceFile.path === targetNote.path) return;
+
+            await this.addMdTask(targetNote, taskText);
+
+            // Remove from source file
+            let content = await this.app.vault.read(sourceFile);
+            const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            content = content.replace(pat, '');
+            await this.app.vault.modify(sourceFile, content);
+
+            this.invalidateTabCache('kanban');
+            this.switchTab('kanban');
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
     /** Change the indent level of a task (promote/demote) */
     public async setTaskIndent(file: TFile, taskText: string, newIndent: number): Promise<void> {
         this._suppressRefresh = true;
@@ -536,17 +586,17 @@ export class ChatView extends ItemView {
         });
 
         // Handle Enter key (Shift+Enter for new line)
-        this.inputEl.addEventListener('keydown', async (e) => {
+        this.inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                await this.sendMessage();
+                void this.sendMessage();
             }
         });
 
         // Auto-resize
         this.inputEl.addEventListener('input', () => {
-            this.inputEl.style.height = 'auto';
-            this.inputEl.style.height = `${Math.min(this.inputEl.scrollHeight, 150)}px`;
+            this.inputEl.setCssProps({ '--tl-input-height': 'auto' });
+            this.inputEl.setCssProps({ '--tl-input-height': `${Math.min(this.inputEl.scrollHeight, 150)}px` });
         });
 
         const buttonContainer = this.inputContainer.createDiv('tl-input-buttons');
@@ -555,7 +605,7 @@ export class ChatView extends ItemView {
             cls: 'tl-send-btn',
             text: '发送',
         });
-        this.sendButton.addEventListener('click', () => this.sendMessage());
+        this.sendButton.addEventListener('click', () => { void this.sendMessage(); });
     }
 
     /**
@@ -608,16 +658,16 @@ export class ChatView extends ItemView {
                     // Plan already exists, go straight to task input with pre-fill
                     const existingTasks = await this.getExistingTasks();
                     if (existingTasks.length > 0) {
-                        this.addAIMessage('今天已有晨间计划。你可以修改或添加任务：');
+                        this.addAIMessage('今天已有计划。你可以修改或添加任务：');
                     } else {
-                        this.addAIMessage('今天已有晨间计划。你可以继续添加任务：');
+                        this.addAIMessage('今天已有计划。你可以继续添加任务：');
                     }
                     this.quickUpdateMode = true;
                     this.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);
                     return;
                 }
             }
-        } catch (e) {
+        } catch {
             // If check fails, just proceed with full SOP
         }
 
@@ -633,7 +683,7 @@ export class ChatView extends ItemView {
      * Start evening SOP
      */
     async startEveningSOP(): Promise<void> {
-        this.addAIMessage('开始晚间复盘...');
+        this.addAIMessage('开始复盘...');
         await this.eveningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
         });
@@ -807,6 +857,26 @@ export class ChatView extends ItemView {
      */
     scrollToBottom(): void {
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    }
+
+    /**
+     * Show a thinking indicator (animated dots) while AI is processing
+     */
+    showThinkingIndicator(): void {
+        this.hideThinkingIndicator(); // Remove any existing indicator
+        const wrapper = this.messagesContainer.createDiv('tl-message tl-message-ai tl-thinking-indicator');
+        const avatar = wrapper.createDiv('tl-message-avatar');
+        setIcon(avatar, 'tidelog-wave');
+        const content = wrapper.createDiv('tl-message-content');
+        content.createDiv('tl-thinking-dots');
+        this.scrollToBottom();
+    }
+
+    /**
+     * Hide the thinking indicator
+     */
+    hideThinkingIndicator(): void {
+        this.messagesContainer.querySelectorAll('.tl-thinking-indicator').forEach(el => el.remove());
     }
 
     // =========================================================================

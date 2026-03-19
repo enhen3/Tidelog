@@ -23,7 +23,6 @@ interface QuestionConfig {
     type: EveningQuestionType;
     prompt: string;
     sectionName: string;
-    required: boolean;
     initialMessage: string;
 }
 
@@ -60,7 +59,6 @@ export class EveningSOP {
                 type: q.type,
                 prompt: PROMPT_MAP[q.type] || '',
                 sectionName: q.sectionName,
-                required: q.required,
                 initialMessage: q.initialMessage,
             }));
     }
@@ -105,13 +103,11 @@ export class EveningSOP {
 
         // Guard: if no questions are enabled
         if (this.questionFlow.length === 0) {
-            onMessage('晚上好！目前没有启用的复盘问题。\n\n请在设置中启用至少一个晚间复盘问题。');
+            onMessage('晚上好！目前没有启用的复盘问题。\n\n请在设置中启用至少一个复盘问题。');
             return;
         }
 
-        // Count required and optional questions
-        const requiredCount = this.questionFlow.filter(q => q.required).length;
-        const optionalCount = this.questionFlow.filter(q => !q.required).length;
+
 
         // Send initial message
         const welcomeMessage = `🌙 辛苦了，一起来回顾一下今天吧。
@@ -129,7 +125,7 @@ ${this.questionFlow[0].initialMessage}`;
     private async getTodayPlanContent(): Promise<string | null> {
         try {
             const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();
-            const content = await this.plugin.app.vault.read(dailyNote);
+            const content = await this.plugin.app.vault.cachedRead(dailyNote);
 
             // Extract morning plan section
             const lines = content.split('\n');
@@ -137,7 +133,7 @@ ${this.questionFlow[0].initialMessage}`;
             const planLines: string[] = [];
 
             for (const line of lines) {
-                if (line.startsWith('## 晨间计划')) {
+                if (line.startsWith('## 计划')) {
                     inMorningSection = true;
                     continue;
                 }
@@ -172,8 +168,8 @@ ${this.questionFlow[0].initialMessage}`;
 
         const currentQuestion = this.questionFlow[this.currentQuestionIndex];
 
-        // Check for skip/end
-        if (this.isSkip(content) && !currentQuestion.required) {
+        // Check for skip/end — user can skip any question
+        if (this.isSkip(content)) {
             await this.moveToNextQuestion(context, onMessage);
             return;
         }
@@ -190,11 +186,11 @@ ${this.questionFlow[0].initialMessage}`;
             timestamp: Date.now(),
         });
 
-        // Save response
-        context.responses[currentQuestion.type] = content;
-
-        // Write to daily note immediately
+        // Write to daily note immediately (before saving response so follow-up detection works)
         await this.writeToDaily(currentQuestion, content, context);
+
+        // Save response (after writing so first-time vs follow-up is correctly detected)
+        context.responses[currentQuestion.type] = content;
 
         // Generate AI follow-up or move to next question
         await this.processResponse(content, context, onMessage);
@@ -213,27 +209,28 @@ ${this.questionFlow[0].initialMessage}`;
         const todayPlan = context.todayPlanContent;
         let systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + currentQuestion.prompt;
         if (todayPlan) {
-            systemPrompt += `\n\n用户今日的晨间计划：\n${todayPlan}\n\n请在回复中参考用户的计划内容，给出针对性的反馈。`;
+            systemPrompt += `\n\n用户今日的计划：\n${todayPlan}\n\n请在回复中参考用户的计划内容，给出针对性的反馈。`;
         }
+
+        // Add response guide to SYSTEM prompt (not user message) to prevent leaking
+        systemPrompt += `\n\n回复指南：
+- 简短回答 → 温和接纳即可
+- 有内容的分享 → 先共情，可追问一个问题
+- 完整有洞察的分享 → 肯定觉察力
+- 不超过 3 句话，让用户感到"被听见"
+- 绝对不要在回复中包含任何括号内的指令、标注或元信息`;
 
         // Generate AI response for follow-up or transition
         try {
             const provider = this.plugin.getAIProvider();
             let response = '';
 
-            const transitionPrompt = `用户在"${currentQuestion.sectionName}"环节说："${content}"
-
-<response_guide>
-- 简短回答 → 温和接纳即可
-- 有内容的分享 → 先共情（"你提到……"），可追问一个问题
-- 完整有洞察的分享 → 肯定觉察力
-</response_guide>
-
-不超过 3 句话。让用户感到"被听见"。`;
+            // User message is just the user's actual content — no instructions
+            const userMessage = `用户在"${currentQuestion.sectionName}"环节说：\n\n"${content}"`;
 
             this.messages.push({
                 role: 'user',
-                content: transitionPrompt,
+                content: userMessage,
                 timestamp: Date.now(),
             });
 
@@ -244,6 +241,9 @@ ${this.questionFlow[0].initialMessage}`;
                     response += chunk;
                 }
             );
+
+            // Strip any leaked instructions from AI response
+            response = this.stripLeakedInstructions(response);
 
             this.messages.push({
                 role: 'assistant',
@@ -260,6 +260,21 @@ ${this.questionFlow[0].initialMessage}`;
     }
 
     /**
+     * Strip leaked AI instructions from response text.
+     * Removes parenthetical instructions like (保持温暖简短的肯定) and XML-style tags.
+     */
+    private stripLeakedInstructions(text: string): string {
+        return text
+            // Remove full-width parenthetical instructions: （...） or (...)
+            .replace(/[（(][^）)]*(?:保持|简短|温暖|肯定|接纳|共情|追问|引导|回复|指令|标注|元信息)[^）)]*[）)]/g, '')
+            // Remove XML-style tags that may leak
+            .replace(/<\/?(?:response_guide|style|constraints|task|scene|evaluation_dimensions)[^>]*>/g, '')
+            // Clean up multiple consecutive newlines left by removals
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    /**
      * Move to next question
      */
     private async moveToNextQuestion(
@@ -268,17 +283,6 @@ ${this.questionFlow[0].initialMessage}`;
         previousResponse?: string
     ): Promise<void> {
         this.currentQuestionIndex++;
-
-        // If not including optional questions, check if next question is optional
-        if (!this.plugin.settings.includeOptionalQuestions) {
-            // Find next question, skip if it's optional
-            while (
-                this.currentQuestionIndex < this.questionFlow.length &&
-                !this.questionFlow[this.currentQuestionIndex].required
-            ) {
-                this.currentQuestionIndex++;
-            }
-        }
 
         if (this.currentQuestionIndex >= this.questionFlow.length) {
             // All questions done — ask for emotion score before finishing
@@ -300,11 +304,11 @@ ${this.questionFlow[0].initialMessage}`;
     /**
      * Ask for today's emotion/mood score as the final step
      */
-    private async askEmotionScore(
+    private askEmotionScore(
         context: SOPContext,
         onMessage: (message: string) => void,
         previousResponse?: string
-    ): Promise<void> {
+    ): void {
         this.isEmotionScoreStep = true;
         context.currentStep = this.questionFlow.length + 1;
 
@@ -325,11 +329,36 @@ ${this.questionFlow[0].initialMessage}`;
     ): Promise<void> {
         const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();
 
-        const formattedContent = `\n### ${question.sectionName}\n\n${content}\n`;
+        // Check if this is a follow-up response (user already answered this section before)
+        const isFollowUp = context.responses[question.type] !== undefined
+            && context.responses[question.type] !== content;
+
+        let formattedContent: string;
+
+        if (isFollowUp) {
+            // Find the last AI message — that's the question the user is answering
+            const lastAIMessage = [...this.messages]
+                .reverse()
+                .find(m => m.role === 'assistant');
+
+            if (lastAIMessage) {
+                // Format AI question as blockquote, then user's answer
+                const aiQuestion = lastAIMessage.content
+                    .split('\n')
+                    .map(line => `> ${line}`)
+                    .join('\n');
+                formattedContent = `\n${aiQuestion}\n\n${content}\n`;
+            } else {
+                formattedContent = `\n${content}\n`;
+            }
+        } else {
+            // First response for this section — normal format with heading
+            formattedContent = `\n### ${question.sectionName}\n\n${content}\n`;
+        }
 
         await this.plugin.vaultManager.appendToSection(
             dailyNote.path,
-            '晚间复盘',
+            '复盘',
             formattedContent
         );
 
@@ -341,53 +370,6 @@ ${this.questionFlow[0].initialMessage}`;
             }
         }
 
-        // Special handling for tomorrow's plan - sync to next day
-        if (question.type === 'tomorrow_plan') {
-            await this.syncTomorrowPlan(content);
-        }
-    }
-
-    /**
-     * Sync tomorrow's plan to next day's daily note
-     */
-    private async syncTomorrowPlan(content: string): Promise<void> {
-        try {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            // Create tomorrow's note
-            const tomorrowNote = await this.plugin.vaultManager.getOrCreateDailyNote(tomorrow);
-
-            // Format as tasks
-            const formattedPlan = this.formatAsTasks(content);
-
-            const planContent = `\n**来自昨日复盘的计划：**\n\n${formattedPlan}\n`;
-
-            await this.plugin.vaultManager.appendToSection(
-                tomorrowNote.path,
-                '晨间计划',
-                planContent
-            );
-        } catch (error) {
-            console.error('Failed to sync tomorrow plan:', error);
-        }
-    }
-
-    /**
-     * Format text as task items
-     */
-    private formatAsTasks(text: string): string {
-        const lines = text.split('\n').filter((line) => line.trim());
-        return lines
-            .map((line) => {
-                const cleaned = line.replace(/^[\d\.\-\*\[\]\s]+/, '').trim();
-                if (cleaned) {
-                    return `- [ ] ${cleaned}`;
-                }
-                return '';
-            })
-            .filter((line) => line)
-            .join('\n');
     }
 
     /**
@@ -404,12 +386,21 @@ ${this.questionFlow[0].initialMessage}`;
         // Write YAML metadata to daily note
         try {
             const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();
-            const yamlFields: Record<string, string | number | null> = {
+            const yamlFields: Record<string, unknown> = {
                 status: 'completed',
             };
             if (emotionScore) {
                 yamlFields.emotion_score = parseInt(emotionScore, 10);
             }
+
+            // Count tasks from metadataCache for stats
+            const cache = this.plugin.app.metadataCache.getFileCache(dailyNote);
+            if (cache?.listItems) {
+                const tasks = cache.listItems.filter(item => item.task !== undefined);
+                yamlFields.tasks_total = tasks.length;
+                yamlFields.tasks_done = tasks.filter(t => t.task === 'x').length;
+            }
+
             await this.plugin.vaultManager.updateDailyNoteYAML(
                 dailyNote.path,
                 yamlFields
@@ -419,11 +410,7 @@ ${this.questionFlow[0].initialMessage}`;
         }
 
         // Build dynamic summary from completed questions
-        const requiredCount = this.questionFlow.filter(q => q.required).length;
-        const completedRequired = Math.min(this.currentQuestionIndex, requiredCount);
-        const completedOptional = Math.max(0, this.currentQuestionIndex - requiredCount);
-
-        let summary = `✅ 今天的晚间复盘完成了！
+        let summary = `✅ 今天的复盘完成了！
 
 **复盘摘要：**`;
 
@@ -434,11 +421,6 @@ ${this.questionFlow[0].initialMessage}`;
 
         if (emotionScore) {
             summary += `\n\n**情绪评分**: ${emotionScore}/10`;
-        }
-
-        if (completedOptional > 0) {
-            const totalOptional = this.questionFlow.filter(q => !q.required).length;
-            summary += `\n- 选问完成 ${completedOptional}/${totalOptional}`;
         }
 
         summary += `\n\n所有内容已保存到今日的日记中。晚安！🌙`;
@@ -482,7 +464,14 @@ ${this.questionFlow[0].initialMessage}`;
             }
             if (!reviewSummary) return;
 
-            const systemPrompt = `基于用户的晚间复盘内容，为用户明天的计划提供3条简短、个性化、有行动力的建议。每条建议以"💡"开头，不超过30字，要具体可执行（不要泛泛而谈）。直接输出建议，不要加前言。`;
+            const systemPrompt = `基于用户的复盘内容，提炼出3条明天可以行动的建议。
+
+严格规则：
+- 每条建议必须直接来源于用户复盘中提到的事情、想法或反思，不得凭空编造
+- 绝对禁止建议用户没有提到过的活动、方法或习惯（例如：如果用户没提到运动，就不要建议运动）
+- 建议应该是用户自己说过的计划、反思到的改进方向、或未完成事项的延续
+- 每条以"💡"开头，不超过30字
+- 直接输出建议，不要加前言`;
 
             const messages: ChatMessage[] = [
                 { role: 'user', content: `我的今日复盘：\n${reviewSummary}`, timestamp: Date.now() }
@@ -495,7 +484,9 @@ ${this.questionFlow[0].initialMessage}`;
                 const file = this.plugin.app.vault.getAbstractFileByPath(path);
                 const content = `---\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
                 if (file) {
-                    await this.plugin.app.vault.modify(file as TFile, content);
+                    if (file instanceof TFile) {
+                        await this.plugin.app.vault.modify(file, content);
+                    }
                 } else {
                     await this.plugin.app.vault.create(path, content);
                 }

@@ -32,6 +32,8 @@ export interface ChatControllerHost extends Component {
     getExistingTasks(): Promise<{ text: string; subtasks: string[] }[]>;
     startMorningSOP(): Promise<void>;
     startEveningSOP(): Promise<void>;
+    showThinkingIndicator(): void;
+    hideThinkingIndicator(): void;
     morningSOP: MorningSOP;
     eveningSOP: EveningSOP;
 }
@@ -69,44 +71,48 @@ export class ChatController {
             text: '📋 更新今日计划',
         });
         todayBtn.addEventListener('click', () => {
-            this.startQuickPlanUpdate();
+            void this.startQuickPlanUpdate();
         });
 
         const weekBtn = buttons.createEl('button', {
             cls: 'tl-plan-option-btn',
             text: '📅 更新周计划',
         });
-        weekBtn.addEventListener('click', async () => {
-            try {
-                const effectiveDate = h.plugin.vaultManager.getEffectiveDate();
-                const weekNumber = `W${effectiveDate.format('ww')}`;
-                const monthRef = effectiveDate.format('YYYY-MM');
-                const template = h.plugin.templateManager.getWeeklyPlanTemplate(weekNumber, monthRef);
-                const file = await h.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, template);
-                const leaf = h.app.workspace.getLeaf();
-                await leaf.openFile(file);
-                h.addAIMessage('✅ 已打开本周计划！');
-            } catch (e) {
-                h.addAIMessage(`❌ 创建周计划失败：${e}`);
-            }
+        weekBtn.addEventListener('click', () => {
+            void (async () => {
+                try {
+                    const effectiveDate = h.plugin.vaultManager.getEffectiveDate();
+                    const weekNumber = `W${effectiveDate.format('ww')}`;
+                    const monthRef = effectiveDate.format('YYYY-MM');
+                    const template = h.plugin.templateManager.getWeeklyPlanTemplate(weekNumber, monthRef);
+                    const file = await h.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, template);
+                    const leaf = h.app.workspace.getLeaf();
+                    await leaf.openFile(file);
+                    h.addAIMessage('✅ 已打开本周计划！');
+                } catch (e) {
+                    h.addAIMessage(`❌ 创建周计划失败：${e}`);
+                }
+            })();
         });
 
         const monthBtn = buttons.createEl('button', {
             cls: 'tl-plan-option-btn',
             text: '📆 更新月计划',
         });
-        monthBtn.addEventListener('click', async () => {
-            try {
-                const effectiveDate = h.plugin.vaultManager.getEffectiveDate();
-                const yearMonth = effectiveDate.format('YYYY-MM');
-                const template = h.plugin.templateManager.getMonthlyPlanTemplate(yearMonth);
-                const file = await h.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, template);
-                const leaf = h.app.workspace.getLeaf();
-                await leaf.openFile(file);
-                h.addAIMessage('✅ 已打开本月计划！');
-            } catch (e) {
-                h.addAIMessage(`❌ 创建月计划失败：${e}`);
-            }
+        monthBtn.addEventListener('click', () => {
+            void (async () => {
+                try {
+                    const effectiveDate = h.plugin.vaultManager.getEffectiveDate();
+                    const yearMonth = effectiveDate.format('YYYY-MM');
+                    const template = h.plugin.templateManager.getMonthlyPlanTemplate(yearMonth);
+                    const file = await h.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, template);
+                    const leaf = h.app.workspace.getLeaf();
+                    await leaf.openFile(file);
+                    h.addAIMessage('✅ 已打开本月计划！');
+                } catch (e) {
+                    h.addAIMessage(`❌ 创建月计划失败：${e}`);
+                }
+            })();
         });
 
         h.scrollToBottom();
@@ -123,7 +129,7 @@ export class ChatController {
         // Add user message
         h.addUserMessage(content);
         h.inputEl.value = '';
-        h.inputEl.style.height = 'auto';
+        h.inputEl.setCssProps({ '--tl-input-height': 'auto' });
         h.inputEl.dispatchEvent(new Event('input'));
 
         // Check for plan update / adjust intent (works in ANY mode)
@@ -146,14 +152,19 @@ export class ChatController {
 
         // Process based on SOP context
         if (h.sopContext.type === 'morning') {
+            h.showThinkingIndicator();
             await h.morningSOP.handleResponse(content, h.sopContext, (message: string) => {
+                h.hideThinkingIndicator();
                 h.streamAIMessage(message);
             }, () => {
+                h.hideThinkingIndicator();
                 // Callback to show task input UI
                 h.showTaskInput();
             });
         } else if (h.sopContext.type === 'evening') {
+            h.showThinkingIndicator();
             await h.eveningSOP.handleResponse(content, h.sopContext, (message: string) => {
+                h.hideThinkingIndicator();
                 h.streamAIMessage(message);
             });
         } else {
@@ -178,8 +189,10 @@ export class ChatController {
         });
 
         // Get AI response
+        h.showThinkingIndicator();
         const messageEl = h.createMessageElement('ai');
         let fullResponse = '';
+        let indicatorRemoved = false;
 
         try {
             const provider = h.plugin.getAIProvider();
@@ -221,6 +234,10 @@ export class ChatController {
 ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将了解融入对话。` : ''}`;
 
             await provider.sendMessage(h.messages, systemPrompt, (chunk) => {
+                if (!indicatorRemoved) {
+                    h.hideThinkingIndicator();
+                    indicatorRemoved = true;
+                }
                 fullResponse += chunk;
                 messageEl.empty();
                 MarkdownRenderer.render(h.app, fullResponse, messageEl, '', h);
@@ -234,6 +251,7 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
                 timestamp: Date.now(),
             });
         } catch (error) {
+            h.hideThinkingIndicator();
             messageEl.empty();
             const friendlyMsg = formatAPIError(error, this.host.plugin.settings.activeProvider);
             MarkdownRenderer.render(h.app, friendlyMsg, messageEl, '', h);

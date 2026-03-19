@@ -77,57 +77,57 @@ export default class TideLogPlugin extends Plugin {
 
         // Add ribbon icons
         this.addRibbonIcon('tidelog-wave', 'TideLog', () => {
-            this.activateChatView();
+            void this.activateChatView();
         });
 
         this.addRibbonIcon('layout-dashboard', '仪表盘', () => {
-            this.openView(DASHBOARD_VIEW_TYPE);
+            void this.openView(DASHBOARD_VIEW_TYPE);
         });
 
         // Add commands
         this.addCommand({
             id: 'open-chat',
-            name: 'Open Chat',
+            name: 'Open chat',
             callback: () => {
-                this.activateChatView();
+                void this.activateChatView();
             },
         });
 
         this.addCommand({
             id: 'start-morning-sop',
-            name: 'Start Morning Review',
+            name: 'Start morning review',
             callback: () => {
-                this.activateChatView('morning');
+                void this.activateChatView('morning');
             },
         });
 
         this.addCommand({
             id: 'start-evening-sop',
-            name: 'Start Evening Review',
+            name: 'Start evening review',
             callback: () => {
-                this.activateChatView('evening');
+                void this.activateChatView('evening');
             },
         });
 
         this.addCommand({
             id: 'generate-weekly-insight',
-            name: 'Generate Weekly Insight',
+            name: 'Generate weekly insight',
             callback: () => {
-                this.generateInsight('weekly');
+                void this.generateInsight('weekly');
             },
         });
 
         this.addCommand({
             id: 'generate-monthly-insight',
-            name: 'Generate Monthly Insight',
+            name: 'Generate monthly insight',
             callback: () => {
-                this.generateInsight('monthly');
+                void this.generateInsight('monthly');
             },
         });
 
         this.addCommand({
             id: 'generate-dashboard',
-            name: 'Generate / Refresh Dashboard (Markdown)',
+            name: 'Generate / refresh dashboard (Markdown)',
             callback: async () => {
                 const file = await this.dashboardService.generateDashboard();
                 const leaf = this.app.workspace.getLeaf();
@@ -137,7 +137,7 @@ export default class TideLogPlugin extends Plugin {
 
         this.addCommand({
             id: 'sync-kanban',
-            name: 'Sync Today to Kanban Board',
+            name: 'Sync today to kanban board',
             callback: async () => {
                 await this.kanbanService.syncFromDailyNote();
             },
@@ -145,34 +145,32 @@ export default class TideLogPlugin extends Plugin {
 
         this.addCommand({
             id: 'open-kanban-view',
-            name: 'Open Kanban Board',
-            callback: () => this.openView(KANBAN_VIEW_TYPE),
+            name: 'Open kanban board',
+            callback: () => { void this.openView(KANBAN_VIEW_TYPE); },
         });
 
         this.addCommand({
             id: 'open-calendar-view',
-            name: 'Open Calendar Heatmap',
-            callback: () => this.openView(CALENDAR_VIEW_TYPE),
+            name: 'Open calendar heatmap',
+            callback: () => { void this.openView(CALENDAR_VIEW_TYPE); },
         });
 
         this.addCommand({
             id: 'open-dashboard-view',
-            name: 'Open Dashboard',
-            callback: () => this.openView(DASHBOARD_VIEW_TYPE),
+            name: 'Open dashboard',
+            callback: () => { void this.openView(DASHBOARD_VIEW_TYPE); },
         });
 
         // Add settings tab
         this.addSettingTab(new TideLogSettingTab(this.app, this));
 
         // Auto-open chat view in sidebar when layout is ready
-        this.app.workspace.onLayoutReady(async () => {
-            this.activateChatView();
+        this.app.workspace.onLayoutReady(() => {
+            void this.activateChatView();
             // Ensure weekly kanban board exists
-            try {
-                await this.kanbanService.ensureWeeklyBoard();
-            } catch (e) {
+            void this.kanbanService.ensureWeeklyBoard().catch((e) => {
                 console.error('[TideLog] Failed to ensure kanban board:', e);
-            }
+            });
             // Start file linker
             this.fileLinkService.startListening();
         });
@@ -245,7 +243,7 @@ export default class TideLogPlugin extends Plugin {
         }
 
         if (leaf) {
-            workspace.revealLeaf(leaf);
+            void workspace.revealLeaf(leaf);
 
             // If SOP type specified, start the workflow
             if (sopType) {
@@ -265,11 +263,11 @@ export default class TideLogPlugin extends Plugin {
         const leaves = workspace.getLeavesOfType(viewType);
 
         if (leaves.length > 0) {
-            workspace.revealLeaf(leaves[0]);
+            void workspace.revealLeaf(leaves[0]);
         } else {
             const leaf = workspace.getLeaf(true);
             await leaf.setViewState({ type: viewType, active: true });
-            workspace.revealLeaf(leaf);
+            void workspace.revealLeaf(leaf);
         }
     }
 

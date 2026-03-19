@@ -36,16 +36,18 @@ export class InsightService {
         const dailyNotes = await this.plugin.vaultManager.getDailyNotesInRange(weekStart, weekEnd);
 
         if (dailyNotes.length === 0) {
-            onChunk('⚠️ 本周还没有日记数据，无法生成洞察报告。请先使用晨间/晚间复盘记录几天后再试。');
+            onChunk('⚠️ 本周还没有日记数据，无法生成洞察报告。请先使用复盘记录几天后再试。');
             onComplete('');
             return;
         }
 
-        // Read all note contents
+        // Read all note contents with compact metadata preamble
         const journalEntries: string[] = [];
         for (const note of dailyNotes) {
-            const content = await this.plugin.app.vault.read(note);
-            journalEntries.push(`--- ${note.basename} ---\n${content}`);
+            const preamble = this.buildCompactDaySummary(note);
+            const content = await this.plugin.app.vault.cachedRead(note);
+            const keySections = this.extractKeySections(content);
+            journalEntries.push(`--- ${note.basename} ---\n${preamble}\n${keySections}`);
         }
         const allJournals = journalEntries.join('\n\n');
 
@@ -121,10 +123,11 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         // Read all note contents (summarize if too long)
         const journalEntries: string[] = [];
         for (const note of dailyNotes) {
-            const content = await this.plugin.app.vault.read(note);
-            // For monthly reports, extract key sections to avoid token overflow
+            const content = await this.plugin.app.vault.cachedRead(note);
+            // For monthly reports, use compact preamble + key sections
+            const preamble = this.buildCompactDaySummary(note);
             const summary = this.extractKeySections(content);
-            journalEntries.push(`--- ${note.basename} ---\n${summary}`);
+            journalEntries.push(`--- ${note.basename} ---\n${preamble}\n${summary}`);
         }
         const allJournals = journalEntries.join('\n\n');
 
@@ -197,9 +200,10 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         const userProfile = await this.plugin.vaultManager.getUserProfileContent();
         const journalEntries: string[] = [];
         for (const note of dailyNotes) {
-            const content = await this.plugin.app.vault.read(note);
+            const content = await this.plugin.app.vault.cachedRead(note);
+            const preamble = this.buildCompactDaySummary(note);
             const summary = this.extractKeySections(content);
-            journalEntries.push(`--- ${note.basename} ---\n${summary}`);
+            journalEntries.push(`--- ${note.basename} ---\n${preamble}\n${summary}`);
         }
 
         const prompt = PROFILE_SUGGESTION_PROMPT
@@ -331,7 +335,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
     private extractKeySections(content: string): string {
         const lines = content.split('\n');
         const keepSections = [
-            '晨间计划', '晚间复盘', '目标对标', '成功日记',
+            '\u8ba1\u5212', '\u590d\u76d8', '\u76ee\u6807\u5bf9\u6807', '\u6210\u529f\u65e5\u8bb0',
             '开心事与情绪', '焦虑觉察', '明日计划', '深度分析',
             '反思', '原则提炼', '自由随笔'
         ];
@@ -363,6 +367,28 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         }
 
         return result.join('\n').trim() || content.substring(0, 1000);
+    }
+
+    /**
+     * Build a compact day summary from metadataCache (zero I/O for metadata)
+     */
+    private buildCompactDaySummary(file: TFile): string {
+        const cache = this.plugin.app.metadataCache.getFileCache(file);
+        const fm = cache?.frontmatter;
+        const listItems = cache?.listItems ?? [];
+        const tasks = listItems.filter(item => item.task !== undefined);
+        const done = tasks.filter(t => t.task === 'x').length;
+        const total = tasks.length;
+
+        const parts: string[] = [];
+        if (fm?.emotion_score) parts.push(`情绪: ${fm.emotion_score}/10`);
+        if (total > 0) parts.push(`任务: ${done}/${total}`);
+        if (fm?.status) parts.push(`状态: ${fm.status}`);
+        if (fm?.tags && Array.isArray(fm.tags) && fm.tags.length > 0) {
+            parts.push(`标签: ${fm.tags.join(', ')}`);
+        }
+
+        return parts.length > 0 ? `[${parts.join(' | ')}]` : '';
     }
 
     /**

@@ -76,7 +76,10 @@ export class KanbanService {
             }
         }
 
-        return file as TFile;
+        if (!(file instanceof TFile)) {
+            throw new Error(`Expected TFile at path: ${path}`);
+        }
+        return file;
     }
 
     /**

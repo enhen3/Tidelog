@@ -60,7 +60,7 @@ export class DashboardView extends ItemView {
         titleBar.createEl('h2', { cls: 'tl-dash-title', text: '📊 TideLog 仪表盘' });
 
         const refreshBtn = titleBar.createEl('button', { cls: 'tl-dash-refresh-btn', text: '刷新' });
-        refreshBtn.addEventListener('click', () => this.render());
+        refreshBtn.addEventListener('click', () => { void this.render(); });
 
         const grid = this.containerEl_.createDiv('tl-dash-grid');
 
@@ -202,42 +202,48 @@ export class DashboardView extends ItemView {
 
         const linkGrid = linksCard.createDiv('tl-dash-link-grid');
 
-        this.createQuickLink(linkGrid, '📝', '今日日记', async () => {
-            const file = await this.plugin.vaultManager.getOrCreateDailyNote();
-            this.app.workspace.getLeaf().openFile(file);
+        this.createQuickLink(linkGrid, '📝', '今日日记', () => {
+            void (async () => {
+                const file = await this.plugin.vaultManager.getOrCreateDailyNote();
+                void this.app.workspace.getLeaf().openFile(file);
+            })();
         });
 
-        this.createQuickLink(linkGrid, '📅', '周计划', async () => {
-            try {
-                const ed = this.plugin.vaultManager.getEffectiveDate();
-                const weekNum = `W${ed.format('ww')}`;
-                const monthRef = ed.format('YYYY-MM');
-                const tmpl = this.plugin.templateManager.getWeeklyPlanTemplate(weekNum, monthRef);
-                const file = await this.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, tmpl);
-                this.app.workspace.getLeaf().openFile(file);
-            } catch {
-                // ignore
-            }
+        this.createQuickLink(linkGrid, '📅', '周计划', () => {
+            void (async () => {
+                try {
+                    const ed = this.plugin.vaultManager.getEffectiveDate();
+                    const weekNum = `W${ed.format('ww')}`;
+                    const monthRef = ed.format('YYYY-MM');
+                    const tmpl = this.plugin.templateManager.getWeeklyPlanTemplate(weekNum, monthRef);
+                    const file = await this.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, tmpl);
+                    void this.app.workspace.getLeaf().openFile(file);
+                } catch {
+                    // ignore
+                }
+            })();
         });
 
-        this.createQuickLink(linkGrid, '📆', '月计划', async () => {
-            try {
-                const ed = this.plugin.vaultManager.getEffectiveDate();
-                const ym = ed.format('YYYY-MM');
-                const tmpl = this.plugin.templateManager.getMonthlyPlanTemplate(ym);
-                const file = await this.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, tmpl);
-                this.app.workspace.getLeaf().openFile(file);
-            } catch {
-                // ignore
-            }
+        this.createQuickLink(linkGrid, '📆', '月计划', () => {
+            void (async () => {
+                try {
+                    const ed = this.plugin.vaultManager.getEffectiveDate();
+                    const ym = ed.format('YYYY-MM');
+                    const tmpl = this.plugin.templateManager.getMonthlyPlanTemplate(ym);
+                    const file = await this.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, tmpl);
+                    void this.app.workspace.getLeaf().openFile(file);
+                } catch {
+                    // ignore
+                }
+            })();
         });
 
         this.createQuickLink(linkGrid, '📊', '看板', () => {
-            this.app.workspace.getLeaf(true).setViewState({ type: KANBAN_VIEW_TYPE, active: true });
+            void this.app.workspace.getLeaf(true).setViewState({ type: KANBAN_VIEW_TYPE, active: true });
         });
 
         this.createQuickLink(linkGrid, '🗓️', '日历', () => {
-            this.app.workspace.getLeaf(true).setViewState({ type: CALENDAR_VIEW_TYPE, active: true });
+            void this.app.workspace.getLeaf(true).setViewState({ type: CALENDAR_VIEW_TYPE, active: true });
         });
     }
 

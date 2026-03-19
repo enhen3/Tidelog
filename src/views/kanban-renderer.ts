@@ -85,7 +85,7 @@ export class KanbanRenderer {
 
         // Click title to open file
         titleArea.addEventListener('click', () => {
-            if (file) h.app.workspace.getLeaf().openFile(file);
+            if (file) void h.app.workspace.getLeaf().openFile(file);
         });
 
         const content = await h.app.vault.read(file);
@@ -120,15 +120,17 @@ export class KanbanRenderer {
                 }
                 const cb = card.createEl('input', { type: 'checkbox' });
                 cb.checked = goal.done;
-                cb.addEventListener('click', async (e) => {
+                cb.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    if (file) await h.toggleMdTask(file, goal.text, goal.done);
-                    // Update UI in-place to avoid scroll reset
-                    goal.done = !goal.done;
-                    cb.checked = goal.done;
-                    card.toggleClass('tl-pyramid-task-done', goal.done);
-                    label.toggleClass('tl-text-done', goal.done);
+                    void (async () => {
+                        if (file) await h.toggleMdTask(file, goal.text, goal.done);
+                        // Update UI in-place to avoid scroll reset
+                        goal.done = !goal.done;
+                        cb.checked = goal.done;
+                        card.toggleClass('tl-pyramid-task-done', goal.done);
+                        label.toggleClass('tl-text-done', goal.done);
+                    })();
                 });
                 const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: goal.text });
                 if (goal.done) { label.addClass('tl-text-done'); }
@@ -177,7 +179,7 @@ export class KanbanRenderer {
 
         // Click title area to open file
         titleArea.addEventListener('click', () => {
-            if (file) h.app.workspace.getLeaf().openFile(file);
+            if (file) void h.app.workspace.getLeaf().openFile(file);
         });
 
         const body = layer.createDiv('tl-pyramid-week-body');
@@ -217,15 +219,17 @@ export class KanbanRenderer {
                 }
                 const cb = card.createEl('input', { type: 'checkbox' });
                 cb.checked = item.done;
-                cb.addEventListener('click', async (e) => {
+                cb.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    if (file) await h.toggleMdTask(file, item.text, item.done);
-                    // Update UI in-place to avoid scroll reset
-                    item.done = !item.done;
-                    cb.checked = item.done;
-                    card.toggleClass('tl-pyramid-task-done', item.done);
-                    label.toggleClass('tl-text-done', item.done);
+                    void (async () => {
+                        if (file) await h.toggleMdTask(file, item.text, item.done);
+                        // Update UI in-place to avoid scroll reset
+                        item.done = !item.done;
+                        cb.checked = item.done;
+                        card.toggleClass('tl-pyramid-task-done', item.done);
+                        label.toggleClass('tl-text-done', item.done);
+                    })();
                 });
                 const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: item.text });
                 if (item.done) { label.addClass('tl-text-done'); }
@@ -272,13 +276,15 @@ export class KanbanRenderer {
         const file = h.app.vault.getAbstractFileByPath(filePath);
 
         // Click title to open file
-        titleArea.addEventListener('click', async () => {
-            if (file && file instanceof TFile) {
-                h.app.workspace.getLeaf().openFile(file);
-            } else {
-                const f = await h.plugin.vaultManager.getOrCreateDailyNote(targetDay.toDate());
-                h.app.workspace.getLeaf().openFile(f);
-            }
+        titleArea.addEventListener('click', () => {
+            void (async () => {
+                if (file && file instanceof TFile) {
+                    void h.app.workspace.getLeaf().openFile(file);
+                } else {
+                    const f = await h.plugin.vaultManager.getOrCreateDailyNote(targetDay.toDate());
+                    void h.app.workspace.getLeaf().openFile(f);
+                }
+            })();
         });
 
         interface DayTask { text: string; done: boolean; indent: number }
@@ -332,12 +338,14 @@ export class KanbanRenderer {
                         row.createEl('span', { cls: 'tl-carry-forward-text', text: ct.text });
                         row.createEl('span', { cls: 'tl-carry-forward-date', text: ct.date.substring(5) });
                         const addBtn = row.createEl('button', { cls: 'tl-carry-forward-add', text: '+' });
-                        addBtn.addEventListener('click', async (e) => {
+                        addBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            await h.plugin.vaultManager.addTaskToDaily(ct.text);
-                            row.remove();
-                            h.invalidateTabCache('kanban');
-                            h.switchTab('kanban');
+                            void (async () => {
+                                await h.plugin.vaultManager.addTaskToDaily(ct.text);
+                                row.remove();
+                                h.invalidateTabCache('kanban');
+                                h.switchTab('kanban');
+                            })();
                         });
                     }
                 }
@@ -386,17 +394,19 @@ export class KanbanRenderer {
         }
         const cb = card.createEl('input', { type: 'checkbox' });
         cb.checked = task.done;
-        cb.addEventListener('click', async (e) => {
+        cb.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
-            const f = h.app.vault.getAbstractFileByPath(filePath);
-            if (f && f instanceof TFile) {
-                await h.toggleMdTask(f, task.text, task.done);
-            }
-            task.done = !task.done;
-            cb.checked = task.done;
-            card.toggleClass('tl-pyramid-task-done', task.done);
-            label.toggleClass('tl-text-done', task.done);
+            void (async () => {
+                const f = h.app.vault.getAbstractFileByPath(filePath);
+                if (f && f instanceof TFile) {
+                    await h.toggleMdTask(f, task.text, task.done);
+                }
+                task.done = !task.done;
+                cb.checked = task.done;
+                card.toggleClass('tl-pyramid-task-done', task.done);
+                label.toggleClass('tl-text-done', task.done);
+            })();
         });
         const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: task.text });
         if (task.done) { label.addClass('tl-text-done'); }

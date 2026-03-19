@@ -76,16 +76,16 @@ export class KanbanView extends ItemView {
         const header = this.containerEl_.createDiv('tl-kanban-header');
 
         const prevBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '‹' });
-        prevBtn.addEventListener('click', () => { this.currentWeekOffset--; this.render(); });
+        prevBtn.addEventListener('click', () => { this.currentWeekOffset--; void this.render(); });
 
         const title = header.createEl('span', { cls: 'tl-kanban-title', text: `${weekRef}  ${weekLabel}` });
 
         const nextBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '›' });
-        nextBtn.addEventListener('click', () => { this.currentWeekOffset++; this.render(); });
+        nextBtn.addEventListener('click', () => { this.currentWeekOffset++; void this.render(); });
 
         if (this.currentWeekOffset !== 0) {
             const todayBtn = header.createEl('button', { cls: 'tl-kanban-today-btn', text: '今天' });
-            todayBtn.addEventListener('click', () => { this.currentWeekOffset = 0; this.render(); });
+            todayBtn.addEventListener('click', () => { this.currentWeekOffset = 0; void this.render(); });
         }
 
         // Parse board data
@@ -98,8 +98,8 @@ export class KanbanView extends ItemView {
             const colEl = grid.createDiv('tl-kanban-column');
 
             const colHeader = colEl.createDiv('tl-kanban-col-header');
-            const headerTitle = colHeader.createEl('span', { text: col.label });
-            const badge = colHeader.createEl('span', {
+            colHeader.createEl('span', { text: col.label });
+            colHeader.createEl('span', {
                 cls: 'tl-kanban-badge',
                 text: `${col.tasks.length}`,
             });
@@ -117,9 +117,11 @@ export class KanbanView extends ItemView {
 
                 const checkbox = card.createEl('input', { type: 'checkbox' });
                 checkbox.checked = task.done;
-                checkbox.addEventListener('change', async () => {
-                    await this.toggleTask(col.id, task.text, !task.done, targetDate.toDate());
-                    await this.render();
+                checkbox.addEventListener('change', () => {
+                    void (async () => {
+                        await this.toggleTask(col.id, task.text, !task.done, targetDate.toDate());
+                        await this.render();
+                    })();
                 });
 
                 const label = card.createEl('span', {

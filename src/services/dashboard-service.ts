@@ -33,7 +33,10 @@ export class DashboardService {
             file = await this.app.vault.create(path, content);
         }
 
-        return file as TFile;
+        if (!(file instanceof TFile)) {
+            throw new Error('Expected TFile for Dashboard.md');
+        }
+        return file;
     }
 
     /**
@@ -101,7 +104,7 @@ LIMIT 7
 
 ## 💡 今日原则
 
-> ${principle || '_暂无原则，完成晚间复盘后 AI 会帮助你提炼。_'}
+> ${principle || '_暂无原则，完成复盘后 AI 会帮助你提炼。_'}
 
 ## 🔍 活跃模式
 
@@ -122,7 +125,7 @@ LIMIT 7
             const file = this.app.vault.getAbstractFileByPath(path);
             if (!file || !(file instanceof TFile)) return '';
 
-            const content = await this.app.vault.read(file);
+            const content = await this.app.vault.cachedRead(file);
             const lines = content.split('\n');
 
             // Extract principle lines (start with "- " but not the example ones)
@@ -149,7 +152,7 @@ LIMIT 7
             const file = this.app.vault.getAbstractFileByPath(path);
             if (!file || !(file instanceof TFile)) return '';
 
-            const content = await this.app.vault.read(file);
+            const content = await this.app.vault.cachedRead(file);
             const lines = content.split('\n');
 
             // Extract pattern lines (start with "- " but not the example ones)

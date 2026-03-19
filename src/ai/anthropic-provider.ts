@@ -20,7 +20,7 @@ export class AnthropicProvider extends BaseAIProvider {
             content: m.content,
         }));
 
-        const response = await fetch(`${this.baseUrl}/messages`, {
+        const response = await this.makeRequest(`${this.baseUrl}/messages`, {
             method: 'POST',
             headers: {
                 'x-api-key': this.apiKey,
@@ -32,69 +32,26 @@ export class AnthropicProvider extends BaseAIProvider {
                 max_tokens: 4096,
                 system: systemPrompt,
                 messages: anthropicMessages,
-                stream: true,
             }),
         });
 
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Anthropic API error: ${response.status} - ${error}`);
+        if (response.status >= 400) {
+            throw new Error(`Anthropic API error: ${response.status} - ${response.text}`);
         }
 
-        return this.processAnthropicStream(response, onChunk);
-    }
+        // Extract content from Anthropic response format
+        const data = response.json as { content?: Array<{ type: string; text: string }> };
+        const fullContent = data.content
+            ?.filter((block: { type: string }) => block.type === 'text')
+            .map((block: { text: string }) => block.text)
+            .join('') || '';
 
-    /**
-     * Process Anthropic's SSE stream format
-     */
-    private async processAnthropicStream(
-        response: Response,
-        onChunk: StreamCallback
-    ): Promise<string> {
-        const reader = response.body?.getReader();
-        if (!reader) {
-            throw new Error('No response body');
-        }
-
-        const decoder = new TextDecoder();
-        let fullContent = '';
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    if (data === '[DONE]') continue;
-
-                    try {
-                        const parsed = JSON.parse(data);
-                        if (parsed.type === 'content_block_delta') {
-                            const text = parsed.delta?.text || '';
-                            if (text) {
-                                fullContent += text;
-                                onChunk(text);
-                            }
-                        }
-                    } catch {
-                        // Ignore parse errors
-                    }
-                }
-            }
-        }
-
-        return fullContent;
+        return this.simulateStream(fullContent, onChunk);
     }
 
     async testConnection(): Promise<boolean> {
         try {
-            const response = await fetch(`${this.baseUrl}/messages`, {
+            const response = await this.makeRequest(`${this.baseUrl}/messages`, {
                 method: 'POST',
                 headers: {
                     'x-api-key': this.apiKey,
@@ -107,7 +64,7 @@ export class AnthropicProvider extends BaseAIProvider {
                     messages: [{ role: 'user', content: 'Hi' }],
                 }),
             });
-            return response.ok;
+            return response.status >= 200 && response.status < 300;
         } catch {
             return false;
         }

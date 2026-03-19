@@ -78,7 +78,10 @@ export class VaultManager {
             file = await this.app.vault.create(path, content);
         }
 
-        return file as TFile;
+        if (!(file instanceof TFile)) {
+            throw new Error(`Expected TFile at path: ${path}`);
+        }
+        return file;
     }
 
     /**
@@ -106,15 +109,13 @@ monthly_ref: "[[${monthRef}]]"
 
 # ${dateStr} ${weekday}
 
-## 晨间计划
+## 计划
 
-<!-- 今日计划将在晨间复盘时填充 -->
+<!-- 今日计划将在计划时填充 -->
 
-## 晚间复盘
+## 复盘
 
-<!-- 晚间复盘内容将在晚间复盘时填充 -->
-
----
+<!-- 复盘内容将在复盘时填充 -->
 
 `;
     }
@@ -209,7 +210,10 @@ monthly_ref: "[[${monthRef}]]"
             file = await this.app.vault.create(path, content);
         }
 
-        return file as TFile;
+        if (!(file instanceof TFile)) {
+            throw new Error(`Expected TFile at path: ${path}`);
+        }
+        return file;
     }
 
     /**
@@ -230,7 +234,10 @@ monthly_ref: "[[${monthRef}]]"
             file = await this.app.vault.create(path, content);
         }
 
-        return file as TFile;
+        if (!(file instanceof TFile)) {
+            throw new Error(`Expected TFile at path: ${path}`);
+        }
+        return file;
     }
 
     /**
@@ -395,10 +402,10 @@ monthly_ref: "[[${monthRef}]]"
     /**
      * Get all daily notes in a date range
      */
-    async getDailyNotesInRange(
+    getDailyNotesInRange(
         startDate: moment.Moment,
         endDate: moment.Moment
-    ): Promise<TFile[]> {
+    ): TFile[] {
         const files: TFile[] = [];
         const folder = this.app.vault.getAbstractFileByPath(this.settings.dailyFolder);
 
@@ -517,18 +524,18 @@ monthly_ref: "[[${monthRef}]]"
     }
 
     /**
-     * Add a task line to today's daily note under 晨间计划
+     * Add a task line to today's daily note under 计划
      */
     async addTaskToDaily(taskText: string, date?: Date): Promise<void> {
         const file = await this.getOrCreateDailyNote(date);
         const content = await this.app.vault.cachedRead(file);
         const taskLine = `- [ ] ${taskText}`;
 
-        // Try to insert under ## 晨间计划
+        // Try to insert under ## 计划
         const lines = content.split('\n');
         let insertIdx = -1;
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].trim().startsWith('## 晨间计划')) {
+            if (lines[i].trim().startsWith('## 计划')) {
                 insertIdx = i + 1;
                 // Skip past any sub-headers, blank lines, or existing content until next ## or ---
                 while (insertIdx < lines.length && !lines[insertIdx].startsWith('## ') && !lines[insertIdx].startsWith('---')) {
