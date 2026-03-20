@@ -4,8 +4,9 @@
 
 import TideLogPlugin from '../main';
 import { SOPContext, ChatMessage } from '../types';
-import { getBaseContextPrompt, MORNING_PROMPT } from './prompts';
+import { getBaseContextPrompt, getMorningPrompt } from './prompts';
 import { formatAPIError } from '../utils/error-formatter';
+import { t, getLanguage } from '../i18n';
 
 export class MorningSOP {
     private plugin: TideLogPlugin;
@@ -34,11 +35,17 @@ export class MorningSOP {
         context.userProfileContent = userProfile || undefined;
 
         // Send initial message - go directly to task input
-        let initialMessage = `早上好！☀️ 让我们开始今天的计划。\n\n`;
+        let initialMessage = getLanguage() === 'en'
+            ? `Good morning! ☀️ Let's plan your day.\n\n`
+            : `早上好！☀️ 让我们开始今天的计划。\n\n`;
         if (weeklyPlan) {
-            initialMessage += '我已经读取了你的本周计划，会帮助你对标今日任务。\n\n';
+            initialMessage += getLanguage() === 'en'
+                ? 'I\'ve read your weekly plan and will help align today\'s tasks.\n\n'
+                : '我已经读取了你的本周计划，会帮助你对标今日任务。\n\n';
         }
-        initialMessage += '**请在下方输入今天要完成的任务：**';
+        initialMessage += getLanguage() === 'en'
+            ? '**Please enter the tasks you want to complete today:**'
+            : '**请在下方输入今天要完成的任务：**';
 
         onMessage(initialMessage);
         context.currentStep = 1;
@@ -99,9 +106,14 @@ export class MorningSOP {
 
         // Use AI to evaluate feasibility
         const userProfile = context.userProfileContent;
-        const systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + MORNING_PROMPT;
+        const systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + getMorningPrompt();
 
-        const evaluationPrompt = `用户今天的计划：
+        const evaluationPrompt = getLanguage() === 'en'
+            ? `User's plan for today:
+${todayPlan}
+
+Quick assessment (2-3 sentences): Is the task load realistic? Is there one core task that must be pushed forward today? Anything that could be more specific? If reasonable, affirm and confirm; if there's room for improvement, say it directly like a teammate.`
+            : `用户今天的计划：
 ${todayPlan}
 
 快速评估（2-3 句话）：任务量是否现实？有没有一件今天必须推进的核心任务？有什么可以更具体的地方？合理就肯定并确认；有优化空间就像战友一样直接说。`;
@@ -124,10 +136,16 @@ ${todayPlan}
                 }
             );
 
-            onMessage(response + '\n\n确认这个计划吗？（回复"确认"或者调整你的计划）');
+            const confirmSuffix = getLanguage() === 'en'
+                ? '\n\nConfirm this plan? (Reply "confirm" or adjust your plan)'
+                : '\n\n确认这个计划吗？（回复"确认"或者调整你的计划）';
+            onMessage(response + confirmSuffix);
             context.currentStep = 2;
         } catch (error) {
-            onMessage(formatAPIError(error, this.plugin.settings.activeProvider) + '\n\n请确认你的计划，或调整后重新输入。');
+            const errorSuffix = getLanguage() === 'en'
+                ? '\n\nPlease confirm your plan, or adjust and re-enter.'
+                : '\n\n请确认你的计划，或调整后重新输入。';
+            onMessage(formatAPIError(error, this.plugin.settings.activeProvider) + errorSuffix);
             context.currentStep = 2;
         }
     }
@@ -156,11 +174,14 @@ ${formattedPlan}
 
         await this.plugin.vaultManager.appendToSection(
             dailyNote.path,
-            '计划',
+            t('vault.sectionPlan'),
             content
         );
 
-        onMessage(`✅ 完美！今日计划已写入到你的日记中。\n\n祝你度过高效的一天！如果需要帮助，随时来找我。🌟`);
+        const doneMsg = getLanguage() === 'en'
+            ? '✅ Perfect! Your daily plan has been written to your journal.\n\nHave a productive day! If you need help, I\'m here anytime. 🌟'
+            : '✅ 完美！今日计划已写入到你的日记中。\n\n祝你度过高效的一天！如果需要帮助，随时来找我。🌟';
+        onMessage(doneMsg);
 
         // Update daily note YAML status
         try {
@@ -204,7 +225,7 @@ ${formattedPlan}
      * Check if response is a confirmation
      */
     private isConfirmation(text: string): boolean {
-        const confirmWords = ['确认', '好', '可以', 'ok', 'yes', '是', '确定', '没问题'];
+        const confirmWords = ['确认', '好', '可以', 'ok', 'yes', '是', '确定', '没问题', 'confirm', 'sure', 'looks good', 'lgtm'];
         return confirmWords.some((word) =>
             text.toLowerCase().includes(word.toLowerCase())
         );
@@ -219,7 +240,7 @@ ${formattedPlan}
         onMessage: (message: string) => void
     ): Promise<void> {
         const userProfile = context.userProfileContent;
-        const systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + MORNING_PROMPT;
+        const systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + getMorningPrompt();
 
         this.messages.push({
             role: 'user',

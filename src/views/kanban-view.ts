@@ -11,14 +11,16 @@ import {
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
+import { t, getLanguage } from '../i18n';
 
 export const KANBAN_VIEW_TYPE = 'tl-kanban-view';
 
 const DAY_COLUMNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAY_LABELS: Record<string, string> = {
-    Mon: '周一', Tue: '周二', Wed: '周三', Thu: '周四',
-    Fri: '周五', Sat: '周六', Sun: '周日',
-};
+function getDayLabels(): Record<string, string> {
+    return getLanguage() === 'en'
+        ? { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' }
+        : { Mon: '周一', Tue: '周二', Wed: '周三', Thu: '周四', Fri: '周五', Sat: '周六', Sun: '周日' };
+}
 
 interface KanbanTask {
     text: string;
@@ -42,7 +44,7 @@ export class KanbanView extends ItemView {
     }
 
     getViewType(): string { return KANBAN_VIEW_TYPE; }
-    getDisplayText(): string { return '看板'; }
+    getDisplayText(): string { return t('kanban.displayText'); }
     getIcon(): string { return 'kanban'; }
 
     async onOpen(): Promise<void> {
@@ -84,7 +86,7 @@ export class KanbanView extends ItemView {
         nextBtn.addEventListener('click', () => { this.currentWeekOffset++; void this.render(); });
 
         if (this.currentWeekOffset !== 0) {
-            const todayBtn = header.createEl('button', { cls: 'tl-kanban-today-btn', text: '今天' });
+            const todayBtn = header.createEl('button', { cls: 'tl-kanban-today-btn', text: t('kanban.today') });
             todayBtn.addEventListener('click', () => { this.currentWeekOffset = 0; void this.render(); });
         }
 
@@ -107,7 +109,7 @@ export class KanbanView extends ItemView {
             const taskList = colEl.createDiv('tl-kanban-task-list');
 
             if (col.tasks.length === 0) {
-                taskList.createDiv({ cls: 'tl-kanban-empty', text: '暂无任务' });
+                taskList.createDiv({ cls: 'tl-kanban-empty', text: t('kanban.noTasks') });
             }
 
             for (const task of col.tasks) {
@@ -151,7 +153,7 @@ export class KanbanView extends ItemView {
             { id: 'backlog', label: '📋 Backlog', tasks: [] },
         ];
         for (const day of DAY_COLUMNS) {
-            columns.push({ id: day, label: `${DAY_LABELS[day]} (${day})`, tasks: [] });
+            columns.push({ id: day, label: `${getDayLabels()[day]} (${day})`, tasks: [] });
         }
         columns.push({ id: 'completed', label: '✅ Completed', tasks: [] });
 
@@ -173,7 +175,7 @@ export class KanbanView extends ItemView {
                 } else {
                     // Try to match day columns
                     for (const day of DAY_COLUMNS) {
-                        if (headerText.includes(day) || headerText.includes(DAY_LABELS[day])) {
+                        if (headerText.includes(day) || headerText.includes(getDayLabels()[day])) {
                             currentCol = columns.find(c => c.id === day) || null;
                             break;
                         }

@@ -3774,3 +3774,154 @@ button.tl-periodic-open-btn {
 .tl-input-auto {
 	overflow: hidden;
 }
+
+/* =============================================================================
+   Pro Feature — Modal, Locked Views, CTA Buttons
+   ============================================================================= */
+
+/* --- Pro Modal --- */
+
+.tl-pro-modal {
+	text-align: center;
+	padding: var(--size-4-4) var(--size-4-6);
+}
+
+.tl-pro-modal-icon {
+	font-size: 48px;
+	margin-bottom: var(--size-4-2);
+}
+
+.tl-pro-modal-title {
+	font-size: var(--font-ui-large);
+	font-weight: 700;
+	margin-bottom: var(--size-4-2);
+}
+
+.tl-pro-modal-desc {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin-bottom: var(--size-4-3);
+}
+
+.tl-pro-modal-features {
+	text-align: left;
+	list-style: none;
+	padding: 0;
+	margin: 0 0 var(--size-4-4) 0;
+}
+
+.tl-pro-modal-features li {
+	padding: var(--size-4-1) 0;
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+}
+
+.tl-pro-modal-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.tl-pro-cta-btn {
+	display: block;
+	padding: var(--size-4-2) var(--size-4-4);
+	border-radius: var(--radius-m);
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	text-decoration: none;
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.tl-pro-cta-cn {
+	background: linear-gradient(135deg, #3B8EA5 0%, #5AABB8 100%);
+	color: white !important;
+}
+
+.tl-pro-cta-cn:hover {
+	opacity: 0.9;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(59, 142, 165, 0.3);
+}
+
+.tl-pro-cta-intl {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal) !important;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.tl-pro-cta-intl:hover {
+	background: var(--background-modifier-active-hover);
+	transform: translateY(-1px);
+}
+
+.tl-pro-modal-settings-link {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.tl-pro-modal-settings-link a {
+	color: var(--text-accent);
+	cursor: pointer;
+	text-decoration: none;
+	margin-left: 4px;
+}
+
+.tl-pro-modal-settings-link a:hover {
+	text-decoration: underline;
+}
+
+/* --- Locked View (Dashboard / Calendar) --- */
+
+.tl-pro-locked-view {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	min-height: 400px;
+	text-align: center;
+	padding: 40px 32px;
+}
+
+.tl-pro-locked-icon {
+	font-size: 64px;
+	margin-bottom: 16px;
+	opacity: 0.7;
+}
+
+.tl-pro-locked-title {
+	font-size: 20px;
+	font-weight: 700;
+	margin-bottom: 8px;
+	color: var(--text-normal);
+}
+
+.tl-pro-locked-desc {
+	font-size: 14px;
+	color: var(--text-muted);
+	max-width: 340px;
+	line-height: 1.5;
+	margin-bottom: 24px;
+}
+
+.tl-pro-locked-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+	max-width: 260px;
+}
+
+/* --- Locked Insight Buttons (Chat View) --- */
+
+.tl-pro-locked-btn {
+	position: relative;
+	opacity: 0.7;
+}
+
+.tl-pro-locked-btn:hover {
+	opacity: 0.9;
+}

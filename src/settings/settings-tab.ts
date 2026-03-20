@@ -13,6 +13,8 @@ import {
 import TideLogPlugin from '../main';
 import { AIProviderType, EveningQuestionConfig } from '../types';
 import { DEFAULT_EVENING_QUESTIONS } from '../constants';
+import { t } from '../i18n';
+import type { Language } from '../i18n';
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;
@@ -27,22 +29,46 @@ export class TideLogSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         // =================================================================
+        // Language Setting
+        // =================================================================
+        new Setting(containerEl).setName(t('settings.language')).setHeading();
+
+        new Setting(containerEl)
+            .setName(t('settings.language'))
+            .setDesc(t('settings.languageDesc'))
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption('zh', '简体中文')
+                    .addOption('en', 'English')
+                    .setValue(this.plugin.settings.language)
+                    .onChange((value) => {
+                        this.plugin.settings.language = value as Language;
+                        void this.plugin.saveSettings().then(() => this.display());
+                    })
+            );
+
+        // =================================================================
+        // Pro License
+        // =================================================================
+        this.renderProLicense(containerEl);
+
+        // =================================================================
         // AI Provider Settings
         // =================================================================
-        new Setting(containerEl).setName('AI provider').setHeading();
+        new Setting(containerEl).setName(t('settings.sectionAI')).setHeading();
 
         // Active provider selection
         new Setting(containerEl)
-            .setName('当前使用的 AI 服务')
-            .setDesc('选择要使用的 AI 服务提供商')
+            .setName(t('settings.aiProvider'))
+            .setDesc(t('settings.aiProviderDesc'))
             .addDropdown((dropdown) =>
                 dropdown
-                    .addOption('openrouter', 'OpenRouter (推荐)')
+                    .addOption('openrouter', 'OpenRouter')
                     .addOption('anthropic', 'Anthropic Claude')
                     .addOption('gemini', 'Google Gemini')
                     .addOption('openai', 'OpenAI')
-                    .addOption('siliconflow', 'SiliconFlow 硅基流动')
-                    .addOption('custom', '自定义 (OpenAI 兼容)')
+                    .addOption('siliconflow', 'SiliconFlow')
+                    .addOption('custom', 'Custom (OpenAI compatible)')
                     .setValue(this.plugin.settings.activeProvider)
                     .onChange((value) => {
                         this.plugin.settings.activeProvider = value as AIProviderType;
@@ -56,11 +82,11 @@ export class TideLogSettingTab extends PluginSettingTab {
         // =================================================================
         // Folder Settings
         // =================================================================
-        new Setting(containerEl).setName('Folders').setHeading();
+        new Setting(containerEl).setName(t('settings.sectionFolders')).setHeading();
 
         new Setting(containerEl)
-            .setName('日记文件夹')
-            .setDesc('存放每日日记的文件夹路径')
+            .setName(t('settings.dailyFolder'))
+            .setDesc(t('settings.dailyFolderDesc'))
             .addText((text) =>
                 text
                     .setPlaceholder('01-Daily')
@@ -72,8 +98,8 @@ export class TideLogSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('计划文件夹')
-            .setDesc('存放周/月计划的文件夹路径')
+            .setName(t('settings.planFolder'))
+            .setDesc(t('settings.planFolderDesc'))
             .addText((text) =>
                 text
                     .setPlaceholder('02-Plan')
@@ -85,8 +111,8 @@ export class TideLogSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('档案文件夹')
-            .setDesc('存放用户画像、原则等档案的文件夹路径')
+            .setName(t('settings.archiveFolder'))
+            .setDesc(t('settings.archiveFolderDesc'))
             .addText((text) =>
                 text
                     .setPlaceholder('03-Archive')
@@ -100,11 +126,11 @@ export class TideLogSettingTab extends PluginSettingTab {
         // =================================================================
         // Date Settings
         // =================================================================
-        new Setting(containerEl).setName('Date boundary').setHeading();
+        new Setting(containerEl).setName(t('settings.dayBoundaryHour')).setHeading();
 
         new Setting(containerEl)
-            .setName('日期分界时间')
-            .setDesc('凌晨几点前的日记归档为前一天（默认 6 点）')
+            .setName(t('settings.dayBoundaryHour'))
+            .setDesc(t('settings.dayBoundaryHourDesc'))
             .addSlider((slider) =>
                 slider
                     .setLimits(0, 12, 1)
@@ -133,7 +159,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         if (provider === 'custom') {
             const urlSetting = new Setting(containerEl)
                 .setName('API Base URL')
-                .setDesc('OpenAI 兼容 API 的基础地址（如 DeepSeek / SiliconFlow / Groq / Ollama）');
+                .setDesc(t('settings.baseUrlDesc'));
 
             urlSetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-wide');
@@ -173,7 +199,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         // --- API Key with password toggle ---
         const apiKeySetting = new Setting(containerEl)
             .setName(`${this.getProviderName(provider)} API Key`)
-            .setDesc('输入你的 API 密钥');
+            .setDesc(t('settings.apiKeyDesc', this.getProviderName(provider)));
 
         let apiKeyInput: HTMLInputElement;
         apiKeySetting.addText((text) => {
@@ -181,7 +207,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             apiKeyInput.type = 'password';
             apiKeyInput.addClass('tl-setting-input-key');
             text
-                .setPlaceholder('输入 API Key...')
+                .setPlaceholder(t('settings.apiKeyPlaceholder'))
                 .setValue(config.apiKey)
                 .onChange((value) => {
                     this.plugin.settings.providers[provider].apiKey = value;
@@ -211,12 +237,12 @@ export class TideLogSettingTab extends PluginSettingTab {
         const hasPresets = Object.keys(models).length > 0;
 
         const modelSetting = new Setting(containerEl)
-            .setName('模型')
-            .setDesc(hasPresets ? '选择推荐模型或手动输入模型 ID' : '输入模型 ID');
+            .setName(t('settings.model'))
+            .setDesc(t('settings.modelDesc'));
 
         if (hasPresets) {
             modelSetting.addDropdown((dropdown) => {
-                dropdown.addOption('', '— 手动输入 —');
+                dropdown.addOption('', '— Manual —');
                 for (const [value, name] of Object.entries(models)) {
                     dropdown.addOption(value, name);
                 }
@@ -369,7 +395,7 @@ export class TideLogSettingTab extends PluginSettingTab {
      * Render the evening question editor — drag-and-drop, toggle, expand
      */
     private renderEveningQuestions(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName('复盘问题').setHeading();
+        new Setting(containerEl).setName(t('settings.eveningQuestions')).setHeading();
 
         const questions = this.plugin.settings.eveningQuestions;
 
@@ -399,7 +425,7 @@ export class TideLogSettingTab extends PluginSettingTab {
 
             // --- Delete button ---
             const deleteBtn = row.createEl('span', { cls: 'tl-q-icon-btn tl-q-icon-delete' });
-            deleteBtn.innerHTML = '\u2715';
+            deleteBtn.textContent = '\u2715';
             deleteBtn.setAttribute('title', '\u5220\u9664');
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -517,12 +543,89 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         // Only the question textarea
         const textareaEl = detailEl.createEl('textarea', { cls: 'tl-q-detail-textarea' });
-        (textareaEl as HTMLTextAreaElement).value = question.initialMessage;
-        (textareaEl as HTMLTextAreaElement).placeholder = '\u8f93\u5165 AI \u5411\u7528\u6237\u63d0\u7684\u95ee\u9898\u2026';
-        (textareaEl as HTMLTextAreaElement).rows = 3;
+        textareaEl.value = question.initialMessage;
+        textareaEl.placeholder = '\u8f93\u5165 AI \u5411\u7528\u6237\u63d0\u7684\u95ee\u9898\u2026';
+        textareaEl.rows = 3;
         textareaEl.addEventListener('input', () => {
-            this.plugin.settings.eveningQuestions[index].initialMessage = (textareaEl as HTMLTextAreaElement).value;
+            this.plugin.settings.eveningQuestions[index].initialMessage = textareaEl.value;
             void this.plugin.saveSettings();
         });
+    }
+
+    /**
+     * Render Pro license section in settings
+     */
+    private renderProLicense(containerEl: HTMLElement): void {
+        const isPro = this.plugin.licenseManager.isPro();
+
+        new Setting(containerEl).setName('TideLog Pro').setHeading();
+
+        // Status
+        const statusSetting = new Setting(containerEl)
+            .setName('授权状态')
+            .setDesc(isPro ? '✅ Pro 版已激活' : '🔒 当前为 Free 版');
+
+        if (isPro) {
+            statusSetting.addButton((button) =>
+                button
+                    .setButtonText('取消激活')
+                    .setWarning()
+                    .onClick(() => {
+                        void (async () => {
+                            await this.plugin.licenseManager.deactivate();
+                            new Notice('已取消 Pro 授权');
+                            this.display();
+                        })();
+                    })
+            );
+        } else {
+            // Key input + activate
+            const keySetting = new Setting(containerEl)
+                .setName('兑换码')
+                .setDesc('购买后在此输入兑换码激活 Pro 版');
+
+            let keyValue = '';
+            keySetting.addText((text) => {
+                text.inputEl.addClass('tl-setting-input-key');
+                text
+                    .setPlaceholder('输入兑换码...')
+                    .onChange((value) => { keyValue = value; });
+            });
+
+            keySetting.addButton((button) =>
+                button
+                    .setButtonText('激活')
+                    .setCta()
+                    .onClick(() => {
+                        void (async () => {
+                            const success = await this.plugin.licenseManager.activate(keyValue);
+                            if (success) {
+                                new Notice('🎉 Pro 版激活成功！');
+                                this.display();
+                            } else {
+                                new Notice('❌ 请输入有效的兑换码');
+                            }
+                        })();
+                    })
+            );
+
+            // Purchase links
+            const urls = this.plugin.licenseManager.getPurchaseUrls();
+            const purchaseSetting = new Setting(containerEl)
+                .setName('购买 Pro 版')
+                .setDesc('解锁完整晚间复盘、AI 洞察报告、仪表盘等全部功能');
+
+            purchaseSetting.addButton((button) =>
+                button
+                    .setButtonText('🇨🇳 面包多（国内）')
+                    .onClick(() => { window.open(urls.mianbaoduo); })
+            );
+
+            purchaseSetting.addButton((button) =>
+                button
+                    .setButtonText('🌍 Gumroad（国际）')
+                    .onClick(() => { window.open(urls.gumroad); })
+            );
+        }
     }
 }

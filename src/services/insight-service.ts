@@ -33,7 +33,7 @@ export class InsightService {
         const weekEnd = today.clone().endOf('isoWeek');
 
         // Read daily notes for this week
-        const dailyNotes = await this.plugin.vaultManager.getDailyNotesInRange(weekStart, weekEnd);
+        const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(weekStart, weekEnd);
 
         if (dailyNotes.length === 0) {
             onChunk('⚠️ 本周还没有日记数据，无法生成洞察报告。请先使用复盘记录几天后再试。');
@@ -112,7 +112,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         const monthEnd = ref.clone().endOf('month');
 
         // Read daily notes for this month
-        const dailyNotes = await this.plugin.vaultManager.getDailyNotesInRange(monthStart, monthEnd);
+        const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(monthStart, monthEnd);
 
         if (dailyNotes.length < 1) {
             onChunk('⚠️ 该月没有日记数据，无法生成洞察报告。');
@@ -189,7 +189,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         const today = moment();
         const twoWeeksAgo = today.clone().subtract(14, 'days');
 
-        const dailyNotes = await this.plugin.vaultManager.getDailyNotesInRange(twoWeeksAgo, today);
+        const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(twoWeeksAgo, today);
 
         if (dailyNotes.length < 7) {
             onChunk('⚠️ 数据不足（需要至少 7 天的日记），暂时无法生成用户画像建议。');

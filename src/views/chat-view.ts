@@ -12,6 +12,7 @@ import {
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
+import { t, getLanguage } from '../i18n';
 import { ChatMessage, SOPContext, SOPType } from '../types';
 import { MorningSOP } from '../sop/morning-sop';
 import { EveningSOP } from '../sop/evening-sop';
@@ -19,6 +20,7 @@ import { PeriodicRenderer, PeriodicMode } from './periodic-renderer';
 import { ReviewRenderer } from './review-renderer';
 import { TaskInputManager } from './task-input-manager';
 import { ChatController } from './chat-controller';
+import { ProModal } from './pro-modal';
 
 type SidebarTab = 'chat' | 'kanban' | 'review';
 
@@ -580,7 +582,7 @@ export class ChatView extends ItemView {
         this.inputEl = this.inputContainer.createEl('textarea', {
             cls: 'tl-input',
             attr: {
-                placeholder: '输入你的想法...',
+                placeholder: t('chat.inputPlaceholder'),
                 rows: '3',
             },
         });
@@ -603,7 +605,7 @@ export class ChatView extends ItemView {
 
         this.sendButton = buttonContainer.createEl('button', {
             cls: 'tl-send-btn',
-            text: '发送',
+            text: t('chat.send'),
         });
         this.sendButton.addEventListener('click', () => { void this.sendMessage(); });
     }
@@ -612,7 +614,16 @@ export class ChatView extends ItemView {
      * Show welcome message
      */
     private showWelcomeMessage(): void {
-        this.addAIMessage(`你好 👋
+        this.addAIMessage(getLanguage() === 'en'
+            ? `Hello 👋
+
+I'm your AI coach, helping you build habits for continuous growth.
+
+**🌙 Review** — Review your day, record achievements & emotions
+**💡 Insight** — Insight analysis, generate reports
+
+Click a button above to start, or type your thoughts.`
+            : `你好 👋
 
 我是你的 AI 教练，帮助你建立持续成长的习惯。
 
@@ -638,9 +649,9 @@ export class ChatView extends ItemView {
         this.hideTaskInput();
 
         if (type === 'morning') {
-            this.startMorningSOP();
+            void this.startMorningSOP();
         } else if (type === 'evening') {
-            this.startEveningSOP();
+            void this.startEveningSOP();
         }
     }
 
@@ -654,13 +665,13 @@ export class ChatView extends ItemView {
             const file = this.app.vault.getAbstractFileByPath(dailyNotePath);
             if (file instanceof TFile) {
                 const content = await this.app.vault.read(file);
-                if (content.includes('精力状态')) {
+                if (content.includes('精力状态') || content.includes('energy')) {
                     // Plan already exists, go straight to task input with pre-fill
                     const existingTasks = await this.getExistingTasks();
                     if (existingTasks.length > 0) {
-                        this.addAIMessage('今天已有计划。你可以修改或添加任务：');
+                        this.addAIMessage(t('chat.planExistsModify'));
                     } else {
-                        this.addAIMessage('今天已有计划。你可以继续添加任务：');
+                        this.addAIMessage(t('chat.planExistsAdd'));
                     }
                     this.quickUpdateMode = true;
                     this.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);
@@ -671,7 +682,7 @@ export class ChatView extends ItemView {
             // If check fails, just proceed with full SOP
         }
 
-        this.addAIMessage('开始晨间复盘...');
+        this.addAIMessage(t('chat.startMorning'));
         await this.morningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
         }, () => {
@@ -683,7 +694,7 @@ export class ChatView extends ItemView {
      * Start evening SOP
      */
     async startEveningSOP(): Promise<void> {
-        this.addAIMessage('开始复盘...');
+        this.addAIMessage(t('chat.startEvening'));
         await this.eveningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
         });
@@ -702,11 +713,13 @@ export class ChatView extends ItemView {
         this.messages = [];
         this.messagesContainer.empty();
         this.hideTaskInput();
-        this.addAIMessage('💬 来聊聊仪表盘上的内容吧！我已经了解了你的数据，请告诉我你想深入讨论什么：');
+        this.addAIMessage(t('chat.dashboardChat'));
         // Inject context as system-level background for the AI
         this.messages.push({
             role: 'system',
-            content: `以下是用户仪表盘上的摘要数据，请基于这些数据回答用户的问题：\n\n${context}`,
+            content: getLanguage() === 'en'
+                ? `The following is the user's dashboard summary data. Please answer the user's questions based on this data:\n\n${context}`
+                : `以下是用户仪表盘上的摘要数据，请基于这些数据回答用户的问题：\n\n${context}`,
             timestamp: Date.now(),
         });
     }
@@ -729,7 +742,13 @@ export class ChatView extends ItemView {
         const contentDiv = messageEl.createDiv();
         MarkdownRenderer.render(
             this.app,
-            `自由对话模式 💬
+            getLanguage() === 'en'
+                ? `Free Chat Mode 💬
+
+Talk about anything — problems you're facing, ideas to organize, topics to discuss.
+
+You can also use the buttons below to generate insight reports:`
+                : `自由对话模式 💬
 
 聊什么都可以 — 遇到的问题、想梳理的想法、想讨论的话题。
 
@@ -742,23 +761,43 @@ export class ChatView extends ItemView {
         // Insight generation buttons
         const btnGroup = messageEl.createDiv('tl-insight-buttons');
 
+        const isPro = this.plugin.licenseManager.isPro();
+
         const weeklyBtn = btnGroup.createEl('button', {
-            cls: 'tl-insight-btn',
-            text: '📊 本周洞察',
+            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
+            text: `📊 ${t('chat.weeklyInsight')}${!isPro ? ' 🔒' : ''}`,
         });
-        weeklyBtn.addEventListener('click', () => this.triggerInsight('weekly'));
+        weeklyBtn.addEventListener('click', () => {
+            if (!isPro) {
+                new ProModal(this.app, t('chat.weeklyInsight'), this.plugin.licenseManager).open();
+                return;
+            }
+            this.triggerInsight('weekly');
+        });
 
         const monthlyBtn = btnGroup.createEl('button', {
-            cls: 'tl-insight-btn',
-            text: '📈 本月洞察',
+            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
+            text: `📈 ${t('chat.monthlyInsight')}${!isPro ? ' 🔒' : ''}`,
         });
-        monthlyBtn.addEventListener('click', () => this.triggerInsight('monthly'));
+        monthlyBtn.addEventListener('click', () => {
+            if (!isPro) {
+                new ProModal(this.app, t('chat.monthlyInsight'), this.plugin.licenseManager).open();
+                return;
+            }
+            this.triggerInsight('monthly');
+        });
 
         const profileBtn = btnGroup.createEl('button', {
-            cls: 'tl-insight-btn',
-            text: '👤 画像建议',
+            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
+            text: `👤 ${t('chat.profileSuggestion')}${!isPro ? ' 🔒' : ''}`,
         });
-        profileBtn.addEventListener('click', () => this.triggerProfileSuggestion());
+        profileBtn.addEventListener('click', () => {
+            if (!isPro) {
+                new ProModal(this.app, t('chat.profileSuggestion'), this.plugin.licenseManager).open();
+                return;
+            }
+            this.triggerProfileSuggestion();
+        });
 
         this.scrollToBottom();
     }

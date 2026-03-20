@@ -7,17 +7,18 @@ import { TFile } from 'obsidian';
 import { SOPContext, ChatMessage, EveningQuestionType, EveningQuestionConfig } from '../types';
 import {
     getBaseContextPrompt,
-    GOAL_ALIGNMENT_PROMPT,
-    SUCCESS_DIARY_PROMPT,
-    HAPPINESS_EMOTION_PROMPT,
-    ANXIETY_AWARENESS_PROMPT,
-    TOMORROW_PLAN_PROMPT,
-    DEEP_ANALYSIS_PROMPT,
-    REFLECTION_PROMPT,
-    PRINCIPLE_EXTRACT_PROMPT,
-    FREE_WRITING_PROMPT,
+    getGoalAlignmentPrompt,
+    getSuccessDiaryPrompt,
+    getHappinessEmotionPrompt,
+    getAnxietyAwarenessPrompt,
+    getTomorrowPlanPrompt,
+    getDeepAnalysisPrompt,
+    getReflectionPrompt,
+    getPrincipleExtractPrompt,
+    getFreeWritingPrompt,
 } from './prompts';
 import { formatAPIError } from '../utils/error-formatter';
+import { t, getLanguage } from '../i18n';
 
 interface QuestionConfig {
     type: EveningQuestionType;
@@ -29,17 +30,19 @@ interface QuestionConfig {
 /**
  * Maps question type → AI system prompt (non-user-editable)
  */
-const PROMPT_MAP: Record<EveningQuestionType, string> = {
-    goal_alignment: GOAL_ALIGNMENT_PROMPT,
-    success_diary: SUCCESS_DIARY_PROMPT,
-    happiness_emotion: HAPPINESS_EMOTION_PROMPT,
-    anxiety_awareness: ANXIETY_AWARENESS_PROMPT,
-    tomorrow_plan: TOMORROW_PLAN_PROMPT,
-    deep_analysis: DEEP_ANALYSIS_PROMPT,
-    reflection: REFLECTION_PROMPT,
-    principle_extract: PRINCIPLE_EXTRACT_PROMPT,
-    free_writing: FREE_WRITING_PROMPT,
-};
+function getPromptMap(): Record<EveningQuestionType, string> {
+    return {
+        goal_alignment: getGoalAlignmentPrompt(),
+        success_diary: getSuccessDiaryPrompt(),
+        happiness_emotion: getHappinessEmotionPrompt(),
+        anxiety_awareness: getAnxietyAwarenessPrompt(),
+        tomorrow_plan: getTomorrowPlanPrompt(),
+        deep_analysis: getDeepAnalysisPrompt(),
+        reflection: getReflectionPrompt(),
+        principle_extract: getPrincipleExtractPrompt(),
+        free_writing: getFreeWritingPrompt(),
+    };
+}
 
 export class EveningSOP {
     private plugin: TideLogPlugin;
@@ -53,14 +56,20 @@ export class EveningSOP {
      */
     private buildQuestionFlow(): QuestionConfig[] {
         const userQuestions = this.plugin.settings.eveningQuestions;
-        return userQuestions
+        const allEnabled = userQuestions
             .filter((q: EveningQuestionConfig) => q.enabled)
             .map((q: EveningQuestionConfig) => ({
                 type: q.type,
-                prompt: PROMPT_MAP[q.type] || '',
+                prompt: getPromptMap()[q.type] || '',
                 sectionName: q.sectionName,
                 initialMessage: q.initialMessage,
             }));
+
+        // Free users: limit to first 2 questions
+        if (!this.plugin.licenseManager.isPro()) {
+            return allEnabled.slice(0, 2);
+        }
+        return allEnabled;
     }
 
     constructor(plugin: TideLogPlugin) {
@@ -74,7 +83,7 @@ export class EveningSOP {
         const flow = this.questionFlow.length > 0 ? this.questionFlow : this.buildQuestionFlow();
         const total = flow.length;
         const current = this.currentQuestionIndex;
-        const currentLabel = current < total ? flow[current].sectionName : '完成';
+        const currentLabel = current < total ? flow[current].sectionName : (getLanguage() === 'en' ? 'Done' : '完成');
         return { current, total, currentLabel };
     }
 
@@ -103,16 +112,21 @@ export class EveningSOP {
 
         // Guard: if no questions are enabled
         if (this.questionFlow.length === 0) {
-            onMessage('晚上好！目前没有启用的复盘问题。\n\n请在设置中启用至少一个复盘问题。');
+            const noQMsg = getLanguage() === 'en'
+                ? 'Good evening! No review questions are currently enabled.\n\nPlease enable at least one review question in settings.'
+                : '晚上好！目前没有启用的复盘问题。\n\n请在设置中启用至少一个复盘问题。';
+            onMessage(noQMsg);
             return;
         }
 
 
 
         // Send initial message
-        const welcomeMessage = `🌙 辛苦了，一起来回顾一下今天吧。
+        const welcomePrefix = getLanguage() === 'en'
+            ? `🌙 Great work today! Let's review your day together.`
+            : `🌙 辛苦了，一起来回顾一下今天吧。`;
 
-${this.questionFlow[0].initialMessage}`;
+        const welcomeMessage = `${welcomePrefix}\n\n${this.questionFlow[0].initialMessage}`;
 
         onMessage(welcomeMessage);
         context.currentStep = 1;
@@ -133,7 +147,7 @@ ${this.questionFlow[0].initialMessage}`;
             const planLines: string[] = [];
 
             for (const line of lines) {
-                if (line.startsWith('## 计划')) {
+                if (line.startsWith('## 计划') || line.startsWith('## Plan')) {
                     inMorningSection = true;
                     continue;
                 }
@@ -209,11 +223,21 @@ ${this.questionFlow[0].initialMessage}`;
         const todayPlan = context.todayPlanContent;
         let systemPrompt = getBaseContextPrompt(userProfile || null) + '\n\n' + currentQuestion.prompt;
         if (todayPlan) {
-            systemPrompt += `\n\n用户今日的计划：\n${todayPlan}\n\n请在回复中参考用户的计划内容，给出针对性的反馈。`;
+            const planRef = getLanguage() === 'en'
+                ? `\n\nUser's plan for today:\n${todayPlan}\n\nReference the user's plan content in your response and give targeted feedback.`
+                : `\n\n用户今日的计划：\n${todayPlan}\n\n请在回复中参考用户的计划内容，给出针对性的反馈。`;
+            systemPrompt += planRef;
         }
 
         // Add response guide to SYSTEM prompt (not user message) to prevent leaking
-        systemPrompt += `\n\n回复指南：
+        systemPrompt += getLanguage() === 'en'
+            ? `\n\nResponse guide:
+- Brief answer → gentle acceptance is enough
+- Substantive sharing → empathize first, may ask one follow-up
+- Full insightful sharing → affirm their awareness
+- No more than 3 sentences, make user feel "heard"
+- Never include any instructions, annotations, or meta-information in brackets`
+            : `\n\n回复指南：
 - 简短回答 → 温和接纳即可
 - 有内容的分享 → 先共情，可追问一个问题
 - 完整有洞察的分享 → 肯定觉察力
@@ -226,7 +250,9 @@ ${this.questionFlow[0].initialMessage}`;
             let response = '';
 
             // User message is just the user's actual content — no instructions
-            const userMessage = `用户在"${currentQuestion.sectionName}"环节说：\n\n"${content}"`;
+            const userMessage = getLanguage() === 'en'
+                ? `User said during "${currentQuestion.sectionName}":\n\n"${content}"`
+                : `用户在"${currentQuestion.sectionName}"环节说：\n\n"${content}"`;
 
             this.messages.push({
                 role: 'user',
@@ -254,7 +280,8 @@ ${this.questionFlow[0].initialMessage}`;
             // Move to next question after response
             await this.moveToNextQuestion(context, onMessage, response);
         } catch (error) {
-            onMessage(`保存成功！\n\n${error ? formatAPIError(error, this.plugin.settings.activeProvider) : ''}`);
+            const saveMsg = getLanguage() === 'en' ? 'Saved!' : '保存成功！';
+            onMessage(`${saveMsg}\n\n${error ? formatAPIError(error, this.plugin.settings.activeProvider) : ''}`);
             await this.moveToNextQuestion(context, onMessage);
         }
     }
@@ -312,9 +339,13 @@ ${this.questionFlow[0].initialMessage}`;
         this.isEmotionScoreStep = true;
         context.currentStep = this.questionFlow.length + 1;
 
-        const message = previousResponse
-            ? `${previousResponse}\n\n---\n\n最后一个问题：**今天整体心情怎么样？** 请用 1-10 分评估一下。\n（1=很糟糕，5=一般，10=非常开心）`
+        const emotionQ = getLanguage() === 'en'
+            ? 'Last question: **How was your overall mood today?** Rate it 1-10.\n(1=very bad, 5=average, 10=very happy)'
             : '最后一个问题：**今天整体心情怎么样？** 请用 1-10 分评估一下。\n（1=很糟糕，5=一般，10=非常开心）';
+
+        const message = previousResponse
+            ? `${previousResponse}\n\n---\n\n${emotionQ}`
+            : emotionQ;
 
         onMessage(message);
     }
@@ -358,7 +389,7 @@ ${this.questionFlow[0].initialMessage}`;
 
         await this.plugin.vaultManager.appendToSection(
             dailyNote.path,
-            '复盘',
+            t('vault.sectionReview'),
             formattedContent
         );
 
@@ -410,9 +441,9 @@ ${this.questionFlow[0].initialMessage}`;
         }
 
         // Build dynamic summary from completed questions
-        let summary = `✅ 今天的复盘完成了！
-
-**复盘摘要：**`;
+        let summary = getLanguage() === 'en'
+            ? `✅ Today's review is complete!\n\n**Review summary:**`
+            : `✅ 今天的复盘完成了！\n\n**复盘摘要：**`;
 
         // List completed question sections
         for (let i = 0; i < this.currentQuestionIndex && i < this.questionFlow.length; i++) {
@@ -420,10 +451,13 @@ ${this.questionFlow[0].initialMessage}`;
         }
 
         if (emotionScore) {
-            summary += `\n\n**情绪评分**: ${emotionScore}/10`;
+            const emotionLabel = getLanguage() === 'en' ? 'Mood score' : '情绪评分';
+            summary += `\n\n**${emotionLabel}**: ${emotionScore}/10`;
         }
 
-        summary += `\n\n所有内容已保存到今日的日记中。晚安！🌙`;
+        summary += getLanguage() === 'en'
+            ? `\n\nAll content has been saved to today's journal. Good night! 🌙`
+            : `\n\n所有内容已保存到今日的日记中。晚安！🌙`;
 
         onMessage(summary);
 
@@ -464,17 +498,26 @@ ${this.questionFlow[0].initialMessage}`;
             }
             if (!reviewSummary) return;
 
-            const systemPrompt = `基于用户的复盘内容，提炼出3条明天可以行动的建议。
+            const systemPrompt = getLanguage() === 'en'
+                ? `Based on the user's review content, extract 3 actionable suggestions for tomorrow.
+
+Strict rules:
+- Each suggestion must directly come from things, thoughts, or reflections mentioned in the review — do not fabricate
+- Absolutely do not suggest activities, methods, or habits the user hasn't mentioned
+- Suggestions should be plans the user stated, improvement directions they reflected on, or continuations of unfinished items
+- Each starts with "💡", no more than 30 words
+- Output suggestions directly, no preamble`
+                : `基于用户的复盘内容，提炼出3条明天可以行动的建议。
 
 严格规则：
 - 每条建议必须直接来源于用户复盘中提到的事情、想法或反思，不得凭空编造
-- 绝对禁止建议用户没有提到过的活动、方法或习惯（例如：如果用户没提到运动，就不要建议运动）
+- 绝对禁止建议用户没有提到过的活动、方法或习惯
 - 建议应该是用户自己说过的计划、反思到的改进方向、或未完成事项的延续
 - 每条以"💡"开头，不超过30字
 - 直接输出建议，不要加前言`;
 
             const messages: ChatMessage[] = [
-                { role: 'user', content: `我的今日复盘：\n${reviewSummary}`, timestamp: Date.now() }
+                { role: 'user', content: getLanguage() === 'en' ? `My today's review:\n${reviewSummary}` : `我的今日复盘：\n${reviewSummary}`, timestamp: Date.now() }
             ];
 
             const suggestions = await provider.sendMessage(messages, systemPrompt, () => {});
@@ -511,7 +554,7 @@ ${this.questionFlow[0].initialMessage}`;
         const trimmed = text.trim();
         // Only treat as skip if the message is short (dedicated skip intent)
         if (trimmed.length > 10) return false;
-        const skipWords = ['跳过', '略过', 'skip', '没有', '无', '暂时不', '不需要', '不用'];
+        const skipWords = ['跳过', '略过', 'skip', '没有', '无', '暂时不', '不需要', '不用', 'none', 'no', 'pass', 'next'];
         return skipWords.some((word) =>
             trimmed.toLowerCase().includes(word.toLowerCase())
         );
@@ -524,7 +567,7 @@ ${this.questionFlow[0].initialMessage}`;
         const trimmed = text.trim();
         // Only treat as end if the message is short (dedicated end intent)
         if (trimmed.length > 10) return false;
-        const endWords = ['结束', '结束复盘', 'done', 'end', '就这样', '没了', '不做了'];
+        const endWords = ['结束', '结束复盘', 'done', 'end', '就这样', '没了', '不做了', 'stop', 'quit', 'finish', 'enough'];
         return endWords.some((word) =>
             trimmed.toLowerCase() === word.toLowerCase() ||
             trimmed.toLowerCase().includes(word.toLowerCase())

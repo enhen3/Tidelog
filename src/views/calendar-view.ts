@@ -42,7 +42,39 @@ export class CalendarView extends ItemView {
         container.empty();
         container.addClass('tl-calendar-container');
         this.containerEl_ = container;
+
+        // Pro gate
+        if (!this.plugin.licenseManager.isPro()) {
+            this.renderProLocked(container, '日历热力图');
+            return;
+        }
+
         await this.render();
+    }
+
+    /**
+     * Render locked state for Free users
+     */
+    private renderProLocked(container: HTMLElement, featureName: string): void {
+        const locked = container.createDiv('tl-pro-locked-view');
+        locked.createEl('div', { cls: 'tl-pro-locked-icon', text: '🔒' });
+        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `${featureName}是 Pro 功能` });
+        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: '升级到 TideLog Pro，解锁日历热力图、数据仪表盘等深度洞察功能。' });
+
+        const urls = this.plugin.licenseManager.getPurchaseUrls();
+        const btnGroup = locked.createDiv('tl-pro-locked-buttons');
+        const cnBtn = btnGroup.createEl('a', {
+            cls: 'tl-pro-cta-btn tl-pro-cta-cn',
+            text: '🇨🇳 面包多购买',
+            href: urls.mianbaoduo,
+        });
+        cnBtn.setAttr('target', '_blank');
+        const intlBtn = btnGroup.createEl('a', {
+            cls: 'tl-pro-cta-btn tl-pro-cta-intl',
+            text: '🌍 Gumroad',
+            href: urls.gumroad,
+        });
+        intlBtn.setAttr('target', '_blank');
     }
 
     async onClose(): Promise<void> {

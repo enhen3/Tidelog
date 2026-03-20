@@ -10,6 +10,7 @@ import type { ChatMessage, SOPContext } from '../types';
 import { formatAPIError } from '../utils/error-formatter';
 import type { MorningSOP } from '../sop/morning-sop';
 import type { EveningSOP } from '../sop/evening-sop';
+import { t, getLanguage } from '../i18n';
 
 /** Minimal interface for the host view that owns this controller. */
 export interface ChatControllerHost extends Component {
@@ -50,8 +51,10 @@ export class ChatController {
             '更新今日', '修改今日', '调整今日',
             '更新任务', '修改任务', '调整任务',
             '更新日计划', '更新周计划', '更新月计划',
+            'update plan', 'modify plan', 'adjust plan', 'change plan',
+            'update tasks', 'modify tasks', 'adjust tasks',
         ];
-        return planKeywords.some((keyword) => content.includes(keyword));
+        return planKeywords.some((keyword) => content.toLowerCase().includes(keyword.toLowerCase()));
     }
 
     /**
@@ -62,13 +65,13 @@ export class ChatController {
         const messageEl = h.createMessageElement('ai');
 
         const text = messageEl.createDiv();
-        text.textContent = '你想更新哪个计划？';
+        text.textContent = t('chat.whichPlan');
 
         const buttons = messageEl.createDiv('tl-plan-buttons');
 
         const todayBtn = buttons.createEl('button', {
             cls: 'tl-plan-option-btn',
-            text: '📋 更新今日计划',
+            text: t('chat.updateDaily'),
         });
         todayBtn.addEventListener('click', () => {
             void this.startQuickPlanUpdate();
@@ -76,7 +79,7 @@ export class ChatController {
 
         const weekBtn = buttons.createEl('button', {
             cls: 'tl-plan-option-btn',
-            text: '📅 更新周计划',
+            text: t('chat.updateWeekly'),
         });
         weekBtn.addEventListener('click', () => {
             void (async () => {
@@ -88,16 +91,16 @@ export class ChatController {
                     const file = await h.plugin.vaultManager.getOrCreateWeeklyPlan(undefined, template);
                     const leaf = h.app.workspace.getLeaf();
                     await leaf.openFile(file);
-                    h.addAIMessage('✅ 已打开本周计划！');
+                    h.addAIMessage(t('chat.weeklyOpened'));
                 } catch (e) {
-                    h.addAIMessage(`❌ 创建周计划失败：${e}`);
+                    h.addAIMessage(t('chat.weeklyFailed', String(e)));
                 }
             })();
         });
 
         const monthBtn = buttons.createEl('button', {
             cls: 'tl-plan-option-btn',
-            text: '📆 更新月计划',
+            text: t('chat.updateMonthly'),
         });
         monthBtn.addEventListener('click', () => {
             void (async () => {
@@ -108,9 +111,9 @@ export class ChatController {
                     const file = await h.plugin.vaultManager.getOrCreateMonthlyPlan(undefined, template);
                     const leaf = h.app.workspace.getLeaf();
                     await leaf.openFile(file);
-                    h.addAIMessage('✅ 已打开本月计划！');
+                    h.addAIMessage(t('chat.monthlyOpened'));
                 } catch (e) {
-                    h.addAIMessage(`❌ 创建月计划失败：${e}`);
+                    h.addAIMessage(t('chat.monthlyFailed', String(e)));
                 }
             })();
         });
@@ -133,10 +136,10 @@ export class ChatController {
         h.inputEl.dispatchEvent(new Event('input'));
 
         // Check for plan update / adjust intent (works in ANY mode)
-        const adjustKeywords = ['调整计划', '修改计划', '调整任务', '修改任务', '改一下', '调整一下'];
-        const isAdjust = adjustKeywords.some((k) => content.includes(k));
+        const adjustKeywords = ['调整计划', '修改计划', '调整任务', '修改任务', '改一下', '调整一下', 'adjust plan', 'modify plan', 'change plan'];
+        const isAdjust = adjustKeywords.some((k) => content.toLowerCase().includes(k.toLowerCase()));
         if (isAdjust) {
-            h.addAIMessage('好的，请重新输入任务：');
+            h.addAIMessage(t('chat.reenterTasks'));
             h.quickUpdateMode = true;
             h.sopContext = { type: 'none', currentStep: 0, responses: {} };
             const existingTasks = await h.getExistingTasks();
@@ -204,7 +207,7 @@ export class ChatController {
                 messageEl.empty();
                 MarkdownRenderer.render(
                     h.app,
-                    `⚠️ **未配置 API Key**\n\n请先在 Obsidian 设置 → TideLog 中配置 ${activeProvider.toUpperCase()} 的 API Key。\n\n配置完成后即可开始对话。`,
+                    t('chat.noApiKey', activeProvider.toUpperCase()),
                     messageEl,
                     '',
                     h
@@ -216,7 +219,24 @@ export class ChatController {
 
             const userProfile = await h.plugin.vaultManager.getUserProfileContent();
 
-            const systemPrompt = `你是 Flow，用户的个人成长伙伴。现在是自由对话模式。
+            const systemPrompt = getLanguage() === 'en'
+                ? `You are Flow, the user's personal growth companion. This is free chat mode.
+
+<strategy>
+Naturally assess needs from the user's words:
+- Sharing emotions → empathize first: "It sounds like this made you..."
+- Seeking advice → understand the full picture first, then offer a thinking framework
+- Free thinking → be a thinking partner, use follow-up questions to help clarify
+- Sharing good news → genuinely celebrate, help savor the joy
+</strategy>
+
+<principles>
+Respond to emotions before content. Use questions to guide discovery. Notice emerging patterns. Keep to 2-4 sentences. Reply in English.
+If user mentions "update plan" "modify plan" "adjust tasks", guide them to click the "Morning" button or say "update plan".
+</principles>
+
+` + (userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\nNaturally weave your understanding into the conversation.` : '')
+                : `你是 Flow，用户的个人成长伙伴。现在是自由对话模式。
 
 <strategy>
 从用户的话语中自然判断需求：
@@ -231,7 +251,7 @@ export class ChatController {
 如果用户提到"更新计划""修改计划""调整任务"，引导点击上方"晨间"按钮或说"更新计划"。
 </principles>
 
-${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将了解融入对话。` : ''}`;
+` + (userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将了解融入对话。` : '');
 
             await provider.sendMessage(h.messages, systemPrompt, (chunk) => {
                 if (!indicatorRemoved) {
@@ -269,9 +289,9 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
         const h = this.host;
         const existingTasks = await h.getExistingTasks();
         if (existingTasks.length > 0) {
-            h.addAIMessage('你可以修改或添加任务：');
+            h.addAIMessage(t('chat.modifyTasks'));
         } else {
-            h.addAIMessage('请输入要添加的任务：');
+            h.addAIMessage(t('chat.enterTasks'));
         }
         h.quickUpdateMode = true;
         h.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);
@@ -282,8 +302,8 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
      */
     triggerInsight(type: 'weekly' | 'monthly'): void {
         const h = this.host;
-        const label = type === 'weekly' ? '本周' : '本月';
-        h.addAIMessage(`📊 正在生成${label}洞察报告，请稍候...`);
+        const label = type === 'weekly' ? t('chat.thisWeek') : t('chat.thisMonth');
+        h.addAIMessage(t('chat.generatingInsight', label));
 
         const messageEl = h.createMessageElement('ai');
         const insightService = h.plugin.insightService;
@@ -292,7 +312,7 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
             ? insightService.generateWeeklyInsight.bind(insightService)
             : insightService.generateMonthlyInsight.bind(insightService);
 
-        handler(
+        void handler(
             (chunk: string) => {
                 // Append chunk to the message element
                 messageEl.empty();
@@ -312,7 +332,7 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
                         .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
                         .trim();
                     MarkdownRenderer.render(h.app, cleanReport, messageEl, '', h);
-                    h.addAIMessage('📁 报告已保存到 `03-Archive/Insights/` 目录。');
+                    h.addAIMessage(t('chat.reportSaved'));
                 }
                 h.scrollToBottom();
             }
@@ -324,13 +344,13 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
      */
     triggerProfileSuggestion(): void {
         const h = this.host;
-        h.addAIMessage('👤 正在分析你的日记数据，生成用户画像建议...');
+        h.addAIMessage(t('chat.analyzingProfile'));
 
         const messageEl = h.createMessageElement('ai');
         const insightService = h.plugin.insightService;
         let fullContent = '';
 
-        insightService.generateProfileSuggestions(
+        void insightService.generateProfileSuggestions(
             (chunk: string) => {
                 fullContent += chunk;
                 messageEl.empty();
@@ -348,7 +368,7 @@ ${userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将
                     // Show save confirmation
                     const hasUpdate = /<profile_update>/.test(fullResponse);
                     if (hasUpdate) {
-                        h.addAIMessage('✅ 用户画像已自动更新，分析记录已保存。你可以在 `user_profile` 文件中查看最新画像。');
+                        h.addAIMessage(t('chat.profileUpdated'));
                     }
                 }
             }

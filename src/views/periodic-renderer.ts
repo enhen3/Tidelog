@@ -546,7 +546,7 @@ export class PeriodicRenderer {
             const link = section.createDiv('tl-periodic-insight-link');
             link.setText('查看完整周报 →');
             link.addEventListener('click', () => {
-                void h.app.workspace.getLeaf().openFile(insightFile!);
+                void h.app.workspace.getLeaf().openFile(insightFile);
             });
         }
     }

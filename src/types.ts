@@ -2,6 +2,18 @@
  * TideLog — Type Definitions
  */
 
+import type { Language } from './i18n';
+
+// =============================================================================
+// License
+// =============================================================================
+
+export interface LicenseInfo {
+    key: string;
+    activated: boolean;
+    activatedAt?: number;
+}
+
 // =============================================================================
 // Plugin Settings
 // =============================================================================
@@ -16,6 +28,12 @@ export interface ProviderConfig {
 }
 
 export interface TideLogSettings {
+    // License
+    proLicense: LicenseInfo;
+
+    // Language
+    language: Language;
+
     // AI Provider Settings
     activeProvider: AIProviderType;
     providers: {

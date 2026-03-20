@@ -4,6 +4,7 @@
 
 import { App, CachedMetadata, TFile, TFolder, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
+import { t } from '../i18n';
 
 export class VaultManager {
     private app: App;
@@ -107,15 +108,15 @@ weekly_ref: "[[${weekRef}]]"
 monthly_ref: "[[${monthRef}]]"
 ---
 
-# ${dateStr} ${weekday}
+${t('vault.dailyNoteTitle', dateStr, weekday)}
 
-## 计划
+## ${t('vault.sectionPlan')}
 
-<!-- 今日计划将在计划时填充 -->
+${t('vault.planComment')}
 
-## 复盘
+## ${t('vault.sectionReview')}
 
-<!-- 复盘内容将在复盘时填充 -->
+${t('vault.reviewComment')}
 
 `;
     }
@@ -380,7 +381,8 @@ monthly_ref: "[[${monthRef}]]"
     /**
      * Add a principle to the principles file
      */
-    async addPrinciple(principle: string, category: string = '通用'): Promise<void> {
+    async addPrinciple(principle: string, category?: string): Promise<void> {
+        category = category || t('vault.principleCategory');
         const path = `${this.settings.archiveFolder}/principles.md`;
         const date = moment().format('YYYY-MM-DD');
         const entry = `\n- ${principle} _(${date})_`;
@@ -391,10 +393,11 @@ monthly_ref: "[[${monthRef}]]"
     /**
      * Add a pattern to the patterns file
      */
-    async addPattern(pattern: string, category: string = '行为模式'): Promise<void> {
+    async addPattern(pattern: string, category?: string): Promise<void> {
+        category = category || t('vault.patternCategory');
         const path = `${this.settings.archiveFolder}/patterns.md`;
         const date = moment().format('YYYY-MM-DD');
-        const entry = `\n- ${pattern} _(发现于 ${date})_`;
+        const entry = `\n- ${pattern} _(${t('vault.patternDatePrefix')} ${date})_`;
 
         await this.appendToSection(path, category, entry);
     }
@@ -531,11 +534,12 @@ monthly_ref: "[[${monthRef}]]"
         const content = await this.app.vault.cachedRead(file);
         const taskLine = `- [ ] ${taskText}`;
 
-        // Try to insert under ## 计划
+        // Try to insert under ## Plan / ## 计划
+        const sectionHeader = `## ${t('vault.sectionPlan')}`;
         const lines = content.split('\n');
         let insertIdx = -1;
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].trim().startsWith('## 计划')) {
+            if (lines[i].trim().startsWith(sectionHeader) || lines[i].trim().startsWith('## 计划') || lines[i].trim().startsWith('## Plan')) {
                 insertIdx = i + 1;
                 // Skip past any sub-headers, blank lines, or existing content until next ## or ---
                 while (insertIdx < lines.length && !lines[insertIdx].startsWith('## ') && !lines[insertIdx].startsWith('---')) {

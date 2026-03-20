@@ -12,6 +12,7 @@ import {
 
 import { TideLogSettings } from './types';
 import { DEFAULT_SETTINGS } from './constants';
+import { setLanguage } from './i18n';
 import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
 import { KanbanView, KANBAN_VIEW_TYPE } from './views/kanban-view';
@@ -25,6 +26,7 @@ import { TaskRegistryService } from './services/task-registry';
 import { KanbanService } from './services/kanban-service';
 import { FileLinkService } from './services/file-linker';
 import { DashboardService } from './services/dashboard-service';
+import { LicenseManager } from './services/license-manager';
 
 export default class TideLogPlugin extends Plugin {
     settings: TideLogSettings = DEFAULT_SETTINGS;
@@ -35,6 +37,7 @@ export default class TideLogPlugin extends Plugin {
     kanbanService!: KanbanService;
     fileLinkService!: FileLinkService;
     dashboardService!: DashboardService;
+    licenseManager!: LicenseManager;
 
     constructor(app: App, manifest: PluginManifest) {
         super(app, manifest);
@@ -45,6 +48,9 @@ export default class TideLogPlugin extends Plugin {
         // Load settings
         await this.loadSettings();
 
+        // Set i18n language
+        setLanguage(this.settings.language);
+
         // Initialize managers
         this.vaultManager = new VaultManager(this.app, this.settings);
         this.templateManager = new TemplateManager(this.app, this.settings);
@@ -53,6 +59,7 @@ export default class TideLogPlugin extends Plugin {
         this.kanbanService = new KanbanService(this.app, this.settings, this.taskRegistry, this.vaultManager);
         this.fileLinkService = new FileLinkService(this.app, this.settings, this.kanbanService);
         this.dashboardService = new DashboardService(this.app, this.settings);
+        this.licenseManager = new LicenseManager(this);
 
         // Ensure vault structure exists
         await this.initializeVaultStructure();
@@ -199,6 +206,7 @@ export default class TideLogPlugin extends Plugin {
 
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
+        setLanguage(this.settings.language);
     }
 
     /**
