@@ -295,7 +295,7 @@ export class EveningSOP {
             // Remove full-width parenthetical instructions: （...） or (...)
             .replace(/[（(][^）)]*(?:保持|简短|温暖|肯定|接纳|共情|追问|引导|回复|指令|标注|元信息)[^）)]*[）)]/g, '')
             // Remove XML-style tags that may leak
-            .replace(/<\/?(?:response_guide|style|constraints|task|scene|evaluation_dimensions)[^>]*>/g, '')
+            .replace(new RegExp('</?(?:response_guide|style|constraints|task|scene|evaluation_dimensions)[^>]*>', 'g'), '')
             // Clean up multiple consecutive newlines left by removals
             .replace(/\n{3,}/g, '\n\n')
             .trim();
