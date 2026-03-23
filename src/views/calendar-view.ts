@@ -11,6 +11,7 @@ import {
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
+import { t, getLanguage } from '../i18n';
 
 export const CALENDAR_VIEW_TYPE = 'tl-calendar-view';
 
@@ -34,7 +35,7 @@ export class CalendarView extends ItemView {
     }
 
     getViewType(): string { return CALENDAR_VIEW_TYPE; }
-    getDisplayText(): string { return '日历'; }
+    getDisplayText(): string { return t('cal.displayText'); }
     getIcon(): string { return 'calendar-days'; }
 
     async onOpen(): Promise<void> {
@@ -45,7 +46,7 @@ export class CalendarView extends ItemView {
 
         // Pro gate
         if (!this.plugin.licenseManager.isPro()) {
-            this.renderProLocked(container, '日历热力图');
+            this.renderProLocked(container, t('cal.heatmap'));
             return;
         }
 
@@ -58,14 +59,14 @@ export class CalendarView extends ItemView {
     private renderProLocked(container: HTMLElement, featureName: string): void {
         const locked = container.createDiv('tl-pro-locked-view');
         locked.createEl('div', { cls: 'tl-pro-locked-icon', text: '🔒' });
-        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `${featureName}是 Pro 功能` });
-        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: '升级到 TideLog Pro，解锁日历热力图、数据仪表盘等深度洞察功能。' });
+        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: t('pro.featureTitle', featureName) });
+        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('pro.calendarDesc') });
 
         const urls = this.plugin.licenseManager.getPurchaseUrls();
         const btnGroup = locked.createDiv('tl-pro-locked-buttons');
         const cnBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: '🇨🇳 面包多购买',
+            text: t('pro.mianbaoduo'),
             href: urls.mianbaoduo,
         });
         cnBtn.setAttr('target', '_blank');
@@ -100,7 +101,7 @@ export class CalendarView extends ItemView {
 
         header.createEl('span', {
             cls: 'tl-cal-title',
-            text: this.currentMonth.format('YYYY年 M月'),
+            text: getLanguage() === 'en' ? this.currentMonth.format('MMMM YYYY') : this.currentMonth.format('YYYY年 M月'),
         });
 
         const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
@@ -111,14 +112,14 @@ export class CalendarView extends ItemView {
 
         // Legend
         const legend = this.containerEl_.createDiv('tl-cal-legend');
-        legend.createEl('span', { cls: 'tl-cal-legend-item', text: '情绪热力图：' });
+        legend.createEl('span', { cls: 'tl-cal-legend-item', text: t('cal.legend') });
         const gradient = legend.createDiv('tl-cal-legend-gradient');
-        gradient.createEl('span', { text: '低' });
+        gradient.createEl('span', { text: t('cal.low') });
         const bar = gradient.createEl('div', { cls: 'tl-cal-gradient-bar' });
-        gradient.createEl('span', { text: '高' });
+        gradient.createEl('span', { text: t('cal.high') });
 
         // Day-of-week header
-        const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+        const weekdays = t('cal.weekdays').split(',');
         const grid = this.containerEl_.createDiv('tl-cal-grid');
 
         for (const wd of weekdays) {

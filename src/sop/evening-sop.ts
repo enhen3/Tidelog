@@ -313,7 +313,7 @@ export class EveningSOP {
 
         if (this.currentQuestionIndex >= this.questionFlow.length) {
             // All questions done — ask for emotion score before finishing
-            await this.askEmotionScore(context, onMessage, previousResponse);
+            this.askEmotionScore(context, onMessage, previousResponse);
             return;
         }
 
@@ -543,7 +543,7 @@ Strict rules:
      * Extract emotion score from response
      */
     private extractEmotionScore(text: string): string | null {
-        const match = text.match(/(\d+)\s*[分\/]/);
+        const match = text.match(/(\d+)\s*[分/]/);
         return match ? match[1] : null;
     }
 

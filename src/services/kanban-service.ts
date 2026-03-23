@@ -17,12 +17,14 @@ import { App, TFile, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { TaskRegistryService, TaskItem } from './task-registry';
 import { VaultManager } from './vault-manager';
+import { getLanguage } from '../i18n';
 
 const DAY_COLUMNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAY_LABELS: Record<string, string> = {
-    Mon: '周一', Tue: '周二', Wed: '周三', Thu: '周四',
-    Fri: '周五', Sat: '周六', Sun: '周日',
-};
+function getDayLabels(): Record<string, string> {
+    return getLanguage() === 'en'
+        ? { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' }
+        : { Mon: '周一', Tue: '周二', Wed: '周三', Thu: '周四', Fri: '周五', Sat: '周六', Sun: '周日' };
+}
 
 export class KanbanService {
     private app: App;
@@ -99,7 +101,7 @@ export class KanbanService {
         ];
 
         for (const day of DAY_COLUMNS) {
-            lines.push(`## ${DAY_LABELS[day]} (${day})`);
+            lines.push(`## ${getDayLabels()[day]} (${day})`);
             lines.push('');
         }
 
@@ -126,7 +128,7 @@ export class KanbanService {
         ];
 
         for (const day of DAY_COLUMNS) {
-            lines.push(`## ${DAY_LABELS[day]} (${day})`);
+            lines.push(`## ${getDayLabels()[day]} (${day})`);
             lines.push('');
         }
 
@@ -146,7 +148,7 @@ export class KanbanService {
     ): Promise<void> {
         const boardFile = await this.ensureWeeklyBoard(date);
         const content = await this.app.vault.read(boardFile);
-        const dayLabel = DAY_LABELS[dayOfWeek] || dayOfWeek;
+        const dayLabel = getDayLabels()[dayOfWeek] || dayOfWeek;
 
         // Find the day column header
         const columnHeader = `## ${dayLabel} (${dayOfWeek})`;
@@ -214,7 +216,7 @@ export class KanbanService {
         // Ensure board exists
         const boardFile = await this.ensureWeeklyBoard(date);
         const content = await this.app.vault.read(boardFile);
-        const dayLabel = DAY_LABELS[dayOfWeek] || dayOfWeek;
+        const dayLabel = getDayLabels()[dayOfWeek] || dayOfWeek;
         const columnHeader = `## ${dayLabel} (${dayOfWeek})`;
 
         // Find the day column
@@ -286,7 +288,7 @@ export class KanbanService {
         if (!file || !(file instanceof TFile)) return [];
 
         const content = await this.app.vault.read(file);
-        const dayLabel = DAY_LABELS[dayOfWeek] || dayOfWeek;
+        const dayLabel = getDayLabels()[dayOfWeek] || dayOfWeek;
         const columnHeader = `## ${dayLabel} (${dayOfWeek})`;
 
         const headerIdx = content.indexOf(columnHeader);

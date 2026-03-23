@@ -164,9 +164,11 @@ ${t('vault.reviewComment')}
      * Get the weekly plan path
      */
     getWeeklyPlanPath(date?: Date): string {
-        const effectiveDate = this.getEffectiveDate(date);
-        const year = effectiveDate.format('YYYY');
-        const week = effectiveDate.format('ww');
+        // When an explicit date is provided (e.g. from week selector), use it directly
+        // without day boundary offset — the boundary is only relevant for "today"
+        const d = date ? moment(date) : this.getEffectiveDate();
+        const year = d.isoWeekYear();
+        const week = String(d.isoWeek()).padStart(2, '0');
         return `${this.settings.planFolder}/Weekly/${year}-W${week}.md`;
     }
 
@@ -188,8 +190,8 @@ ${t('vault.reviewComment')}
      * Get the monthly plan path
      */
     getMonthlyPlanPath(date?: Date): string {
-        const effectiveDate = this.getEffectiveDate(date);
-        const yearMonth = effectiveDate.format('YYYY-MM');
+        const d = date ? moment(date) : this.getEffectiveDate();
+        const yearMonth = d.format('YYYY-MM');
         return `${this.settings.planFolder}/Monthly/${yearMonth}.md`;
     }
 

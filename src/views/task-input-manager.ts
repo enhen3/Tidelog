@@ -7,6 +7,7 @@ import { TFile, setIcon } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 import type { SOPContext } from '../types';
+import { t } from '../i18n';
 
 /** Minimal interface for the host view that owns this manager. */
 export interface TaskInputHost {
@@ -47,7 +48,7 @@ export class TaskInputManager {
 
         // Header
         const header = h.taskInputContainer.createDiv('tl-task-input-header');
-        header.createSpan({ text: '📋 输入今日任务' });
+        header.createSpan({ text: t('task.header') });
 
         // Task rows container
         const rowsContainer = h.taskInputContainer.createDiv('tl-task-rows');
@@ -67,7 +68,7 @@ export class TaskInputManager {
         // Add task button
         const addBtn = h.taskInputContainer.createEl('button', {
             cls: 'tl-task-add-btn',
-            text: '＋ 添加任务',
+            text: t('task.addTask'),
         });
         addBtn.addEventListener('click', () => {
             this.addTaskRow(rowsContainer);
@@ -78,7 +79,7 @@ export class TaskInputManager {
         // Submit button
         const submitBtn = h.taskInputContainer.createEl('button', {
             cls: 'tl-task-submit-btn',
-            text: '✅ 确认提交',
+            text: t('task.submit'),
         });
         submitBtn.addEventListener('click', () => void this.submitTasks());
 
@@ -107,7 +108,7 @@ export class TaskInputManager {
             cls: 'tl-task-field',
             attr: {
                 type: 'text',
-                placeholder: `任务 ${index}...`,
+                placeholder: t('task.placeholder', String(index)),
             },
         });
 
@@ -121,14 +122,14 @@ export class TaskInputManager {
         // Sub-task toggle button
         const subtaskBtn = actions.createEl('button', {
             cls: 'tl-task-subtask-btn',
-            attr: { 'aria-label': '子任务' },
+            attr: { 'aria-label': t('task.subtask') },
         });
         setIcon(subtaskBtn, 'list-tree');
 
         // Remove button
         const removeBtn = actions.createEl('button', {
             cls: 'tl-task-remove-btn',
-            attr: { 'aria-label': '删除' },
+            attr: { 'aria-label': t('task.delete') },
         });
         setIcon(removeBtn, 'x');
 
@@ -164,7 +165,7 @@ export class TaskInputManager {
                     cls: 'tl-subtask-add-btn',
                 });
                 setIcon(addSubBtn, 'plus');
-                addSubBtn.createSpan({ text: '添加子任务' });
+                addSubBtn.createSpan({ text: t('task.addSubtask') });
                 addSubBtn.addEventListener('click', () => {
                     this.addSubtaskRow(taskEntry, subRows);
                     const lastSub = taskEntry.subtaskFields[taskEntry.subtaskFields.length - 1];
@@ -233,7 +234,7 @@ export class TaskInputManager {
             cls: 'tl-subtask-field',
             attr: {
                 type: 'text',
-                placeholder: '子任务...',
+                placeholder: t('task.subtaskPlaceholder'),
             },
         });
 
@@ -243,7 +244,7 @@ export class TaskInputManager {
 
         const subRemoveBtn = subRow.createEl('button', {
             cls: 'tl-subtask-remove-btn',
-            attr: { 'aria-label': '删除子任务' },
+            attr: { 'aria-label': t('task.deleteSubtask') },
         });
         setIcon(subRemoveBtn, 'x');
         subRemoveBtn.addEventListener('click', () => {
@@ -274,7 +275,7 @@ export class TaskInputManager {
             if (row) {
                 const label = row.querySelector('.tl-task-label');
                 if (label) label.textContent = `${i + 1}.`;
-                entry.field.placeholder = `任务 ${i + 1}...`;
+                entry.field.placeholder = t('task.placeholder', String(i + 1));
             }
         });
     }
@@ -324,13 +325,13 @@ export class TaskInputManager {
 
             if (h.sopContext.type === 'morning' && !h.quickUpdateMode) {
                 const energyLevel = h.sopContext.responses['energy_level'] || '?';
-                const content = `**精力状态**: ${energyLevel}/10\n\n${formattedTasks}\n\n---`;
+                const content = `**${t('task.energyLabel')}**: ${energyLevel}/10\n\n${formattedTasks}\n\n---`;
                 await h.plugin.vaultManager.replaceSectionContent(
                     dailyNote.path,
-                    '计划',
+                    t('vault.sectionPlan'),
                     content
                 );
-                h.streamAIMessage(`✅ 完美！今日计划已写入到你的日记中。\n\n祝你度过高效的一天！🌟`);
+                h.streamAIMessage(t('task.planSaved'));
             } else {
                 // Quick update: read existing energy level, then replace entire section
                 let energyLine = '';
@@ -338,7 +339,7 @@ export class TaskInputManager {
                     const noteFile = h.app.vault.getAbstractFileByPath(dailyNote.path);
                     if (noteFile instanceof TFile) {
                         const noteContent = await h.app.vault.read(noteFile);
-                        const match = noteContent.match(/\*\*精力状态\*\*: .+/);
+                        const match = noteContent.match(/\*\*(?:精力状态|Energy level)\*\*: .+/);
                         if (match) {
                             energyLine = match[0] + '\n\n';
                         }
@@ -348,13 +349,13 @@ export class TaskInputManager {
                 const content = energyLine + formattedTasks + '\n\n---';
                 await h.plugin.vaultManager.replaceSectionContent(
                     dailyNote.path,
-                    '计划',
+                    t('vault.sectionPlan'),
                     content
                 );
-                h.streamAIMessage('✅ 任务已更新到今日计划中！');
+                h.streamAIMessage(t('task.planUpdated'));
             }
         } catch (error) {
-            h.addAIMessage(`❌ 写入失败：${error}`);
+            h.addAIMessage(t('task.writeFailed', String(error)));
         }
 
         // Sync to kanban board
@@ -393,9 +394,9 @@ export class TaskInputManager {
         // Read existing tasks from today's daily note
         const existingTasks = await this.getExistingTasks();
         if (existingTasks.length > 0) {
-            h.addAIMessage('你可以修改或添加任务：');
+            h.addAIMessage(t('task.modifyTasks'));
         } else {
-            h.addAIMessage('请输入要添加的任务：');
+            h.addAIMessage(t('task.enterTasks'));
         }
         h.quickUpdateMode = true;
         this.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);

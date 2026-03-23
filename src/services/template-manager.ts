@@ -4,6 +4,7 @@
 
 import { App } from 'obsidian';
 import { TideLogSettings } from '../types';
+import { t } from '../i18n';
 
 export class TemplateManager {
     private app: App;
@@ -31,85 +32,85 @@ export class TemplateManager {
         const exists = this.app.vault.getAbstractFileByPath(path);
 
         if (!exists) {
-            const content = `# 用户画像
+            const content = `${t('tmpl.userProfileTitle')}
 
-## 基本信息
+${t('tmpl.basicInfo')}
 
-<!-- 填写你的基本信息，帮助 AI 更好地理解你 -->
+${t('tmpl.basicInfoComment')}
 
-- **年龄段**: 
-- **职业/角色**: 
-- **生活阶段**: 
+- ${t('tmpl.ageRange')}: 
+- ${t('tmpl.career')}: 
+- ${t('tmpl.lifeStage')}: 
 
-## 情绪特征
+${t('tmpl.emotionTraits')}
 
-### 焦虑诱因
-<!-- 什么事情容易让你感到焦虑？ -->
-
-- 
-
-### 开心诱因
-<!-- 什么事情容易让你感到开心？ -->
+${t('tmpl.anxietyTriggers')}
+${t('tmpl.anxietyComment')}
 
 - 
 
-### 能量时段
-<!-- 你一天中什么时候精力最充沛？ -->
-
-- **高能量时段**: 
-- **低能量时段**: 
-
-## 成功模式
-
-### 擅长的任务类型
-<!-- 你在什么类型的任务上表现最好？ -->
+${t('tmpl.happinessTriggers')}
+${t('tmpl.happinessComment')}
 
 - 
 
-### 容易拖延的任务类型
-<!-- 什么类型的任务你容易拖延？ -->
+${t('tmpl.energyPeriods')}
+${t('tmpl.energyComment')}
+
+- ${t('tmpl.highEnergy')}: 
+- ${t('tmpl.lowEnergy')}: 
+
+${t('tmpl.successPatterns')}
+
+${t('tmpl.goodTaskTypes')}
+${t('tmpl.goodTaskComment')}
 
 - 
 
-### 激励方式
-<!-- 什么能激励你行动？ -->
+${t('tmpl.procrastination')}
+${t('tmpl.procrastinationComment')}
 
 - 
 
-## 思维倾向
-
-<!-- 你倾向于分析思维还是直觉思维？乐观还是谨慎？ -->
+${t('tmpl.motivation')}
+${t('tmpl.motivationComment')}
 
 - 
 
-## 核心价值观
+${t('tmpl.thinkingStyle')}
 
-<!-- 你最看重什么？比如：成长、自由、家庭、健康等 -->
+${t('tmpl.thinkingComment')}
+
+- 
+
+${t('tmpl.coreValues')}
+
+${t('tmpl.coreValuesComment')}
 
 1. 
 2. 
 3. 
 
-## 成长边界
+${t('tmpl.growthBoundary')}
 
-### 舒适区
-<!-- 你擅长且熟悉的领域 -->
-
-- 
-
-### 学习区
-<!-- 你正在学习或想要发展的领域 -->
+${t('tmpl.comfortZone')}
+${t('tmpl.comfortComment')}
 
 - 
 
-### 恐慌区
-<!-- 让你感到恐惧或抗拒的领域 -->
+${t('tmpl.learningZone')}
+${t('tmpl.learningComment')}
+
+- 
+
+${t('tmpl.panicZone')}
+${t('tmpl.panicComment')}
 
 - 
 
 ---
 
-> 这份画像会随着你的使用不断更新，AI 会根据你的日记内容提出更新建议。
+${t('tmpl.profileFooter')}
 `;
             await this.app.vault.create(path, content);
         }
@@ -123,49 +124,49 @@ export class TemplateManager {
         const exists = this.app.vault.getAbstractFileByPath(path);
 
         if (!exists) {
-            const content = `# 原则库
+            const content = `${t('tmpl.principlesTitle')}
 
-> 这里记录你从经验中提炼出的人生原则。AI 会在复盘时帮助你发现和提炼新原则。
+${t('tmpl.principlesDesc')}
 
-## 决策类
+${t('tmpl.principleDecision')}
 
-<!-- 帮助你做出更好决策的原则 -->
+${t('tmpl.principleDecisionComment')}
 
-- 示例：当面临选择时，问自己"5年后我会怎么看这个决定？"
+- ${t('tmpl.principleDecisionExample')}
 
-## 情绪管理类
+${t('tmpl.principleEmotion')}
 
-<!-- 帮助你管理情绪的原则 -->
+${t('tmpl.principleEmotionComment')}
 
-- 示例：感到焦虑时，先问自己"这件事我能控制吗？"
+- ${t('tmpl.principleEmotionExample')}
 
-## 效率类
+${t('tmpl.principleEfficiency')}
 
-<!-- 提高效率的原则 -->
+${t('tmpl.principleEfficiencyComment')}
 
-- 示例：最重要的任务放在早上精力最好的时候做
+- ${t('tmpl.principleEfficiencyExample')}
 
-## 人际关系类
+${t('tmpl.principleRelationship')}
 
-<!-- 处理人际关系的原则 -->
+${t('tmpl.principleRelationshipComment')}
 
-- 示例：批评行为，不批评人格
+- ${t('tmpl.principleRelationshipExample')}
 
-## 健康类
+${t('tmpl.principleHealth')}
 
-<!-- 维护身心健康的原则 -->
+${t('tmpl.principleHealthComment')}
 
-- 示例：再忙也要保证7小时睡眠
+- ${t('tmpl.principleHealthExample')}
 
-## 通用
+${t('tmpl.principleGeneral')}
 
-<!-- 其他类型的原则 -->
+${t('tmpl.principleGeneralComment')}
 
 - 
 
 ---
 
-> 原则应该是可操作的、具体的指导方针，而不是抽象的口号。
+${t('tmpl.principlesFooter')}
 `;
             await this.app.vault.create(path, content);
         }
@@ -179,49 +180,49 @@ export class TemplateManager {
         const exists = this.app.vault.getAbstractFileByPath(path);
 
         if (!exists) {
-            const content = `# 模式库
+            const content = `${t('tmpl.patternsTitle')}
 
-> 这里记录 AI 从你的日记中发现的重复模式。识别模式是自我成长的第一步。
+${t('tmpl.patternsDesc')}
 
-## 情绪模式
+${t('tmpl.patternEmotion')}
 
-<!-- 情绪变化的规律 -->
+${t('tmpl.patternEmotionComment')}
 
-- 示例：周一上午容易焦虑，通常与工作任务积压有关
+- ${t('tmpl.patternEmotionExample')}
 
-## 行为模式
+${t('tmpl.patternBehavior')}
 
-<!-- 行为习惯的规律 -->
+${t('tmpl.patternBehaviorComment')}
 
-- 示例：截止日期前一天效率最高
+- ${t('tmpl.patternBehaviorExample')}
 
-## 思维模式
+${t('tmpl.patternThinking')}
 
-<!-- 思维方式的规律 -->
+${t('tmpl.patternThinkingComment')}
 
-- 示例：面对新挑战时，倾向于先想到困难而非机会
+- ${t('tmpl.patternThinkingExample')}
 
-## 周期性规律
+${t('tmpl.patternCyclic')}
 
-<!-- 周期性出现的现象 -->
+${t('tmpl.patternCyclicComment')}
 
-- 示例：每月月底情绪低落，可能与月度压力有关
+- ${t('tmpl.patternCyclicExample')}
 
-## 触发器
+${t('tmpl.patternTrigger')}
 
-<!-- 导致特定反应的触发因素 -->
+${t('tmpl.patternTriggerComment')}
 
-- 示例：收到批评邮件后容易陷入过度反刍
+- ${t('tmpl.patternTriggerExample')}
 
-## 成功因素
+${t('tmpl.patternSuccess')}
 
-<!-- 导致成功结果的共同因素 -->
+${t('tmpl.patternSuccessComment')}
 
-- 示例：提前规划的项目完成质量明显更高
+- ${t('tmpl.patternSuccessExample')}
 
 ---
 
-> AI 会在周/月洞察报告中分析你的模式，并提出改进建议。
+${t('tmpl.patternsFooter')}
 `;
             await this.app.vault.create(path, content);
         }
@@ -239,27 +240,27 @@ monthly_ref: "${mRef ? `[[${mRef}]]` : ''}"
 progress: 0
 ---
 
-# ${weekNumber} 周计划
+${t('tmpl.weeklyPlanTitle', weekNumber)}
 
-## 本周目标
+${t('tmpl.weeklyGoals')}
 
-<!-- 本周最重要的目标和关键任务 -->
+${t('tmpl.weeklyGoalsComment')}
 
 - [ ] 
 - [ ] 
 - [ ] 
 
-## 回顾 (周末填写)
+${t('tmpl.weeklyReview')}
 
-### 完成情况
+${t('tmpl.weeklyCompletion')}
 
 - 
 
-### 收获与感悟
+${t('tmpl.weeklyLearnings')}
 
 - 
 
-### 下周调整
+${t('tmpl.weeklyNextWeek')}
 
 - 
 
@@ -271,52 +272,52 @@ progress: 0
      * Get monthly plan template
      */
     getMonthlyPlanTemplate(yearMonth: string): string {
-        return `# ${yearMonth} 月计划
+        return `${t('tmpl.monthlyPlanTitle', yearMonth)}
 
-## 本月主题
+${t('tmpl.monthlyTheme')}
 
-<!-- 用一句话概括本月的主题 -->
+${t('tmpl.monthlyThemeComment')}
 
 
 
-## 月度目标
+${t('tmpl.monthlyGoals')}
 
-<!-- 本月最重要的 3-5 个目标 -->
+${t('tmpl.monthlyGoalsComment')}
 
 1. 
 2. 
 3. 
 
-## 关键里程碑
+${t('tmpl.monthlyMilestones')}
 
-<!-- 本月需要达成的关键里程碑 -->
+${t('tmpl.monthlyMilestonesComment')}
 
-- [ ] 第一周：
-- [ ] 第二周：
-- [ ] 第三周：
-- [ ] 第四周：
+- [ ] ${t('tmpl.monthlyMilestoneWeek', '1')}
+- [ ] ${t('tmpl.monthlyMilestoneWeek', '2')}
+- [ ] ${t('tmpl.monthlyMilestoneWeek', '3')}
+- [ ] ${t('tmpl.monthlyMilestoneWeek', '4')}
 
-## 成长重点
+${t('tmpl.monthlyGrowth')}
 
-<!-- 本月想要重点发展的领域 -->
-
-- 
-
-## 月度回顾 (月底填写)
-
-### 目标完成情况
+${t('tmpl.monthlyGrowthComment')}
 
 - 
 
-### 本月亮点
+${t('tmpl.monthlyReview')}
+
+${t('tmpl.monthlyGoalReview')}
 
 - 
 
-### 经验教训
+${t('tmpl.monthlyHighlights')}
 
 - 
 
-### 下月展望
+${t('tmpl.monthlyLessons')}
+
+- 
+
+${t('tmpl.monthlyOutlook')}
 
 - 
 

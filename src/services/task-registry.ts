@@ -4,6 +4,7 @@
 
 import { App, TFile } from 'obsidian';
 import { TideLogSettings } from '../types';
+import { t } from '../i18n';
 
 // =============================================================================
 // Types
@@ -146,7 +147,7 @@ export class TaskRegistryService {
         const filename = effectiveDate.format('YYYY-MM-DD');
         const path = `${this.settings.dailyFolder}/${filename}.md`;
 
-        return this.readTasks(path, '计划');
+        return this.readTasks(path, t('vault.sectionPlan'));
     }
 
     /**

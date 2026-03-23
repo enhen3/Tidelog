@@ -373,6 +373,24 @@ export class PeriodicRenderer {
             });
         }
 
+        // Pad trailing days to complete the last week of the month
+        const lastDay = moment(calMonth).endOf('month');
+        const trailPad = 7 - lastDay.isoWeekday();
+        for (let i = 1; i <= trailPad; i++) {
+            const nextMonthDay = moment(lastDay).add(i, 'days');
+            const dateStr = nextMonthDay.format('YYYY-MM-DD');
+            const weekStartStr = moment(nextMonthDay).startOf('isoWeek').format('YYYY-MM-DD');
+            const isInSelectedWeek = weekStartStr === selWeekStart;
+
+            const cell = grid.createDiv(`tl-periodic-cal-cell tl-periodic-cal-cell-other-month ${isInSelectedWeek ? 'tl-periodic-cal-cell-week-highlight' : ''}`);
+            cell.setText(`${nextMonthDay.date()}`);
+            cell.addEventListener('click', () => {
+                h.periodicSelectedDate = moment(nextMonthDay);
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            });
+        }
+
         // Preview area: Week plan
         const weekStart = moment(sel).startOf('isoWeek');
         await this.renderWeekPreview(body, weekStart);
@@ -380,44 +398,22 @@ export class PeriodicRenderer {
 
     private async renderWeekPreview(body: HTMLElement, weekStart: moment.Moment): Promise<void> {
         const h = this.host;
-        const weekNum = weekStart.format('ww');
-        const weekLabel = `W${weekNum}`;
+        const isoWeek = weekStart.isoWeek();
+        const weekLabel = `W${String(isoWeek).padStart(2, '0')}`;
 
         const preview = body.createDiv('tl-periodic-preview');
         const previewHeader = preview.createDiv('tl-periodic-preview-header');
         previewHeader.createEl('span', {
             cls: 'tl-periodic-preview-date',
-            text: `${weekStart.format('YYYY')}-${weekLabel} (${weekStart.format('M/D')}—${moment(weekStart).add(6, 'days').format('M/D')})`,
+            text: `${weekStart.isoWeekYear()}-${weekLabel} (${weekStart.format('M/D')}—${moment(weekStart).add(6, 'days').format('M/D')})`,
         });
 
-        // Try load weekly plan file
-        const weeklyPath = `${h.plugin.settings.planFolder}/Weekly/${weekStart.format('YYYY')}-${weekLabel}.md`;
+        // Try load weekly plan file — use consistent path
+        const weeklyPath = `${h.plugin.settings.planFolder}/Weekly/${weekStart.isoWeekYear()}-${weekLabel}.md`;
         const weekFile = h.app.vault.getAbstractFileByPath(weeklyPath);
 
         if (weekFile && weekFile instanceof TFile) {
             const content = await h.app.vault.read(weekFile);
-            // Extract goals section (lines until first task)
-            const lines = content.split('\n');
-            const goalLines: string[] = [];
-            let inGoals = false;
-            for (const line of lines) {
-                if (line.startsWith('## ') || line.startsWith('# ')) {
-                    if (inGoals) break;
-                    inGoals = true;
-                    continue;
-                }
-                if (inGoals && line.trim() && !line.startsWith('---')) {
-                    goalLines.push(line);
-                }
-            }
-
-            if (goalLines.length > 0) {
-                const goalsDiv = preview.createDiv('tl-periodic-goals');
-                goalsDiv.createEl('div', { cls: 'tl-periodic-goals-label', text: '📋 周目标' });
-                for (const g of goalLines.slice(0, 5)) {
-                    goalsDiv.createEl('div', { cls: 'tl-periodic-goal-line', text: g.replace(/^[-*]\s*/, '') });
-                }
-            }
 
             // Tasks from weekly plan
             const tasks = h.parseMdTasks(content).filter(t => t.isTask);

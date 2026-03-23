@@ -510,7 +510,7 @@ export class TideLogSettingTab extends PluginSettingTab {
 
                 void (async () => {
                     const items = this.plugin.settings.eveningQuestions;
-                    const [moved] = items.splice(dragIdx!, 1);
+                    const [moved] = items.splice(dragIdx, 1);
                     items.splice(index, 0, moved);
                     await this.plugin.saveSettings();
                     this.display();
@@ -558,7 +558,7 @@ export class TideLogSettingTab extends PluginSettingTab {
     private renderProLicense(containerEl: HTMLElement): void {
         const isPro = this.plugin.licenseManager.isPro();
 
-        new Setting(containerEl).setName('TideLog Pro').setHeading();
+        new Setting(containerEl).setName('Pro').setHeading();
 
         // Status
         const statusSetting = new Setting(containerEl)

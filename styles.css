@@ -2980,6 +2980,10 @@
 	cursor: default;
 }
 
+.tl-periodic-cal-cell-other-month {
+	opacity: 0.35;
+}
+
 .tl-periodic-cal-cell-today {
 	font-weight: var(--tl-fw-bold);
 	color: var(--tl-accent);

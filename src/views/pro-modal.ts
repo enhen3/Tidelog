@@ -4,6 +4,7 @@
 
 import { App, Modal, setIcon } from 'obsidian';
 import { LicenseManager } from '../services/license-manager';
+import { t } from '../i18n';
 
 export class ProModal extends Modal {
     private featureName: string;
@@ -26,24 +27,24 @@ export class ProModal extends Modal {
         // Title
         contentEl.createEl('h2', {
             cls: 'tl-pro-modal-title',
-            text: `${this.featureName} 是 Pro 功能`,
+            text: t('pro.featureTitle', this.featureName),
         });
 
         // Description
         contentEl.createEl('p', {
             cls: 'tl-pro-modal-desc',
-            text: '升级到 TideLog Pro，解锁全部深度洞察功能：',
+            text: t('pro.upgradeDesc'),
         });
 
         // Feature list
         const features = contentEl.createEl('ul', { cls: 'tl-pro-modal-features' });
         const proFeatures = [
-            '🌙 完整晚间复盘（全部问题维度）',
-            '📊 AI 周报 / 月报洞察',
-            '👤 AI 用户画像分析',
-            '📅 日历热力图',
-            '🏠 数据仪表盘',
-            '🔄 模式 / 原则自动提炼',
+            t('pro.feature1'),
+            t('pro.feature2'),
+            t('pro.feature3'),
+            t('pro.feature4'),
+            t('pro.feature5'),
+            t('pro.feature6'),
         ];
         for (const f of proFeatures) {
             features.createEl('li', { text: f });
@@ -56,22 +57,22 @@ export class ProModal extends Modal {
 
         const cnBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: '🇨🇳 面包多购买（国内）',
+            text: t('pro.mianbaoduo'),
             href: urls.mianbaoduo,
         });
         cnBtn.setAttr('target', '_blank');
 
         const intlBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-intl',
-            text: '🌍 Gumroad（国际）',
+            text: t('pro.gumroad'),
             href: urls.gumroad,
         });
         intlBtn.setAttr('target', '_blank');
 
         // Settings link
         const settingsLink = contentEl.createDiv('tl-pro-modal-settings-link');
-        settingsLink.createEl('span', { text: '已有兑换码？' });
-        const link = settingsLink.createEl('a', { text: '前往设置页输入 →' });
+        settingsLink.createEl('span', { text: t('pro.hasCode') });
+        const link = settingsLink.createEl('a', { text: t('pro.goToSettings') });
         link.addEventListener('click', (e) => {
             e.preventDefault();
             this.close();

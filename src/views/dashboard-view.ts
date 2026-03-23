@@ -11,6 +11,7 @@ import {
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
+import { t } from '../i18n';
 import { KANBAN_VIEW_TYPE } from './kanban-view';
 import { CALENDAR_VIEW_TYPE } from './calendar-view';
 
@@ -32,7 +33,7 @@ export class DashboardView extends ItemView {
     }
 
     getViewType(): string { return DASHBOARD_VIEW_TYPE; }
-    getDisplayText(): string { return '仪表盘'; }
+    getDisplayText(): string { return t('dash.title').replace('📊 ', ''); }
     getIcon(): string { return 'layout-dashboard'; }
 
     async onOpen(): Promise<void> {
@@ -43,7 +44,7 @@ export class DashboardView extends ItemView {
 
         // Pro gate
         if (!this.plugin.licenseManager.isPro()) {
-            this.renderProLocked(container, '仪表盘');
+            this.renderProLocked(container, t('view.dashboardDisplayText'));
             return;
         }
 
@@ -56,14 +57,14 @@ export class DashboardView extends ItemView {
     private renderProLocked(container: HTMLElement, featureName: string): void {
         const locked = container.createDiv('tl-pro-locked-view');
         locked.createEl('div', { cls: 'tl-pro-locked-icon', text: '🔒' });
-        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `${featureName}是 Pro 功能` });
-        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: '升级到 TideLog Pro，解锁数据仪表盘、日历热力图等深度洞察功能。' });
+        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: t('pro.featureTitle', featureName) });
+        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('pro.dashboardDesc') });
 
         const urls = this.plugin.licenseManager.getPurchaseUrls();
         const btnGroup = locked.createDiv('tl-pro-locked-buttons');
         const cnBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: '🇨🇳 面包多购买',
+            text: t('pro.mianbaoduo'),
             href: urls.mianbaoduo,
         });
         cnBtn.setAttr('target', '_blank');
@@ -89,9 +90,9 @@ export class DashboardView extends ItemView {
 
         // Title bar
         const titleBar = this.containerEl_.createDiv('tl-dash-title-bar');
-        titleBar.createEl('h2', { cls: 'tl-dash-title', text: '📊 TideLog 仪表盘' });
+        titleBar.createEl('h2', { cls: 'tl-dash-title', text: t('dash.title') });
 
-        const refreshBtn = titleBar.createEl('button', { cls: 'tl-dash-refresh-btn', text: '刷新' });
+        const refreshBtn = titleBar.createEl('button', { cls: 'tl-dash-refresh-btn', text: t('dash.refresh') });
         refreshBtn.addEventListener('click', () => { void this.render(); });
 
         const grid = this.containerEl_.createDiv('tl-dash-grid');
@@ -105,7 +106,7 @@ export class DashboardView extends ItemView {
         const todayStr = moment().format('YYYY-MM-DD');
         const todayData = weekProgress.days.find(d => d.date === todayStr);
         const focusCard = grid.createDiv('tl-dash-card tl-dash-card-focus');
-        focusCard.createEl('h3', { text: '🎯 今日聚焦' });
+        focusCard.createEl('h3', { text: t('dash.todayFocus') });
         const focusBody = focusCard.createDiv('tl-dash-focus-body');
 
         // Today's tasks
@@ -128,9 +129,9 @@ export class DashboardView extends ItemView {
         if (todayTasks.length > 0) {
             const doneCount = todayTasks.filter(t => t.done).length;
             const focusStats = focusBody.createDiv('tl-dash-focus-stats');
-            focusStats.createEl('span', { text: `✅ ${doneCount}/${todayTasks.length} 任务` });
+            focusStats.createEl('span', { text: t('dash.taskCount', String(doneCount), String(todayTasks.length)) });
             if (todayData?.emotionScore) {
-                focusStats.createEl('span', { text: `  💭 情绪 ${todayData.emotionScore}/10` });
+                focusStats.createEl('span', { text: `  ${t('dash.emotionScore', String(todayData.emotionScore))}` });
             }
 
             // Carry-forward count
@@ -139,7 +140,7 @@ export class DashboardView extends ItemView {
                 const todayTexts = new Set(todayTasks.map(t => t.text));
                 const carryCount = unfinished.filter(u => !todayTexts.has(u.text)).length;
                 if (carryCount > 0) {
-                    focusStats.createEl('span', { cls: 'tl-dash-focus-carry', text: `  📌 ${carryCount} 待继承` });
+                    focusStats.createEl('span', { cls: 'tl-dash-focus-carry', text: `  ${t('dash.carryForward', String(carryCount))}` });
                 }
             } catch { /* skip */ }
 
@@ -151,15 +152,15 @@ export class DashboardView extends ItemView {
                 row.createEl('span', { text: task.text });
             }
             if (todayTasks.length > 5) {
-                taskList.createEl('span', { cls: 'tl-dash-focus-more', text: `+${todayTasks.length - 5} 更多...` });
+                taskList.createEl('span', { cls: 'tl-dash-focus-more', text: t('dash.moreItems', String(todayTasks.length - 5)) });
             }
         } else {
-            focusBody.createEl('p', { cls: 'tl-dash-focus-empty', text: '今日尚未制定计划。使用 Plan 开始晨间规划！' });
+            focusBody.createEl('p', { cls: 'tl-dash-focus-empty', text: t('dash.noPlan') });
         }
 
         // ---- Card 1: This Week Progress ----
         const progressCard = grid.createDiv('tl-dash-card tl-dash-card-progress');
-        progressCard.createEl('h3', { text: '📋 本周进度' });
+        progressCard.createEl('h3', { text: t('dash.weekProgress') });
 
         const pct = weekProgress.totalTasks > 0
             ? Math.round((weekProgress.completedTasks / weekProgress.totalTasks) * 100)
@@ -181,11 +182,11 @@ export class DashboardView extends ItemView {
 
         // ---- Card 2: Emotion Trend (last 7 days) ----
         const emotionCard = grid.createDiv('tl-dash-card tl-dash-card-emotion');
-        emotionCard.createEl('h3', { text: '💭 本周情绪' });
+        emotionCard.createEl('h3', { text: t('dash.weekEmotion') });
 
         const chart = emotionCard.createDiv('tl-dash-chart');
         const today = moment();
-        const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+        const dayLabels = t('dash.weekdaysShort').split(',');
 
         for (let i = 0; i < 7; i++) {
             const dayStart = moment(today).startOf('isoWeek').add(i, 'days');
@@ -214,34 +215,34 @@ export class DashboardView extends ItemView {
 
         // ---- Card 3: Today's Principle ----
         const principleCard = grid.createDiv('tl-dash-card tl-dash-card-principle');
-        principleCard.createEl('h3', { text: '💡 今日原则' });
+        principleCard.createEl('h3', { text: t('dash.todayPrinciple') });
         principleCard.createEl('blockquote', {
             cls: 'tl-dash-quote',
-            text: principle || '尚无原则数据。在聊天中积累原则吧！',
+            text: principle || t('dash.noPrinciple'),
         });
 
         // ---- Card 4: Latest Pattern ----
         const patternCard = grid.createDiv('tl-dash-card tl-dash-card-pattern');
-        patternCard.createEl('h3', { text: '🔄 活跃模式' });
+        patternCard.createEl('h3', { text: t('dash.activePattern') });
         patternCard.createEl('p', {
             cls: 'tl-dash-pattern',
-            text: pattern || '尚无模式数据。持续使用后将自动发现行为模式。',
+            text: pattern || t('dash.noPattern'),
         });
 
         // ---- Quick Links ----
         const linksCard = grid.createDiv('tl-dash-card tl-dash-card-links');
-        linksCard.createEl('h3', { text: '🚀 快速入口' });
+        linksCard.createEl('h3', { text: t('dash.quickLinks') });
 
         const linkGrid = linksCard.createDiv('tl-dash-link-grid');
 
-        this.createQuickLink(linkGrid, '📝', '今日日记', () => {
+        this.createQuickLink(linkGrid, '📝', t('dash.linkDiary'), () => {
             void (async () => {
                 const file = await this.plugin.vaultManager.getOrCreateDailyNote();
                 void this.app.workspace.getLeaf().openFile(file);
             })();
         });
 
-        this.createQuickLink(linkGrid, '📅', '周计划', () => {
+        this.createQuickLink(linkGrid, '📅', t('dash.linkWeekly'), () => {
             void (async () => {
                 try {
                     const ed = this.plugin.vaultManager.getEffectiveDate();
@@ -256,7 +257,7 @@ export class DashboardView extends ItemView {
             })();
         });
 
-        this.createQuickLink(linkGrid, '📆', '月计划', () => {
+        this.createQuickLink(linkGrid, '📆', t('dash.linkMonthly'), () => {
             void (async () => {
                 try {
                     const ed = this.plugin.vaultManager.getEffectiveDate();
@@ -270,11 +271,11 @@ export class DashboardView extends ItemView {
             })();
         });
 
-        this.createQuickLink(linkGrid, '📊', '看板', () => {
+        this.createQuickLink(linkGrid, '📊', t('dash.linkKanban'), () => {
             void this.app.workspace.getLeaf(true).setViewState({ type: KANBAN_VIEW_TYPE, active: true });
         });
 
-        this.createQuickLink(linkGrid, '🗓️', '日历', () => {
+        this.createQuickLink(linkGrid, '🗓️', t('dash.linkCalendar'), () => {
             void this.app.workspace.getLeaf(true).setViewState({ type: CALENDAR_VIEW_TYPE, active: true });
         });
     }

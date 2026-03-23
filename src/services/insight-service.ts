@@ -7,6 +7,7 @@ import { moment, TFile } from 'obsidian';
 import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import { formatAPIError } from '../utils/error-formatter';
+import { t, getLanguage } from '../i18n';
 import {
     getBaseContextPrompt,
     WEEKLY_INSIGHT_PROMPT,
@@ -36,7 +37,7 @@ export class InsightService {
         const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(weekStart, weekEnd);
 
         if (dailyNotes.length === 0) {
-            onChunk('⚠️ 本周还没有日记数据，无法生成洞察报告。请先使用复盘记录几天后再试。');
+            onChunk(t('insight.noWeeklyData'));
             onComplete('');
             return;
         }
@@ -58,14 +59,14 @@ export class InsightService {
 
         const systemPrompt = getBaseContextPrompt(userProfile) + '\n\n' + WEEKLY_INSIGHT_PROMPT;
 
-        const userMessage = `以下是我本周的日记内容（${weekStart.format('YYYY-MM-DD')} ~ ${weekEnd.format('YYYY-MM-DD')}，共 ${dailyNotes.length} 天）：
+        const userMessage = `${t('insight.weeklyUserMsg', weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'), String(dailyNotes.length))}
 
 ${allJournals}
 
-${patterns ? `\n\n已知的模式库：\n${patterns}` : ''}
-${principles ? `\n\n已有的原则库：\n${principles}` : ''}
+${patterns ? `\n\n${t('insight.knownPatterns')}\n${patterns}` : ''}
+${principles ? `\n\n${t('insight.knownPrinciples')}\n${principles}` : ''}
 
-请根据以上内容生成本周的洞察报告。`;
+${t('insight.generateWeeklyReport')}`;
 
         const messages: ChatMessage[] = [
             { role: 'user', content: userMessage, timestamp: Date.now() },
@@ -115,7 +116,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(monthStart, monthEnd);
 
         if (dailyNotes.length < 1) {
-            onChunk('⚠️ 该月没有日记数据，无法生成洞察报告。');
+            onChunk(t('insight.noMonthlyData'));
             onComplete('');
             return;
         }
@@ -138,14 +139,14 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
 
         const systemPrompt = getBaseContextPrompt(userProfile) + '\n\n' + MONTHLY_INSIGHT_PROMPT;
 
-        const userMessage = `以下是我本月的日记内容（${monthStart.format('YYYY-MM-DD')} ~ ${monthEnd.format('YYYY-MM-DD')}，共 ${dailyNotes.length} 天）：
+        const userMessage = `${t('insight.monthlyUserMsg', monthStart.format('YYYY-MM-DD'), monthEnd.format('YYYY-MM-DD'), String(dailyNotes.length))}
 
 ${allJournals}
 
-${patterns ? `\n\n已知的模式库：\n${patterns}` : ''}
-${principles ? `\n\n已有的原则库：\n${principles}` : ''}
+${patterns ? `\n\n${t('insight.knownPatterns')}\n${patterns}` : ''}
+${principles ? `\n\n${t('insight.knownPrinciples')}\n${principles}` : ''}
 
-请根据以上内容生成本月的深度洞察报告。`;
+${t('insight.generateMonthlyReport')}`;
 
         const messages: ChatMessage[] = [
             { role: 'user', content: userMessage, timestamp: Date.now() },
@@ -192,7 +193,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(twoWeeksAgo, today);
 
         if (dailyNotes.length < 7) {
-            onChunk('⚠️ 数据不足（需要至少 7 天的日记），暂时无法生成用户画像建议。');
+            onChunk(t('insight.noProfileData'));
             onComplete?.('');
             return;
         }
@@ -207,7 +208,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         }
 
         const prompt = PROFILE_SUGGESTION_PROMPT
-            .replace('{CURRENT_PROFILE}', userProfile || '（暂无用户画像）')
+            .replace('{CURRENT_PROFILE}', userProfile || t('insight.noProfile'))
             .replace('{RECENT_JOURNALS}', journalEntries.join('\n\n'));
 
         const systemPrompt = getBaseContextPrompt(userProfile);
@@ -250,8 +251,8 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         try {
             await this.plugin.vaultManager.ensureInsightsFolder();
             const date = moment().format('YYYY-MM-DD');
-            const filePath = `${this.plugin.settings.archiveFolder}/Insights/${date}-画像更新.md`;
-            const header = `# 用户画像更新分析\n\n> 生成于 ${moment().format('YYYY-MM-DD HH:mm')}\n\n`;
+            const filePath = `${this.plugin.settings.archiveFolder}/Insights/${t('insight.profileUpdateFile', date)}`;
+            const header = `${t('insight.profileUpdateTitle')}\n\n${t('insight.generatedAt', moment().format('YYYY-MM-DD HH:mm'))}\n\n`;
 
             // Remove <profile_update> and extraction tags from the saved analysis
             // (profile goes to user_profile.md, patterns/principles to their files)
@@ -309,13 +310,13 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
             await this.plugin.vaultManager.ensureInsightsFolder();
 
             const fileName = type === 'weekly'
-                ? `${date.format('YYYY')}-W${date.isoWeek()}-周报.md`
-                : `${date.format('YYYY-MM')}-月报.md`;
+                ? t('insight.weeklyFileName', date.format('YYYY'), String(date.isoWeek()))
+                : t('insight.monthlyFileName', date.format('YYYY-MM'));
 
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${fileName}`;
             const header = type === 'weekly'
-                ? `# ${date.format('YYYY')} 第 ${date.isoWeek()} 周 洞察报告\n\n> 生成于 ${moment().format('YYYY-MM-DD HH:mm')}\n\n`
-                : `# ${date.format('YYYY年MM月')} 洞察报告\n\n> 生成于 ${moment().format('YYYY-MM-DD HH:mm')}\n\n`;
+                ? `${t('insight.weeklyReportTitle', date.format('YYYY'), String(date.isoWeek()))}\n\n${t('insight.generatedAt', moment().format('YYYY-MM-DD HH:mm'))}\n\n`
+                : `${t('insight.monthlyReportTitle', getLanguage() === 'en' ? date.format('YYYY-MM') : date.format('YYYY年MM月'))}\n\n${t('insight.generatedAt', moment().format('YYYY-MM-DD HH:mm'))}\n\n`;
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {
@@ -335,9 +336,16 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
     private extractKeySections(content: string): string {
         const lines = content.split('\n');
         const keepSections = [
-            '\u8ba1\u5212', '\u590d\u76d8', '\u76ee\u6807\u5bf9\u6807', '\u6210\u529f\u65e5\u8bb0',
+            t('insight.sectionPlan'), t('insight.sectionReview'),
+            t('insight.sectionGoalAlign'), t('insight.sectionSuccess'),
+            t('insight.sectionJoyEmotion'), t('insight.sectionAnxiety'),
+            t('insight.sectionTomorrow'), t('insight.sectionDeep'),
+            t('insight.sectionReflect'), t('insight.sectionPrinciple'),
+            t('insight.sectionFreeWrite'),
+            // Always include Chinese section names for matching existing notes
+            '计划', '复盘', '目标对标', '成功日记',
             '开心事与情绪', '焦虑觉察', '明日计划', '深度分析',
-            '反思', '原则提炼', '自由随笔'
+            '反思', '原则提炼', '自由随笔',
         ];
 
         const result: string[] = [];
@@ -359,7 +367,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
             }
 
             // Also keep energy level and task lines at top level
-            if (line.includes('精力状态') || line.match(/^- \[[ x]\]/)) {
+            if (line.includes(t('insight.energyLevel')) || line.includes('精力状态') || line.includes('Energy') || line.match(/^- \[[ x]\]/)) {
                 if (!result.includes(line)) {
                     result.push(line);
                 }
@@ -381,11 +389,11 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
         const total = tasks.length;
 
         const parts: string[] = [];
-        if (fm?.emotion_score) parts.push(`情绪: ${fm.emotion_score}/10`);
-        if (total > 0) parts.push(`任务: ${done}/${total}`);
-        if (fm?.status) parts.push(`状态: ${fm.status}`);
+        if (fm?.emotion_score) parts.push(`${t('insight.emotionLabel')}: ${fm.emotion_score}/10`);
+        if (total > 0) parts.push(`${t('insight.taskLabel')}: ${done}/${total}`);
+        if (fm?.status) parts.push(`${t('insight.statusLabel')}: ${fm.status}`);
         if (fm?.tags && Array.isArray(fm.tags) && fm.tags.length > 0) {
-            parts.push(`标签: ${fm.tags.join(', ')}`);
+            parts.push(`${t('insight.tagLabel')}: ${fm.tags.join(', ')}`);
         }
 
         return parts.length > 0 ? `[${parts.join(' | ')}]` : '';
@@ -396,7 +404,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
      */
     private async extractAndSavePatterns(response: string): Promise<void> {
         const match = response.match(/<new_patterns>([\s\S]*?)<\/new_patterns>/);
-        if (!match || !match[1].trim() || match[1].trim() === '无') return;
+        if (!match || !match[1].trim() || match[1].trim() === '无' || match[1].trim() === 'None') return;
 
         const bullets = match[1].match(/- (.+)/g);
         if (!bullets) return;
@@ -414,7 +422,7 @@ ${principles ? `\n\n已有的原则库：\n${principles}` : ''}
      */
     private async extractAndSavePrinciples(response: string): Promise<void> {
         const match = response.match(/<new_principles>([\s\S]*?)<\/new_principles>/);
-        if (!match || !match[1].trim() || match[1].trim() === '无') return;
+        if (!match || !match[1].trim() || match[1].trim() === '无' || match[1].trim() === 'None') return;
 
         const bullets = match[1].match(/- (.+)/g);
         if (!bullets) return;
