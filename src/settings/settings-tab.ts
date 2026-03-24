@@ -565,18 +565,14 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(isPro ? '✅ Pro 版已激活' : '🔒 当前为 Free 版');
 
         if (isPro) {
-            statusSetting.addButton((button) =>
-                button
-                    .setButtonText('取消激活')
-                    .setWarning()
-                    .onClick(() => {
-                        void (async () => {
-                            const result = await this.plugin.licenseManager.deactivate();
-                            new Notice(result.message);
-                            this.display();
-                        })();
-                    })
-            );
+            const key = this.plugin.settings.proLicense.key;
+            const masked = key.length > 8
+                ? key.slice(0, 3) + '-****-****-' + key.slice(-4)
+                : '****';
+            const label = this.plugin.licenseManager.getLicenseLabel();
+            const expiry = this.plugin.licenseManager.getExpiryDate();
+            const expiryText = expiry ? ` · 到期：${expiry}` : '';
+            statusSetting.setDesc(`✅ ${label}已激活（${masked}）${expiryText}`);
         } else {
             // Key input + activate
             const keySetting = new Setting(containerEl)

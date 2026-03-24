@@ -154,7 +154,7 @@ export class PeriodicRenderer {
             this.renderTaskInputForDate(preview, date);
             // AI suggestion for today / future
             if (date.isSameOrAfter(moment(), 'day')) {
-                this.renderPlanSuggestion(preview, date);
+                void this.renderPlanSuggestion(preview, date);
             }
             const createBtn = preview.createEl('button', { cls: 'tl-periodic-open-btn', text: t('periodic.createDiary') });
             createBtn.addEventListener('click', () => {
@@ -208,7 +208,7 @@ export class PeriodicRenderer {
         // AI planning suggestion for today / future dates
         const isCurrentOrFuture = date.isSameOrAfter(moment(), 'day');
         if (isCurrentOrFuture) {
-            this.renderPlanSuggestion(preview, date);
+            await this.renderPlanSuggestion(preview, date);
         }
 
         // Open note button
@@ -219,66 +219,147 @@ export class PeriodicRenderer {
         });
     }
 
-    /** Show planning suggestion — AI cache for today/tomorrow, date-seeded tips for future */
-    private renderPlanSuggestion(container: HTMLElement, date: moment.Moment): void {
+    /**
+     * Show planning suggestions based on previous day's review content.
+     * Reads the daily note directly, extracts review section, and generates
+     * AI suggestions. Cached per-date to avoid redundant API calls.
+     */
+    private async renderPlanSuggestion(container: HTMLElement, date: moment.Moment): Promise<void> {
         const h = this.host;
         const isToday = date.isSame(moment(), 'day');
         const isTomorrow = date.isSame(moment().add(1, 'day'), 'day');
         const section = container.createDiv('tl-plan-suggestion');
 
         if (isToday || isTomorrow) {
-            // Today/Tomorrow: try loading AI-generated suggestions from last night's review
-            section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.suggestionToday') : t('periodic.suggestionOther') });
-            const path = `${h.plugin.settings.archiveFolder}/plan_suggestions.md`;
-            const file = h.app.vault.getAbstractFileByPath(path);
-            if (file && file instanceof TFile) {
-                h.app.vault.read(file).then(content => {
-                    let body = content;
+            // Read the previous day's daily note review content
+            const yesterday = moment(date).subtract(1, 'day');
+            const yesterdayPath = `${h.plugin.settings.dailyFolder}/${yesterday.format('YYYY-MM-DD')}.md`;
+            const yesterdayFile = h.app.vault.getAbstractFileByPath(yesterdayPath);
+
+            if (!yesterdayFile || !(yesterdayFile instanceof TFile)) {
+                this.showFallbackTip(section, date);
+                return;
+            }
+
+            const content = await h.app.vault.read(yesterdayFile);
+
+            // Extract review section
+            let reviewIdx = content.indexOf('## 复盘');
+            if (reviewIdx < 0) reviewIdx = content.indexOf('## Review');
+            if (reviewIdx < 0) {
+                this.showFallbackTip(section, date);
+                return;
+            }
+            const reviewLabel = content.indexOf('## 复盘') >= 0 ? '## 复盘' : '## Review';
+            let reviewContent = content.substring(reviewIdx + reviewLabel.length);
+            // Cut at next "---" or "## " header
+            const endIdx = reviewContent.indexOf('\n---');
+            if (endIdx > 0) reviewContent = reviewContent.substring(0, endIdx);
+
+            // Remove HTML comments
+            reviewContent = reviewContent.replace(/<!--[\s\S]*?-->/g, '').trim();
+            if (!reviewContent) {
+                this.showFallbackTip(section, date);
+                return;
+            }
+
+            // Check cache: only regenerate if date changed
+            const cacheKey = date.format('YYYY-MM-DD');
+            const cachePath = `${h.plugin.settings.archiveFolder}/plan_suggestions.md`;
+            const cacheFile = h.app.vault.getAbstractFileByPath(cachePath);
+
+            if (cacheFile && cacheFile instanceof TFile) {
+                const cached = await h.app.vault.read(cacheFile);
+                // Check if cache is for today's suggestions
+                if (cached.includes(`date: ${cacheKey}`)) {
+                    // Use cached suggestions
+                    let body = cached;
                     if (body.startsWith('---')) {
                         const end = body.indexOf('---', 3);
                         if (end > 0) body = body.substring(end + 3);
                     }
                     const lines = body.trim().split('\n').filter(l => l.trim());
                     if (lines.length > 0) {
-                        section.empty();
-                        section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.suggestionToday') : t('periodic.suggestionOther') });
+                        section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.aiSuggestionToday') : t('periodic.aiSuggestionGeneral') });
                         for (const line of lines) {
                             section.createDiv({ cls: 'tl-plan-suggestion-line', text: line.trim() });
                         }
                         return;
                     }
+                }
+            }
+
+            // Generate fresh suggestions via AI
+            section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.aiSuggestionToday') : t('periodic.aiSuggestionGeneral') });
+            const loadingEl = section.createDiv({ cls: 'tl-plan-suggestion-line', text: '⏳ 正在生成建议...' });
+
+            try {
+                const provider = h.plugin.getAIProvider();
+                if (!provider) {
+                    loadingEl.remove();
                     this.showFallbackTip(section, date);
-                }).catch(() => this.showFallbackTip(section, date));
-            } else {
+                    return;
+                }
+
+                const systemPrompt = `基于用户昨日的复盘内容，提炼出3条今天可以行动的建议。
+
+严格规则：
+- 每条建议必须直接来源于用户复盘中提到的事情、想法或反思，不得凭空编造
+- 绝对禁止建议用户没有提到过的活动、方法或习惯
+- 建议应该是用户自己说过的计划、反思到的改进方向、或未完成事项的延续
+- 每条以"💡"开头，不超过30字
+- 直接输出建议，不要加前言`;
+
+                const messages: { role: string; content: string; timestamp: number }[] = [
+                    { role: 'user', content: `我的昨日复盘：\n${reviewContent}`, timestamp: Date.now() }
+                ];
+
+                const suggestions = await provider.sendMessage(messages as any, systemPrompt, () => {});
+
+                loadingEl.remove();
+
+                if (suggestions && suggestions.trim()) {
+                    const lines = suggestions.trim().split('\n').filter((l: string) => l.trim());
+                    for (const line of lines) {
+                        section.createDiv({ cls: 'tl-plan-suggestion-line', text: line.trim() });
+                    }
+                    // Save to cache
+                    const cacheContent = `---\ndate: ${cacheKey}\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
+                    if (cacheFile && cacheFile instanceof TFile) {
+                        await h.app.vault.modify(cacheFile, cacheContent);
+                    } else {
+                        const folder = cachePath.substring(0, cachePath.lastIndexOf('/'));
+                        if (!h.app.vault.getAbstractFileByPath(folder)) {
+                            await h.app.vault.createFolder(folder);
+                        }
+                        await h.app.vault.create(cachePath, cacheContent);
+                    }
+                } else {
+                    this.showFallbackTip(section, date);
+                }
+            } catch {
+                loadingEl.remove();
                 this.showFallbackTip(section, date);
             }
         } else {
-            // Future dates: show a planning prompt seeded by date
-            section.createDiv({ cls: 'tl-plan-suggestion-header', text: t('periodic.tipHeader') });
+            // Future dates: show a planning tip
+            section.createDiv({ cls: 'tl-plan-suggestion-header', text: t('periodic.planTip') });
             this.showFallbackTip(section, date);
         }
     }
 
     private showFallbackTip(section: HTMLElement, date: moment.Moment): void {
         const tips = [
-            t('periodic.tip1'),
-            t('periodic.tip2'),
-            t('periodic.tip3'),
-            t('periodic.tip4'),
-            t('periodic.tip5'),
-            t('periodic.tip6'),
-            t('periodic.tip7'),
-            t('periodic.tip8'),
-            t('periodic.tip9'),
-            t('periodic.tip10'),
-            t('periodic.tip11'),
-            t('periodic.tip12'),
+            t('tip.0'), t('tip.1'), t('tip.2'), t('tip.3'),
+            t('tip.4'), t('tip.5'), t('tip.6'), t('tip.7'),
+            t('tip.8'), t('tip.9'), t('tip.10'), t('tip.11'),
         ];
-        // Use date as seed so each day shows a consistent but different tip
         const dayOfYear = date.dayOfYear();
         const tip = tips[dayOfYear % tips.length];
         section.createDiv({ cls: 'tl-plan-suggestion-line', text: tip });
     }
+
+
 
     /** Extract and render 复盘 sections from daily note content */
     private renderReviewSection(preview: HTMLElement, content: string): void {

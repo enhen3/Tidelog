@@ -13,7 +13,9 @@ export interface LicenseInfo {
     activated: boolean;
     activatedAt?: number;
     deviceId?: string;
-    lastVerified?: number; // timestamp of last successful online verification
+    lastVerified?: number;
+    licenseType?: 'annual' | 'lifetime';
+    expiresAt?: number; // epoch ms, null for lifetime
 }
 
 // =============================================================================

@@ -1,17 +1,12 @@
 /**
  * License Manager - Online license verification via Cloudflare Worker API
- *
- * Features:
- *  - Online activation with device binding
- *  - Startup verification
- *  - Offline grace period (7 days)
- *  - Automatic device ID generation
+ * v2: Annual/lifetime types + multi-device (3 per key) + offline grace period
  */
 
 import { requestUrl } from 'obsidian';
 import TideLogPlugin from '../main';
 
-/** API base URL — replace with your deployed Worker URL */
+/** API base URL */
 const API_BASE = 'https://tidelog-license-api.tidelog.workers.dev';
 
 /** Offline grace period: 7 days in milliseconds */
@@ -36,22 +31,42 @@ export class LicenseManager {
 
     /**
      * Check whether the user has an active Pro license.
-     * Considers the offline grace period.
+     * Considers: activation status, expiry, and offline grace period.
      */
     isPro(): boolean {
         const license = this.plugin.settings.proLicense;
         if (!license.activated) return false;
 
-        // If lastVerified exists, check grace period
+        // Check annual license expiry
+        if (license.licenseType === 'annual' && license.expiresAt) {
+            if (Date.now() > license.expiresAt) return false;
+        }
+
+        // Check offline grace period
         if (license.lastVerified) {
             const elapsed = Date.now() - license.lastVerified;
-            if (elapsed > GRACE_PERIOD_MS) {
-                // Grace period expired — lock the user out
-                return false;
-            }
+            if (elapsed > GRACE_PERIOD_MS) return false;
         }
 
         return true;
+    }
+
+    /**
+     * Get the license type label
+     */
+    getLicenseLabel(): string {
+        const license = this.plugin.settings.proLicense;
+        if (!license.activated) return 'Free';
+        return license.licenseType === 'annual' ? 'Pro 年费版' : 'Pro 终身版';
+    }
+
+    /**
+     * Get expiry date string (for annual licenses)
+     */
+    getExpiryDate(): string | null {
+        const license = this.plugin.settings.proLicense;
+        if (license.licenseType !== 'annual' || !license.expiresAt) return null;
+        return new Date(license.expiresAt).toLocaleDateString('zh-CN');
     }
 
     /**
@@ -80,6 +95,8 @@ export class LicenseManager {
                     activatedAt: Date.now(),
                     deviceId,
                     lastVerified: Date.now(),
+                    licenseType: data.licenseType || 'lifetime',
+                    expiresAt: data.expiresAt ? data.expiresAt * 1000 : undefined, // API returns seconds
                 };
                 await this.plugin.saveSettings();
                 return { success: true, message: data.message || '激活成功' };
@@ -87,8 +104,6 @@ export class LicenseManager {
                 return { success: false, message: data.error || '激活失败' };
             }
         } catch (err) {
-            // Network error — allow offline activation as fallback
-            // for first-time users who might not have connectivity
             return { success: false, message: `网络错误：${err instanceof Error ? err.message : '请检查网络连接'}` };
         }
     }
@@ -114,23 +129,30 @@ export class LicenseManager {
             const data = response.json;
 
             if (data.success && data.valid) {
-                // Update last verified timestamp
                 this.plugin.settings.proLicense.lastVerified = Date.now();
+                // Update license type and expiry from server
+                if (data.licenseType) {
+                    this.plugin.settings.proLicense.licenseType = data.licenseType;
+                }
+                if (data.expiresAt) {
+                    this.plugin.settings.proLicense.expiresAt = data.expiresAt * 1000;
+                }
                 await this.plugin.saveSettings();
             } else if (data.success && !data.valid) {
-                // License is no longer valid (revoked or device mismatch)
-                // Don't immediately deactivate — let grace period handle it
-                // But don't refresh the lastVerified either
+                if (data.status === 'expired') {
+                    // Annual expired — deactivate locally
+                    this.plugin.settings.proLicense.activated = false;
+                    await this.plugin.saveSettings();
+                }
                 console.warn('[TideLog] License verification failed:', data);
             }
         } catch {
-            // Network error — silently ignore, grace period will handle
             console.warn('[TideLog] License verification network error (grace period active)');
         }
     }
 
     /**
-     * Deactivate the current license
+     * Deactivate the current license (unbind this device)
      */
     async deactivate(): Promise<{ success: boolean; message: string }> {
         const license = this.plugin.settings.proLicense;
@@ -147,7 +169,6 @@ export class LicenseManager {
                     }),
                 });
             } catch {
-                // If network fails, still deactivate locally
                 console.warn('[TideLog] Deactivate network error — clearing locally');
             }
         }
@@ -171,33 +192,24 @@ export class LicenseManager {
     // Device ID
     // =========================================================================
 
-    /**
-     * Get or create a persistent anonymous device ID.
-     * Based on vault name + a random salt for anonymity.
-     */
     private getOrCreateDeviceId(): string {
         const existing = this.plugin.settings.proLicense.deviceId;
         if (existing) return existing;
 
-        // Generate a new device ID
         const vaultName = this.plugin.app.vault.getName();
         const salt = this.randomHex(8);
         const raw = `${vaultName}-${salt}-${Date.now()}`;
 
-        // Simple hash
         let hash = 0;
         for (let i = 0; i < raw.length; i++) {
             const char = raw.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
+            hash = hash & hash;
         }
 
         const deviceId = `dev-${Math.abs(hash).toString(36)}-${salt}`;
-
-        // Persist it
         this.plugin.settings.proLicense.deviceId = deviceId;
         void this.plugin.saveSettings();
-
         return deviceId;
     }
 
