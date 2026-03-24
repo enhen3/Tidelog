@@ -29,8 +29,6 @@ export interface ChatControllerHost extends Component {
     streamAIMessage(content: string): void;
     createMessageElement(type: 'user' | 'ai'): HTMLElement;
     scrollToBottom(): void;
-    showTaskInput(prefillTasks?: { text: string; subtasks: string[] }[]): void;
-    getExistingTasks(): Promise<{ text: string; subtasks: string[] }[]>;
     startMorningSOP(): Promise<void>;
     startEveningSOP(): Promise<void>;
     showThinkingIndicator(): void;
@@ -74,7 +72,7 @@ export class ChatController {
             text: t('chat.updateDaily'),
         });
         todayBtn.addEventListener('click', () => {
-            void this.startQuickPlanUpdate();
+            void h.startMorningSOP();
         });
 
         const weekBtn = buttons.createEl('button', {
@@ -135,17 +133,7 @@ export class ChatController {
         h.inputEl.setCssProps({ '--tl-input-height': 'auto' });
         h.inputEl.dispatchEvent(new Event('input'));
 
-        // Check for plan update / adjust intent (works in ANY mode)
-        const adjustKeywords = ['调整计划', '修改计划', '调整任务', '修改任务', '改一下', '调整一下', 'adjust plan', 'modify plan', 'change plan'];
-        const isAdjust = adjustKeywords.some((k) => content.toLowerCase().includes(k.toLowerCase()));
-        if (isAdjust) {
-            h.addAIMessage(t('chat.reenterTasks'));
-            h.quickUpdateMode = true;
-            h.sopContext = { type: 'none', currentStep: 0, responses: {} };
-            const existingTasks = await h.getExistingTasks();
-            h.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);
-            return;
-        }
+
 
         // Check for plan update intent in free chat mode (e.g. "更新计划")
         if (h.sopContext.type === 'none' && this.detectPlanUpdateIntent(content)) {
@@ -159,10 +147,6 @@ export class ChatController {
             await h.morningSOP.handleResponse(content, h.sopContext, (message: string) => {
                 h.hideThinkingIndicator();
                 h.streamAIMessage(message);
-            }, () => {
-                h.hideThinkingIndicator();
-                // Callback to show task input UI
-                h.showTaskInput();
             });
         } else if (h.sopContext.type === 'evening') {
             h.showThinkingIndicator();
@@ -282,20 +266,7 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
         h.sendButton.disabled = false;
     }
 
-    /**
-     * Start a quick plan update (delegates to task input)
-     */
-    private async startQuickPlanUpdate(): Promise<void> {
-        const h = this.host;
-        const existingTasks = await h.getExistingTasks();
-        if (existingTasks.length > 0) {
-            h.addAIMessage(t('chat.modifyTasks'));
-        } else {
-            h.addAIMessage(t('chat.enterTasks'));
-        }
-        h.quickUpdateMode = true;
-        h.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);
-    }
+
 
     /**
      * Trigger insight generation (public, called from main.ts)

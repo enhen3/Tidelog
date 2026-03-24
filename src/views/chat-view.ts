@@ -18,7 +18,7 @@ import { MorningSOP } from '../sop/morning-sop';
 import { EveningSOP } from '../sop/evening-sop';
 import { PeriodicRenderer, PeriodicMode } from './periodic-renderer';
 import { ReviewRenderer } from './review-renderer';
-import { TaskInputManager } from './task-input-manager';
+
 import { ChatController } from './chat-controller';
 import { ProModal } from './pro-modal';
 
@@ -73,7 +73,7 @@ export class ChatView extends ItemView {
     public eveningSOP!: EveningSOP;
     private periodicRenderer!: PeriodicRenderer;
     private reviewRenderer!: ReviewRenderer;
-    private taskInputManager!: TaskInputManager;
+
     private chatController!: ChatController;
 
     constructor(leaf: WorkspaceLeaf, plugin: TideLogPlugin) {
@@ -83,7 +83,7 @@ export class ChatView extends ItemView {
         this.eveningSOP = new EveningSOP(plugin);
         this.periodicRenderer = new PeriodicRenderer(this);
         this.reviewRenderer = new ReviewRenderer(this);
-        this.taskInputManager = new TaskInputManager(this);
+
         this.chatController = new ChatController(this);
     }
 
@@ -646,7 +646,6 @@ Click a button above to start, or type your thoughts.`
         // Clear messages and hide task input if visible
         this.messages = [];
         this.messagesContainer.empty();
-        this.hideTaskInput();
 
         if (type === 'morning') {
             void this.startMorningSOP();
@@ -666,15 +665,7 @@ Click a button above to start, or type your thoughts.`
             if (file instanceof TFile) {
                 const content = await this.app.vault.read(file);
                 if (content.includes('精力状态') || content.includes('energy')) {
-                    // Plan already exists, go straight to task input with pre-fill
-                    const existingTasks = await this.getExistingTasks();
-                    if (existingTasks.length > 0) {
-                        this.addAIMessage(t('chat.planExistsModify'));
-                    } else {
-                        this.addAIMessage(t('chat.planExistsAdd'));
-                    }
-                    this.quickUpdateMode = true;
-                    this.showTaskInput(existingTasks.length > 0 ? existingTasks : undefined);
+                    this.addAIMessage(t('chat.planExistsModify'));
                     return;
                 }
             }
@@ -685,8 +676,6 @@ Click a button above to start, or type your thoughts.`
         this.addAIMessage(t('chat.startMorning'));
         await this.morningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
-        }, () => {
-            this.taskInputManager.showTaskInput();
         });
     }
 
@@ -712,7 +701,6 @@ Click a button above to start, or type your thoughts.`
         };
         this.messages = [];
         this.messagesContainer.empty();
-        this.hideTaskInput();
         this.addAIMessage(t('chat.dashboardChat'));
         // Inject context as system-level background for the AI
         this.messages.push({
@@ -736,7 +724,6 @@ Click a button above to start, or type your thoughts.`
 
         this.messages = [];
         this.messagesContainer.empty();
-        this.hideTaskInput();
 
         const messageEl = this.createMessageElement('ai');
         const contentDiv = messageEl.createDiv();
@@ -800,26 +787,6 @@ You can also use the buttons below to generate insight reports:`
         });
 
         this.scrollToBottom();
-    }
-
-    // =========================================================================
-    // Task input — delegated to TaskInputManager
-    // =========================================================================
-
-    showTaskInput(prefillTasks?: { text: string; subtasks: string[] }[]): void {
-        this.taskInputManager.showTaskInput(prefillTasks);
-    }
-
-    hideTaskInput(): void {
-        this.taskInputManager.hideTaskInput();
-    }
-
-    async startQuickPlanUpdate(): Promise<void> {
-        await this.taskInputManager.startQuickPlanUpdate();
-    }
-
-    async getExistingTasks(): Promise<{ text: string; subtasks: string[] }[]> {
-        return this.taskInputManager.getExistingTasks();
     }
 
     // =========================================================================

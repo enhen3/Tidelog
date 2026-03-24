@@ -1,0 +1,17 @@
+{
+  "name": "tidelog-license-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute tidelog-license-db --local --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute tidelog-license-db --remote --file=schema.sql",
+    "generate-keys": "node scripts/generate-keys.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "typescript": "^5.4.0",
+    "wrangler": "^3.60.0"
+  }
+}

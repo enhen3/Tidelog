@@ -12,6 +12,8 @@ export interface LicenseInfo {
     key: string;
     activated: boolean;
     activatedAt?: number;
+    deviceId?: string;
+    lastVerified?: number; // timestamp of last successful online verification
 }
 
 // =============================================================================

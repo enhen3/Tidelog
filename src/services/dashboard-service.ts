@@ -4,6 +4,7 @@
 
 import { App, TFile } from 'obsidian';
 import { TideLogSettings } from '../types';
+import { t } from '../i18n';
 
 export class DashboardService {
     private app: App;
@@ -66,53 +67,53 @@ type: dashboard
 
 # 📊 Dashboard
 
-## 本周任务进度
+## ${t('dashSvc.weeklyProgress')}
 
 \`\`\`dataview
 TABLE WITHOUT ID
-  file.link AS "日期",
-  status AS "状态",
-  emotion_score AS "情绪"
+  file.link AS "${t('dashSvc.colDate')}",
+  status AS "${t('dashSvc.colStatus')}",
+  emotion_score AS "${t('dashSvc.colEmotion')}"
 FROM "${this.settings.dailyFolder}"
 WHERE type = "daily" AND date >= date(sow)
 SORT date ASC
 \`\`\`
 
-## 本周计划
+## ${t('dashSvc.weeklyPlan')}
 
 \`\`\`dataview
 TABLE WITHOUT ID
-  file.link AS "计划",
-  progress AS "进度 %"
+  file.link AS "${t('dashSvc.colPlan')}",
+  progress AS "${t('dashSvc.colProgress')}"
 FROM "${this.settings.planFolder}/Weekly"
 WHERE type = "weekly"
 SORT file.ctime DESC
 LIMIT 1
 \`\`\`
 
-## 📈 情绪趋势 (近 7 天)
+## 📈 ${t('dashSvc.emotionTrend')}
 
 \`\`\`dataview
 TABLE WITHOUT ID
-  date AS "日期",
-  emotion_score AS "评分"
+  date AS "${t('dashSvc.colDate')}",
+  emotion_score AS "${t('dashSvc.colScore')}"
 FROM "${this.settings.dailyFolder}"
 WHERE type = "daily" AND emotion_score != null
 SORT date DESC
 LIMIT 7
 \`\`\`
 
-## 💡 今日原则
+## 💡 ${t('dashSvc.todayPrinciple')}
 
-> ${principle || '_暂无原则，完成复盘后 AI 会帮助你提炼。_'}
+> ${principle || t('dashSvc.noPrinciple')}
 
-## 🔍 活跃模式
+## 🔍 ${t('dashSvc.activePattern')}
 
-> ${pattern || '_暂无活跃模式，使用一段时间后 AI 会分析你的行为模式。_'}
+> ${pattern || t('dashSvc.noPattern')}
 
 ---
 
-> _此页面由 TideLog 自动生成，可随时运行"刷新 Dashboard"命令更新。_
+> ${t('dashSvc.footer')}
 `;
     }
 
@@ -130,7 +131,7 @@ LIMIT 7
 
             // Extract principle lines (start with "- " but not the example ones)
             const principles = lines
-                .filter(l => l.startsWith('- ') && !l.includes('示例'))
+                .filter(l => l.startsWith('- ') && !l.includes('示例') && !l.includes('Example'))
                 .map(l => l.substring(2).trim())
                 .filter(l => l.length > 0);
 
@@ -157,7 +158,7 @@ LIMIT 7
 
             // Extract pattern lines (start with "- " but not the example ones)
             const patterns = lines
-                .filter(l => l.startsWith('- ') && !l.includes('示例'))
+                .filter(l => l.startsWith('- ') && !l.includes('示例') && !l.includes('Example'))
                 .map(l => l.substring(2).trim())
                 .filter(l => l.length > 0);
 

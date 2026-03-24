@@ -22,7 +22,6 @@ export class MorningSOP {
     async start(
         context: SOPContext,
         onMessage: (message: string) => void,
-        showTaskInput?: () => void
     ): Promise<void> {
         // Reset messages
         this.messages = [];
@@ -34,7 +33,7 @@ export class MorningSOP {
         context.weeklyPlanContent = weeklyPlan || undefined;
         context.userProfileContent = userProfile || undefined;
 
-        // Send initial message - go directly to task input
+        // Send initial message
         let initialMessage = getLanguage() === 'en'
             ? `Good morning! ☀️ Let's plan your day.\n\n`
             : `早上好！☀️ 让我们开始今天的计划。\n\n`;
@@ -49,11 +48,6 @@ export class MorningSOP {
 
         onMessage(initialMessage);
         context.currentStep = 1;
-
-        // Trigger the multi-task input UI
-        if (showTaskInput) {
-            showTaskInput();
-        }
     }
 
     /**
@@ -63,7 +57,6 @@ export class MorningSOP {
         content: string,
         context: SOPContext,
         onMessage: (message: string) => void,
-        showTaskInput?: () => void
     ): Promise<void> {
         // Add user message
         this.messages.push({

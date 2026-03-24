@@ -1,0 +1,12 @@
+name = "tidelog-license-api"
+main = "src/index.ts"
+compatibility_date = "2024-05-29"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "tidelog-license-db"
+database_id = "84ab01ff-6b0d-45ba-8ce8-6a59efd49ad8"
+
+# Environment variables (set via wrangler secret)
+# ADMIN_TOKEN — protects /admin/* endpoints

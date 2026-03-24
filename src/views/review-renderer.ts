@@ -6,6 +6,7 @@
 import { TFile, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
+import { t, getLanguage } from '../i18n';
 
 interface CalData { emotionScore: number | null; taskCount: number; completedCount: number; tasks: { text: string; done: boolean }[]; status: string; filePath: string; hasPlan: boolean; hasReview: boolean }
 
@@ -61,8 +62,8 @@ export class ReviewRenderer {
                 tasks,
                 status,
                 filePath: file.path,
-                hasPlan: content.includes('## 计划') && tasks.length > 0,
-                hasReview: content.includes('## 复盘'),
+                hasPlan: (content.includes('## 计划') || content.includes('## Plan')) && tasks.length > 0,
+                hasReview: content.includes('## 复盘') || content.includes('## Review'),
             };
         } catch { return null; }
     }
@@ -79,7 +80,7 @@ export class ReviewRenderer {
         const titleEl = header.createEl('span', { cls: 'tl-cal-title' });
         const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
 
-        titleEl.setText(h.calendarMonth.format('YYYY年 M月'));
+        titleEl.setText(getLanguage() === 'en' ? h.calendarMonth.format('MMMM YYYY') : h.calendarMonth.format('YYYY年 M月'));
         prevBtn.addEventListener('click', () => { h.calendarMonth.subtract(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
         nextBtn.addEventListener('click', () => { h.calendarMonth.add(1, 'month'); h.invalidateTabCache('review'); h.switchTab('review'); });
         await this.renderMonthView(layer);
@@ -92,7 +93,7 @@ export class ReviewRenderer {
         const body = layer.createDiv('tl-pyramid-review-cal-body');
 
         // Weekday row
-        const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+        const weekdays = t('cal.weekdays').split(',');
         const grid = body.createDiv('tl-cal-grid');
         for (const wd of weekdays) {
             grid.createEl('div', { cls: 'tl-cal-weekday', text: wd });
@@ -285,7 +286,9 @@ export class ReviewRenderer {
     private async renderWeekView(layer: HTMLElement, weekStart: moment.Moment): Promise<void> {
         const h = this.host;
         const todayStr = moment().format('YYYY-MM-DD');
-        const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const weekdays = getLanguage() === 'en'
+            ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            : ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
         const weekGrid = layer.createDiv('tl-week-grid');
 
@@ -345,8 +348,8 @@ export class ReviewRenderer {
         const hasPlan = data.hasPlan;
         const hasReview = data.hasReview;
         popHeader.createEl('span', { text: dateLabel });
-        if (hasPlan) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-plan', text: '计划' });
-        if (hasReview) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-review', text: '复盘' });
+        if (hasPlan) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-plan', text: t('review.plan') });
+        if (hasReview) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-review', text: t('review.review') });
         if (data.emotionScore) popHeader.createEl('span', { cls: 'tl-cal-popover-badge', text: `❤ ${data.emotionScore}` });
 
         // Tasks
@@ -358,10 +361,10 @@ export class ReviewRenderer {
                 row.createEl('span', { text: task.text });
             }
             if (data.tasks.length > 4) {
-                popBody.createEl('span', { cls: 'tl-cal-popover-more', text: `+${data.tasks.length - 4} 更多` });
+                popBody.createEl('span', { cls: 'tl-cal-popover-more', text: t('review.more', String(data.tasks.length - 4)) });
             }
         } else {
-            popover.createDiv({ cls: 'tl-cal-popover-empty', text: '暂无任务' });
+            popover.createDiv({ cls: 'tl-cal-popover-empty', text: t('kanban.noTasks') });
         }
 
         // Keep popover alive when hovering over it
@@ -413,21 +416,22 @@ export class ReviewRenderer {
 
         // ---- Monthly Insight only (no weekly on dashboard) ----
         const monthKey = calMonth.format('YYYY-MM');
-        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${monthKey}-月报.md`;
+        const mPath = `${h.plugin.settings.archiveFolder}/Insights/${t('insight.monthlyFileName', monthKey)}`;
         const mFile = h.app.vault.getAbstractFileByPath(mPath);
 
         const monthCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
         const mHeader = monthCard.createDiv('tl-pyramid-layer-header');
         mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
-        mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: `${monthKey} 月报洞察` });
+        mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: t('review.monthlyInsight', monthKey) });
         const mBody = monthCard.createDiv('tl-dash-card-body');
 
         if (mFile && mFile instanceof TFile) {
             try {
                 const content = await h.app.vault.read(mFile);
-                const summaryIdx = content.indexOf('仪表盘摘要');
+                const summaryIdx = content.indexOf('仪表盘摘要') !== -1 ? content.indexOf('仪表盘摘要') : content.indexOf('Dashboard Summary');
                 if (summaryIdx >= 0) {
-                    let summaryText = content.substring(summaryIdx + '仪表盘摘要'.length);
+                    const label = content.indexOf('仪表盘摘要') !== -1 ? '仪表盘摘要' : 'Dashboard Summary';
+                    let summaryText = content.substring(summaryIdx + label.length);
                     const nextH = summaryText.search(/\n#{2,3}\s/);
                     if (nextH > 0) summaryText = summaryText.substring(0, nextH);
                     const sLines = summaryText.split('\n')
@@ -439,13 +443,13 @@ export class ReviewRenderer {
                 } else {
                     const fLines = content.split('\n')
                         .map((l: string) => stripMd(l))
-                        .filter((l: string) => l.length > 4 && !l.startsWith('#') && !l.match(/^(生成于|报告结构)/))
+                        .filter((l: string) => l.length > 4 && !l.startsWith('#') && !l.match(/^(生成于|报告结构|Generated|Report structure)/))
                         .slice(0, 3);
                     for (const line of fLines) {
                         mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                     }
                 }
-                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: '查看完整月报 →' });
+                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: t('review.viewFullReport') });
                 link.addEventListener('click', () => {
                     if (mFile instanceof TFile) void h.app.workspace.getLeaf().openFile(mFile);
                 });
@@ -454,21 +458,21 @@ export class ReviewRenderer {
                 const insightText = Array.from(mBody.querySelectorAll('.tl-dash-insight-line')).map(el => el.textContent).join('\n');
                 const chatBtn = mBody.createEl('button', {
                     cls: 'tl-dash-chat-btn',
-                    text: '💬 聊聊这个洞察',
+                    text: t('review.chatInsight'),
                 });
                 chatBtn.addEventListener('click', () => {
-                    h.startChatWithContext(`以下是 ${monthKey} 月报洞察的摘要：\n${insightText}`);
+                    h.startChatWithContext(t('review.insightContext', monthKey, insightText));
                 });
             } catch { /* skip */ }
         } else {
-            mBody.createEl('p', { cls: 'tl-dash-insight-line tl-dash-empty-hint', text: '该月尚无洞察报告' });
+            mBody.createEl('p', { cls: 'tl-dash-insight-line tl-dash-empty-hint', text: t('review.noInsight') });
             const genBtn = mBody.createEl('button', {
                 cls: 'tl-dash-generate-btn',
-                text: '✨ 生成当月洞察',
+                text: t('review.generateInsight'),
             });
             genBtn.addEventListener('click', () => {
                 void (async () => {
-                genBtn.setText('⚙️ 正在生成...');
+                genBtn.setText(t('review.generating'));
                 genBtn.disabled = true;
                 genBtn.addClass('tl-dash-generate-btn-loading');
                 try {
@@ -481,7 +485,7 @@ export class ReviewRenderer {
                         moment(calMonth),
                     );
                 } catch {
-                    genBtn.setText('❌ 生成失败，点击重试');
+                    genBtn.setText(t('review.generateFailed'));
                     genBtn.disabled = false;
                     genBtn.removeClass('tl-dash-generate-btn-loading');
                 }
@@ -517,7 +521,7 @@ export class ReviewRenderer {
             const ppCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
             const ppHeader = ppCard.createDiv('tl-pyramid-layer-header');
             ppHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💡' });
-            ppHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: '原则与模式' });
+            ppHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: t('review.principlesAndPatterns') });
             const ppBody = ppCard.createDiv('tl-dash-card-body');
             if (principle) ppBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle });
             if (pattern) ppBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });

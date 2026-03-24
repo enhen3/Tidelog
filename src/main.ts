@@ -61,6 +61,9 @@ export default class TideLogPlugin extends Plugin {
         this.dashboardService = new DashboardService(this.app, this.settings);
         this.licenseManager = new LicenseManager(this);
 
+        // Background license verification (non-blocking)
+        void this.licenseManager.verifyOnStartup();
+
         // Ensure vault structure exists
         await this.initializeVaultStructure();
 
@@ -254,11 +257,8 @@ export default class TideLogPlugin extends Plugin {
             void workspace.revealLeaf(leaf);
 
             // If SOP type specified, start the workflow
-            if (sopType) {
-                const view = leaf.view as ChatView;
-                if (view && view.startSOP) {
-                    view.startSOP(sopType);
-                }
+            if (sopType && leaf.view && 'startSOP' in leaf.view) {
+                (leaf.view as ChatView).startSOP(sopType);
             }
         }
     }
@@ -289,9 +289,9 @@ export default class TideLogPlugin extends Plugin {
         // Find the chat view and trigger insight
         const leaves = this.app.workspace.getLeavesOfType(CHAT_VIEW_TYPE);
         if (leaves.length > 0) {
-            const view = leaves[0].view as ChatView;
-            if (view && view.triggerInsight) {
-                view.triggerInsight(type);
+            const view = leaves[0].view;
+            if (view && 'triggerInsight' in view) {
+                (view as ChatView).triggerInsight(type);
             }
         }
     }
