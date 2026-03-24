@@ -217,16 +217,16 @@ export class TideLogSettingTab extends PluginSettingTab {
         apiKeySetting.addExtraButton((button) => {
             button
                 .setIcon('eye-off')
-                .setTooltip('显示/隐藏 API Key')
+                .setTooltip(t('settings.toggleApiKey'))
                 .onClick(() => {
                     if (apiKeyInput.type === 'password') {
                         apiKeyInput.type = 'text';
                         button.setIcon('eye');
-                        button.setTooltip('隐藏 API Key');
+                        button.setTooltip(t('settings.hideApiKey'));
                     } else {
                         apiKeyInput.type = 'password';
                         button.setIcon('eye-off');
-                        button.setTooltip('显示 API Key');
+                        button.setTooltip(t('settings.showApiKey'));
                     }
                 });
         });
@@ -269,15 +269,15 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         // --- Test connection button ---
         new Setting(containerEl)
-            .setName('测试连接')
-            .setDesc('验证 API Key 和模型配置是否正确')
+            .setName(t('settings.testConnection'))
+            .setDesc(t('settings.testConnectionDesc'))
             .addButton((button) =>
                 button
-                    .setButtonText('🔗 测试连接')
+                    .setButtonText(t('settings.testBtn'))
                     .setCta()
                     .onClick(() => {
                         void (async () => {
-                            button.setButtonText('⏳ 测试中...');
+                            button.setButtonText(t('settings.testing'));
                             button.setDisabled(true);
 
                             try {
@@ -285,23 +285,23 @@ export class TideLogSettingTab extends PluginSettingTab {
                                 const success = await aiProvider.testConnection();
 
                                 if (success) {
-                                    new Notice('✅ 连接成功！API Key 有效');
-                                    button.setButtonText('✅ 连接成功');
+                                    new Notice(t('settings.testSuccess'));
+                                    button.setButtonText(t('settings.testSuccessBtn'));
                                     setTimeout(() => {
-                                        button.setButtonText('🔗 测试连接');
+                                        button.setButtonText(t('settings.testBtn'));
                                     }, 2000);
                                 } else {
-                                    new Notice('❌ 连接失败，请检查 API Key 是否正确');
-                                    button.setButtonText('❌ 连接失败');
+                                    new Notice(t('settings.testFail'));
+                                    button.setButtonText(t('settings.testFailBtn'));
                                     setTimeout(() => {
-                                        button.setButtonText('🔗 测试连接');
+                                        button.setButtonText(t('settings.testBtn'));
                                     }, 2000);
                                 }
                             } catch (error) {
-                                new Notice(`❌ 错误: ${error}`);
-                                button.setButtonText('❌ 出错了');
+                                new Notice(`❌ ${t('settings.testError')}: ${error}`);
+                                button.setButtonText(t('settings.testErrorBtn'));
                                 setTimeout(() => {
-                                    button.setButtonText('🔗 测试连接');
+                                    button.setButtonText(t('settings.testBtn'));
                                 }, 2000);
                             }
 
@@ -321,7 +321,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             gemini: 'Google Gemini',
             openai: 'OpenAI',
             siliconflow: 'SiliconFlow',
-            custom: '自定义',
+            custom: t('settings.customProvider'),
         };
         return names[provider];
     }
@@ -348,9 +348,9 @@ export class TideLogSettingTab extends PluginSettingTab {
         switch (provider) {
             case 'openrouter':
                 return {
-                    'anthropic/claude-sonnet-4': 'Claude Sonnet 4 (推荐)',
+                    'anthropic/claude-sonnet-4': t('settings.recommended', 'Claude Sonnet 4'),
                     'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
-                    'anthropic/claude-3-haiku': 'Claude 3 Haiku (快速)',
+                    'anthropic/claude-3-haiku': t('settings.fast', 'Claude 3 Haiku'),
                     'openai/gpt-4o': 'GPT-4o',
                     'openai/gpt-4o-mini': 'GPT-4o Mini',
                     'google/gemini-2.0-flash': 'Gemini 2.0 Flash',
@@ -364,23 +364,23 @@ export class TideLogSettingTab extends PluginSettingTab {
                 };
             case 'gemini':
                 return {
-                    'gemini-2.0-flash': 'Gemini 2.0 Flash (推荐)',
-                    'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite (快速)',
+                    'gemini-2.0-flash': t('settings.recommended', 'Gemini 2.0 Flash'),
+                    'gemini-2.0-flash-lite': t('settings.fast', 'Gemini 2.0 Flash Lite'),
                     'gemini-1.5-pro-latest': 'Gemini 1.5 Pro',
                     'gemini-1.5-flash-latest': 'Gemini 1.5 Flash',
                 };
             case 'openai':
                 return {
-                    'gpt-4o': 'GPT-4o (推荐)',
+                    'gpt-4o': t('settings.recommended', 'GPT-4o'),
                     'gpt-4o-mini': 'GPT-4o Mini',
                     'gpt-4-turbo': 'GPT-4 Turbo',
                 };
             case 'siliconflow':
                 return {
-                    'deepseek-ai/DeepSeek-V3': 'DeepSeek V3 (推荐)',
-                    'Qwen/Qwen3-235B-A22B': 'Qwen3 235B (强大)',
-                    'Qwen/Qwen3-30B-A3B': 'Qwen3 30B (快速)',
-                    'deepseek-ai/DeepSeek-R1': 'DeepSeek R1 (推理)',
+                    'deepseek-ai/DeepSeek-V3': t('settings.recommended', 'DeepSeek V3'),
+                    'Qwen/Qwen3-235B-A22B': t('settings.powerful', 'Qwen3 235B'),
+                    'Qwen/Qwen3-30B-A3B': t('settings.fast', 'Qwen3 30B'),
+                    'deepseek-ai/DeepSeek-R1': t('settings.reasoning', 'DeepSeek R1'),
                     'THUDM/GLM-4-9B-Chat': 'GLM-4 9B Chat',
                 };
             case 'custom':
@@ -410,14 +410,14 @@ export class TideLogSettingTab extends PluginSettingTab {
 
             // --- Drag handle ---
             const handle = row.createEl('span', { cls: 'tl-q-drag-handle', text: '\u2847' });
-            handle.setAttribute('title', '\u62d6\u62fd\u8c03\u6574\u987a\u5e8f');
+            handle.setAttribute('title', t('settings.dragToReorder'));
 
             // --- Expand triangle ---
             const triangle = row.createEl('span', { cls: 'tl-q-triangle' });
             triangle.textContent = '\u25b6';
 
             // --- Name (static text, replaced by input when expanded) ---
-            const nameEl = row.createEl('span', { cls: 'tl-q-name', text: question.sectionName || '\u672a\u547d\u540d' });
+            const nameEl = row.createEl('span', { cls: 'tl-q-name', text: question.sectionName || t('settings.unnamed') });
 
             // --- Spacer ---
             row.createEl('span', { cls: 'tl-q-spacer' });
@@ -425,7 +425,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             // --- Delete button ---
             const deleteBtn = row.createEl('span', { cls: 'tl-q-icon-btn tl-q-icon-delete' });
             deleteBtn.textContent = '\u2715';
-            deleteBtn.setAttribute('title', '\u5220\u9664');
+            deleteBtn.setAttribute('title', t('settings.delete'));
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 void (async () => {
@@ -449,7 +449,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     if (currentInput) {
                         const newSpan = document.createElement('span');
                         newSpan.className = 'tl-q-name';
-                        newSpan.textContent = currentInput.value || '\u672a\u547d\u540d';
+                        newSpan.textContent = currentInput.value || t('settings.unnamed');
                         currentInput.replaceWith(newSpan);
                     }
                 } else {
@@ -462,7 +462,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                         input.type = 'text';
                         input.className = 'tl-q-name-input';
                         input.value = question.sectionName;
-                        input.placeholder = '\u8f93\u5165\u7ae0\u8282\u540d\u2026';
+                        input.placeholder = t('settings.sectionNamePlaceholder');
                         input.addEventListener('input', () => {
                             this.plugin.settings.eveningQuestions[index].sectionName = input.value;
                             void this.plugin.saveSettings();
@@ -518,7 +518,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         // --- Add question link ---
-        const addLink = listEl.createEl('span', { cls: 'tl-q-add-link', text: '+ \u6dfb\u52a0' });
+        const addLink = listEl.createEl('span', { cls: 'tl-q-add-link', text: t('settings.addQuestion') });
         addLink.addEventListener('click', () => {
             const newQ: EveningQuestionConfig = {
                 type: 'free_writing',
@@ -543,7 +543,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         // Only the question textarea
         const textareaEl = detailEl.createEl('textarea', { cls: 'tl-q-detail-textarea' });
         textareaEl.value = question.initialMessage;
-        textareaEl.placeholder = '\u8f93\u5165 AI \u5411\u7528\u6237\u63d0\u7684\u95ee\u9898\u2026';
+        textareaEl.placeholder = t('settings.questionPlaceholder');
         textareaEl.rows = 3;
         textareaEl.addEventListener('input', () => {
             this.plugin.settings.eveningQuestions[index].initialMessage = textareaEl.value;
@@ -561,8 +561,8 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         // Status
         const statusSetting = new Setting(containerEl)
-            .setName('授权状态')
-            .setDesc(isPro ? '✅ Pro 版已激活' : '🔒 当前为 Free 版');
+            .setName(t('settings.proStatus'))
+            .setDesc(isPro ? t('settings.proActive') : t('settings.proFree'));
 
         if (isPro) {
             const key = this.plugin.settings.proLicense.key;
@@ -571,13 +571,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                 : '****';
             const label = this.plugin.licenseManager.getLicenseLabel();
             const expiry = this.plugin.licenseManager.getExpiryDate();
-            const expiryText = expiry ? ` · 到期：${expiry}` : '';
-            statusSetting.setDesc(`✅ ${label}已激活（${masked}）${expiryText}`);
+            const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
+            statusSetting.setDesc(`✅ ${label} ${t('settings.proActivated')} (${masked})${expiryText}`);
         } else {
             // Key input + activate
             const keySetting = new Setting(containerEl)
-                .setName('兑换码')
-                .setDesc('购买后在此输入兑换码激活 Pro 版');
+                .setName(t('settings.redeemCode'))
+                .setDesc(t('settings.redeemDesc'));
 
             let keyValue = '';
             keySetting.addText((text) => {
@@ -589,11 +589,11 @@ export class TideLogSettingTab extends PluginSettingTab {
 
             keySetting.addButton((button) =>
                 button
-                    .setButtonText('激活')
+                    .setButtonText(t('settings.activate'))
                     .setCta()
                     .onClick(() => {
                         void (async () => {
-                            button.setButtonText('⏳ 验证中...');
+                            button.setButtonText(t('settings.verifying'));
                             button.setDisabled(true);
                             const result = await this.plugin.licenseManager.activate(keyValue);
                             if (result.success) {
@@ -601,7 +601,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                                 this.display();
                             } else {
                                 new Notice(`❌ ${result.message}`);
-                                button.setButtonText('激活');
+                                button.setButtonText(t('settings.activate'));
                                 button.setDisabled(false);
                             }
                         })();
@@ -611,18 +611,18 @@ export class TideLogSettingTab extends PluginSettingTab {
             // Purchase links
             const urls = this.plugin.licenseManager.getPurchaseUrls();
             const purchaseSetting = new Setting(containerEl)
-                .setName('购买 Pro 版')
-                .setDesc('解锁完整晚间复盘、AI 洞察报告、仪表盘等全部功能');
+                .setName(t('settings.purchasePro'))
+                .setDesc(t('settings.purchaseDesc'));
 
             purchaseSetting.addButton((button) =>
                 button
-                    .setButtonText('🇨🇳 面包多（国内）')
+                    .setButtonText(t('settings.purchaseDomestic'))
                     .onClick(() => { window.open(urls.mianbaoduo); })
             );
 
             purchaseSetting.addButton((button) =>
                 button
-                    .setButtonText('🌍 Gumroad（国际）')
+                    .setButtonText(t('settings.purchaseIntl'))
                     .onClick(() => { window.open(urls.gumroad); })
             );
         }

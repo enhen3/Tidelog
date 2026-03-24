@@ -7,76 +7,79 @@ import {
     EveningQuestionConfig,
     TideLogSettings,
 } from './types';
+import { t } from './i18n';
 
 // =============================================================================
 // Default Evening Questions
 // =============================================================================
 
-export const DEFAULT_EVENING_QUESTIONS: EveningQuestionConfig[] = [
+export function getDefaultEveningQuestions(): EveningQuestionConfig[] {
+    return [
     {
         type: 'goal_alignment',
-        sectionName: '目标对标',
-        initialMessage: '今天过得怎么样？计划里的事情推进得顺利吗？',
+        sectionName: t('insight.sectionGoalAlign'),
+        initialMessage: t('evening.q1'),
         required: true,
         enabled: true,
     },
     {
         type: 'success_diary',
-        sectionName: '成功日记',
-        initialMessage: '今天有什么让你觉得"还不错"的事？大事小事都算 😊',
+        sectionName: t('insight.sectionSuccess'),
+        initialMessage: t('evening.q2'),
         required: true,
         enabled: true,
     },
     {
         type: 'happiness_emotion',
-        sectionName: '开心事与情绪',
-        initialMessage: '今天有什么开心或温暖的瞬间吗？给今天的情绪打个分吧（1-10）。',
+        sectionName: t('insight.sectionJoyEmotion'),
+        initialMessage: t('evening.q3'),
         required: true,
         enabled: true,
     },
     {
         type: 'anxiety_awareness',
-        sectionName: '焦虑觉察',
-        initialMessage: '今天有没有什么让你不太舒服的事？没有的话说"没有"就好。',
+        sectionName: t('insight.sectionAnxiety'),
+        initialMessage: t('evening.q4'),
         required: true,
         enabled: true,
     },
     {
         type: 'tomorrow_plan',
-        sectionName: '明日计划',
-        initialMessage: '明天最想推进的 1-3 件事是什么？',
+        sectionName: t('insight.sectionTomorrow'),
+        initialMessage: t('evening.q5'),
         required: true,
         enabled: true,
     },
     {
         type: 'deep_analysis',
-        sectionName: '深度分析',
-        initialMessage: '想挑一件今天的事深入聊聊吗？成功的或没完成的都行。不需要的话回复"跳过"。',
+        sectionName: t('insight.sectionDeep'),
+        initialMessage: t('evening.q6'),
         required: false,
         enabled: false,
     },
     {
         type: 'reflection',
-        sectionName: '反思',
-        initialMessage: '来做个小反思：今天做好了什么？有什么可以改进的？有什么被忽略的？\n\n不需要的话回复"跳过"。',
+        sectionName: t('insight.sectionReflect'),
+        initialMessage: t('evening.q7'),
         required: false,
         enabled: false,
     },
     {
         type: 'principle_extract',
-        sectionName: '原则提炼',
-        initialMessage: '从今天的经历里，你悟到了什么可以指导未来的道理？不需要的话回复"跳过"。',
+        sectionName: t('insight.sectionPrinciple'),
+        initialMessage: t('evening.q8'),
         required: false,
         enabled: false,
     },
     {
         type: 'free_writing',
-        sectionName: '自由随笔',
-        initialMessage: '还有什么想说的吗？什么都可以。没有的话，回复"结束"收工 🌙',
+        sectionName: t('insight.sectionFreeWrite'),
+        initialMessage: t('evening.q9'),
         required: false,
         enabled: false,
     },
 ];
+}
 
 // =============================================================================
 // Default Plugin Settings
@@ -127,5 +130,5 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
     enableMorningSOP: true,
     enableEveningSOP: true,
     includeOptionalQuestions: true,
-    eveningQuestions: [...DEFAULT_EVENING_QUESTIONS],
+    eveningQuestions: [...getDefaultEveningQuestions()],
 };

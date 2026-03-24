@@ -12,7 +12,7 @@ import {
 
 import { TideLogSettings } from './types';
 import { DEFAULT_SETTINGS } from './constants';
-import { setLanguage } from './i18n';
+import { setLanguage, t } from './i18n';
 import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
 import { KanbanView, KANBAN_VIEW_TYPE } from './views/kanban-view';
@@ -90,7 +90,7 @@ export default class TideLogPlugin extends Plugin {
             void this.activateChatView();
         });
 
-        this.addRibbonIcon('layout-dashboard', '仪表盘', () => {
+        this.addRibbonIcon('layout-dashboard', t('view.dashboardDisplayText'), () => {
             void this.openView(DASHBOARD_VIEW_TYPE);
         });
 

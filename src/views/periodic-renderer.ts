@@ -291,7 +291,7 @@ export class PeriodicRenderer {
 
             // Generate fresh suggestions via AI
             section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.aiSuggestionToday') : t('periodic.aiSuggestionGeneral') });
-            const loadingEl = section.createDiv({ cls: 'tl-plan-suggestion-line', text: '⏳ 正在生成建议...' });
+            const loadingEl = section.createDiv({ cls: 'tl-plan-suggestion-line', text: t('periodic.generatingSuggestion') });
 
             try {
                 const provider = h.plugin.getAIProvider();
