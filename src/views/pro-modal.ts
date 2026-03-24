@@ -2,7 +2,7 @@
  * Pro Modal - Upgrade prompt shown when Free users access Pro features
  */
 
-import { App, Modal, setIcon } from 'obsidian';
+import { App, Modal } from 'obsidian';
 import { LicenseManager } from '../services/license-manager';
 import { t } from '../i18n';
 

@@ -12,7 +12,6 @@ import {
 
 import TideLogPlugin from '../main';
 import { AIProviderType, EveningQuestionConfig } from '../types';
-import { DEFAULT_EVENING_QUESTIONS } from '../constants';
 import { t } from '../i18n';
 import type { Language } from '../i18n';
 
@@ -572,8 +571,8 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .setWarning()
                     .onClick(() => {
                         void (async () => {
-                            await this.plugin.licenseManager.deactivate();
-                            new Notice('已取消 Pro 授权');
+                            const result = await this.plugin.licenseManager.deactivate();
+                            new Notice(result.message);
                             this.display();
                         })();
                     })
@@ -588,7 +587,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             keySetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-key');
                 text
-                    .setPlaceholder('输入兑换码...')
+                    .setPlaceholder('TL-XXXX-XXXX-XXXX')
                     .onChange((value) => { keyValue = value; });
             });
 
@@ -598,12 +597,16 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .setCta()
                     .onClick(() => {
                         void (async () => {
-                            const success = await this.plugin.licenseManager.activate(keyValue);
-                            if (success) {
-                                new Notice('🎉 Pro 版激活成功！');
+                            button.setButtonText('⏳ 验证中...');
+                            button.setDisabled(true);
+                            const result = await this.plugin.licenseManager.activate(keyValue);
+                            if (result.success) {
+                                new Notice(`🎉 ${result.message}`);
                                 this.display();
                             } else {
-                                new Notice('❌ 请输入有效的兑换码');
+                                new Notice(`❌ ${result.message}`);
+                                button.setButtonText('激活');
+                                button.setDisabled(false);
                             }
                         })();
                     })
