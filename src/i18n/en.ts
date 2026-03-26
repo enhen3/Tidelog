@@ -116,7 +116,7 @@ export const en: Record<string, string> = {
 - Seeking advice → Understand the full situation first, then offer a thinking framework
 - Thinking aloud → Be a thinking partner, use follow-up questions to help clarify
 - Sharing good news → Be genuinely happy for them, help them savor the joy`,
-    'ctrl.freeChatPrinciples': 'Respond to emotions before content. Guide discovery through questions. Watch for emerging patterns. Keep responses to 2-4 sentences. Reply in English.\nIf the user mentions "update plan", "modify plan", or "adjust tasks", guide them to click the Morning button or say "update plan".',
+    'ctrl.freeChatPrinciples': 'Respond to emotions before content. Guide discovery through questions. Watch for emerging patterns. Keep responses to 2-4 sentences. Reply in English.\nIf the user mentions "update plan", "modify plan", or "adjust tasks", guide them to click the morning button or say "update plan".',
     'ctrl.freeChatProfileNote': 'Naturally weave what you know about the user into the conversation.',
     'ctrl.insightGenerating': '📊 Generating {0} insight report, please wait...',
     'ctrl.insightWeekLabel': 'weekly',
@@ -156,8 +156,8 @@ export const en: Record<string, string> = {
     'kanban.done': '✅ Completed ({0})',
     'kanban.dayLabels': 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
     'kanban.dayTasks': '{0} tasks',
-    'kanban.goalSections': 'Monthly Goals,Key Milestones,月度目标,关键里程碑',
-    'kanban.weekSections': 'Key Tasks,Weekly Goals,Weekly Focus,关键任务,本周目标,本周重点',
+    'kanban.goalSections': 'Monthly goals,key milestones,月度目标,关键里程碑',
+    'kanban.weekSections': 'Key tasks,weekly goals,weekly focus,关键任务,本周目标,本周重点',
 
     // ─── periodic-renderer.ts ──────────────────────────────
     'periodic.yearFormat': '{1}/{0}',
@@ -242,7 +242,7 @@ export const en: Record<string, string> = {
     'dash.emotionScore': '💭 Mood {0}/10',
     'dash.carryForward': '📌 {0} carry-forward',
     'dash.moreItems': '+{0} more...',
-    'dash.noPlan': 'No plan for today yet. Use Plan to start morning planning!',
+    'dash.noPlan': 'No plan for today yet. Use plan to start morning planning!',
     'dash.weekProgress': '📋 This week\'s progress',
     'dash.weekEmotion': '💭 This week\'s mood',
     'dash.todayPrinciple': '💡 Today\'s principle',
@@ -286,7 +286,7 @@ export const en: Record<string, string> = {
     'morning.askGoalsFallback': 'Got it.\n\nNext, what are your most important goals for today? What do you want to accomplish?\n(Describe freely, I\'ll help organize)',
 
     // ─── evening-sop.ts ────────────────────────────────────
-    'evening.complete': 'Today\'s review is complete! Great work 🌙 Rest well, and keep going tomorrow!',
+    'evening.complete': 'Today\'s review is complete! Great work 🌙 rest well, and keep going tomorrow!',
     'evening.skipWords': 'skip,none,nothing,pass,next,no,nah,n/a',
     'evening.skipResponse': 'Okay, let\'s skip this part.',
     'evening.endWords': 'end,stop,done,quit,finish,enough,exit',
@@ -403,11 +403,11 @@ export const en: Record<string, string> = {
     'insight.tagLabel': 'Tags',
 
     // template-manager.ts
-    'tmpl.userProfileTitle': '# User Profile',
-    'tmpl.basicInfo': '## Basic Information',
+    'tmpl.userProfileTitle': '# User profile',
+    'tmpl.basicInfo': '## Basic information',
     'tmpl.basicInfoComment': '<!-- Fill in your basic info to help AI understand you better -->',
     'tmpl.ageRange': '**Age range**',
-    'tmpl.career': '**Career/Role**',
+    'tmpl.career': '**Career/role**',
     'tmpl.lifeStage': '**Life stage**',
     'tmpl.emotionTraits': '## Emotional traits',
     'tmpl.anxietyTriggers': '### Anxiety triggers',
@@ -441,10 +441,10 @@ export const en: Record<string, string> = {
     'tmpl.principlesDesc': '> Record your life principles distilled from experience. AI will help discover and refine new principles during reviews.',
     'tmpl.principleDecision': '## Decision making',
     'tmpl.principleDecisionComment': '<!-- Principles to help you make better decisions -->',
-    'tmpl.principleDecisionExample': 'Example: When facing a choice, ask yourself "How will I view this decision in 5 years?"',
+    'tmpl.principleDecisionExample': 'Example: When facing a choice, ask yourself "how will I view this decision in 5 years?"',
     'tmpl.principleEmotion': '## Emotion management',
     'tmpl.principleEmotionComment': '<!-- Principles to help you manage emotions -->',
-    'tmpl.principleEmotionExample': 'Example: When feeling anxious, first ask yourself "Can I control this?"',
+    'tmpl.principleEmotionExample': 'Example: When feeling anxious, first ask yourself "can I control this?"',
     'tmpl.principleEfficiency': '## Efficiency',
     'tmpl.principleEfficiencyComment': '<!-- Principles to improve efficiency -->',
     'tmpl.principleEfficiencyExample': 'Example: Do the most important tasks in the morning when energy is highest',
@@ -478,14 +478,14 @@ export const en: Record<string, string> = {
     'tmpl.patternSuccessComment': '<!-- Common factors leading to successful outcomes -->',
     'tmpl.patternSuccessExample': 'Example: Projects planned in advance have notably higher completion quality',
     'tmpl.patternsFooter': '> AI will analyze your patterns in weekly/monthly insight reports and suggest improvements.',
-    'tmpl.weeklyPlanTitle': '# {0} Weekly Plan',
+    'tmpl.weeklyPlanTitle': '# {0} Weekly plan',
     'tmpl.weeklyGoals': '## Weekly goals',
     'tmpl.weeklyGoalsComment': '<!-- Most important goals and key tasks for this week -->',
     'tmpl.weeklyReview': '## Review (fill on weekend)',
     'tmpl.weeklyCompletion': '### Completion status',
     'tmpl.weeklyLearnings': '### Learnings and insights',
     'tmpl.weeklyNextWeek': '### Next week adjustments',
-    'tmpl.monthlyPlanTitle': '# {0} Monthly Plan',
+    'tmpl.monthlyPlanTitle': '# {0} Monthly plan',
     'tmpl.monthlyTheme': '## Monthly theme',
     'tmpl.monthlyThemeComment': '<!-- Summarize this month\'s theme in one sentence -->',
     'tmpl.monthlyGoals': '## Monthly goals',
@@ -515,7 +515,7 @@ export const en: Record<string, string> = {
     'dashSvc.noPrinciple': '_No principles yet. AI will help you extract them after reviews._',
     'dashSvc.activePattern': 'Active pattern',
     'dashSvc.noPattern': '_No active patterns yet. AI will analyze your behavior patterns after some time._',
-    'dashSvc.footer': '_This page is auto-generated by TideLog. Run the "Refresh Dashboard" command to update anytime._',
+    'dashSvc.footer': '_This page is auto-generated by TideLog. Run the "refresh dashboard" command to update anytime._',
 
     // review-renderer.ts
     'review.plan': 'Plan',
@@ -561,7 +561,7 @@ export const en: Record<string, string> = {
     'periodic.aiWeeklySummary': '🤖 AI weekly summary',
 
     // periodic-renderer.ts (batch 2)
-    'periodic.monthPlan': '{0} Monthly Plan',
+    'periodic.monthPlan': '{0} Monthly plan',
     'periodic.monthGoals': '🎯 Monthly goals',
     'periodic.monthTasks': '📝 Monthly tasks ({0})',
     'periodic.diaryCount': '📅 {0} diary entries',

@@ -157,7 +157,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         // --- Custom provider: Base URL ---
         if (provider === 'custom') {
             const urlSetting = new Setting(containerEl)
-                .setName('API Base URL')
+                .setName('API base URL')
                 .setDesc(t('settings.baseUrlDesc'));
 
             urlSetting.addText((text) => {
@@ -197,7 +197,7 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         // --- API Key with password toggle ---
         const apiKeySetting = new Setting(containerEl)
-            .setName(`${this.getProviderName(provider)} API Key`)
+            .setName(`${this.getProviderName(provider)} API key`)
             .setDesc(t('settings.apiKeyDesc', this.getProviderName(provider)));
 
         let apiKeyInput: HTMLInputElement;
