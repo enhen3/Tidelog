@@ -112,7 +112,7 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
         },
         siliconflow: {
             apiKey: '',
-            model: 'deepseek-ai/DeepSeek-V3',
+            model: 'deepseek-ai/DeepSeek-V3.2',
             enabled: false,
             baseUrl: 'https://api.siliconflow.cn/v1',
         },

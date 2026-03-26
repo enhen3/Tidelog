@@ -4,6 +4,7 @@
 
 import { ChatMessage, StreamCallback } from '../types';
 import { BaseAIProvider } from './base-provider';
+import { classifyHTTPError, classifyNetworkError, TideLogError } from '../utils/error-formatter';
 
 export class OpenRouterProvider extends BaseAIProvider {
     name = 'OpenRouter';
@@ -31,7 +32,7 @@ export class OpenRouterProvider extends BaseAIProvider {
         });
 
         if (response.status >= 400) {
-            throw new Error(`OpenRouter API error: ${response.status} - ${response.text}`);
+            throw classifyHTTPError(response.status, response.text, this.name, this.model);
         }
 
         const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
@@ -47,9 +48,15 @@ export class OpenRouterProvider extends BaseAIProvider {
                     'Authorization': `Bearer ${this.apiKey}`,
                 },
             });
-            return response.status >= 200 && response.status < 300;
-        } catch {
-            return false;
+
+            if (response.status >= 200 && response.status < 300) {
+                return true;
+            }
+
+            throw classifyHTTPError(response.status, response.text, this.name);
+        } catch (e) {
+            if (e instanceof TideLogError) throw e;
+            throw classifyNetworkError(e);
         }
     }
 }

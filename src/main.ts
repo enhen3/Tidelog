@@ -28,6 +28,8 @@ import { FileLinkService } from './services/file-linker';
 import { DashboardService } from './services/dashboard-service';
 import { LicenseManager } from './services/license-manager';
 
+import { migrateSettings } from './settings-migration';
+
 export default class TideLogPlugin extends Plugin {
     settings: TideLogSettings = DEFAULT_SETTINGS;
     vaultManager!: VaultManager;
@@ -203,6 +205,11 @@ export default class TideLogPlugin extends Plugin {
             }
         }
         this.settings = { ...DEFAULT_SETTINGS, ...saved, providers: mergedProviders };
+
+        // Run any pending settings migrations (e.g. deprecated model replacement)
+        if (migrateSettings(this.settings)) {
+            await this.saveData(this.settings);
+        }
     }
 
     async saveSettings(): Promise<void> {

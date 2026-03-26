@@ -5,6 +5,7 @@
 
 import { ChatMessage, StreamCallback } from '../types';
 import { BaseAIProvider } from './base-provider';
+import { classifyHTTPError, classifyNetworkError, TideLogError } from '../utils/error-formatter';
 
 export class CustomProvider extends BaseAIProvider {
     name = 'Custom';
@@ -36,7 +37,7 @@ export class CustomProvider extends BaseAIProvider {
         });
 
         if (response.status >= 400) {
-            throw new Error(`API error: ${response.status} - ${response.text}`);
+            throw classifyHTTPError(response.status, response.text, this.name, this.model);
         }
 
         const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
@@ -47,7 +48,6 @@ export class CustomProvider extends BaseAIProvider {
 
     async testConnection(): Promise<boolean> {
         try {
-            // Send a minimal request to verify API key + model
             const response = await this.makeRequest(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: {
@@ -60,9 +60,15 @@ export class CustomProvider extends BaseAIProvider {
                     messages: [{ role: 'user', content: 'Hi' }],
                 }),
             });
-            return response.status >= 200 && response.status < 300;
-        } catch {
-            return false;
+
+            if (response.status >= 200 && response.status < 300) {
+                return true;
+            }
+
+            throw classifyHTTPError(response.status, response.text, this.name, this.model);
+        } catch (e) {
+            if (e instanceof TideLogError) throw e;
+            throw classifyNetworkError(e);
         }
     }
 }

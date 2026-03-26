@@ -64,6 +64,9 @@ export interface TideLogSettings {
 
     // Evening SOP Questions (user-configurable)
     eveningQuestions: EveningQuestionConfig[];
+
+    // Settings schema version (for migrations)
+    settingsVersion?: number;
 }
 
 /**

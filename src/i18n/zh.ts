@@ -576,7 +576,7 @@ export const zh: Record<string, string> = {
     'settings.testSuccessBtn': '✅ 连接成功',
     'settings.testFail': '❌ 连接失败，请检查 API Key 是否正确',
     'settings.testFailBtn': '❌ 连接失败',
-    'settings.testError': '错误',
+    'settings.testError': '连接失败，请将错误代码反馈给开发者',
     'settings.testErrorBtn': '❌ 出错了',
     'settings.customProvider': '自定义',
     'settings.recommended': '{0} (推荐)',

@@ -590,7 +590,7 @@ export const en: Record<string, string> = {
     'settings.testSuccessBtn': '✅ Connected',
     'settings.testFail': '❌ Connection failed. Please check your API key',
     'settings.testFailBtn': '❌ Failed',
-    'settings.testError': 'Error',
+    'settings.testError': 'Connection failed. Please report the error code to the developer',
     'settings.testErrorBtn': '❌ Error',
     'settings.customProvider': 'Custom',
     'settings.recommended': '{0} (Recommended)',

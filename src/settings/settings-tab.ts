@@ -14,6 +14,7 @@ import TideLogPlugin from '../main';
 import { AIProviderType, EveningQuestionConfig } from '../types';
 import { t } from '../i18n';
 import type { Language } from '../i18n';
+import { formatAPIError } from '../utils/error-formatter';
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;
@@ -298,11 +299,16 @@ export class TideLogSettingTab extends PluginSettingTab {
                                     }, 2000);
                                 }
                             } catch (error) {
-                                new Notice(`❌ ${t('settings.testError')}: ${error}`);
-                                button.setButtonText(t('settings.testErrorBtn'));
+                                const activeProvider = this.plugin.settings.activeProvider;
+                                const errMsg = formatAPIError(error, activeProvider);
+                                // Extract error code for Notice (strip markdown)
+                                const codeMatch = errMsg.match(/\*\*(TL-\d+)\*\*/);
+                                const code = codeMatch ? codeMatch[1] : '';
+                                new Notice(`❌ ${t('settings.testError')} ${code}`, 8000);
+                                button.setButtonText(code ? `❌ ${code}` : t('settings.testErrorBtn'));
                                 setTimeout(() => {
                                     button.setButtonText(t('settings.testBtn'));
-                                }, 2000);
+                                }, 4000);
                             }
 
                             button.setDisabled(false);
@@ -335,7 +341,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             anthropic: 'claude-sonnet-4-20250514',
             gemini: 'gemini-2.0-flash',
             openai: 'gpt-4o',
-            siliconflow: 'deepseek-ai/DeepSeek-V3',
+            siliconflow: 'deepseek-ai/DeepSeek-V3.2',
             custom: 'deepseek-chat',
         };
         return placeholders[provider];
@@ -377,11 +383,12 @@ export class TideLogSettingTab extends PluginSettingTab {
                 };
             case 'siliconflow':
                 return {
-                    'deepseek-ai/DeepSeek-V3': t('settings.recommended', 'DeepSeek V3'),
-                    'Qwen/Qwen3-235B-A22B': t('settings.powerful', 'Qwen3 235B'),
+                    'deepseek-ai/DeepSeek-V3.2': t('settings.recommended', 'DeepSeek V3.2'),
+                    'deepseek-ai/DeepSeek-V3.1-Terminus': 'DeepSeek V3.1 Terminus',
+                    'Qwen/Qwen3.5-397B-A17B': t('settings.powerful', 'Qwen3.5 397B'),
                     'Qwen/Qwen3-30B-A3B': t('settings.fast', 'Qwen3 30B'),
                     'deepseek-ai/DeepSeek-R1': t('settings.reasoning', 'DeepSeek R1'),
-                    'THUDM/GLM-4-9B-Chat': 'GLM-4 9B Chat',
+                    'Pro/zai-org/GLM-4.7': 'GLM-4.7',
                 };
             case 'custom':
                 // No presets — user types the model ID
