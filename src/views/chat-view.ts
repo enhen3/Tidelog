@@ -159,7 +159,7 @@ export class ChatView extends ItemView {
             cls: 'tl-mode-btn tl-mode-btn-review',
         });
         setIcon(eveningBtn, 'moon');
-        eveningBtn.createSpan({ text: 'Review' });
+        eveningBtn.createSpan({ text: 'Daily' });
         eveningBtn.addEventListener('click', () => this.startSOP('evening'));
 
         const insightBtn = buttons.createEl('button', {
@@ -622,7 +622,7 @@ export class ChatView extends ItemView {
 
 I'm your AI coach, helping you build habits for continuous growth.
 
-**🌙 Review** — Review your day, record achievements & emotions
+**🌙 Daily** — Review your day, record achievements & emotions
 **💡 Insight** — Insight analysis, generate reports
 
 Click a button above to start, or type your thoughts.`
@@ -630,7 +630,7 @@ Click a button above to start, or type your thoughts.`
 
 我是你的 AI 教练，帮助你建立持续成长的习惯。
 
-**🌙 Review** — 回顾一天，记录成就与情绪
+**🌙 Daily** — 回顾一天，记录成就与情绪
 **💡 Insight** — 洞察分析，生成报告
 
 点击上方按钮开始，或直接输入你的想法。`);
