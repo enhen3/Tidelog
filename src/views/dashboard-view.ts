@@ -57,14 +57,14 @@ export class DashboardView extends ItemView {
     private renderProLocked(container: HTMLElement, featureName: string): void {
         const locked = container.createDiv('tl-pro-locked-view');
         locked.createEl('div', { cls: 'tl-pro-locked-icon', text: '🔒' });
-        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: t('pro.featureTitle', featureName) });
-        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('pro.dashboardDesc') });
+        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `🔒 ${featureName}` });
+        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('settings.purchaseDesc') });
 
         const urls = this.plugin.licenseManager.getPurchaseUrls();
         const btnGroup = locked.createDiv('tl-pro-locked-buttons');
         const cnBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: t('pro.mianbaoduo'),
+            text: t('settings.purchaseDomestic'),
             href: urls.mianbaoduo,
         });
         cnBtn.setAttr('target', '_blank');

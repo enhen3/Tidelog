@@ -61,8 +61,10 @@ export class VaultManager {
      * Get the daily note path for a date
      */
     getDailyNotePath(date?: Date): string {
-        const effectiveDate = this.getEffectiveDate(date);
-        const filename = effectiveDate.format('YYYY-MM-DD');
+        // When an explicit date is provided (e.g. from calendar selector), use it directly
+        // without day boundary offset — the boundary is only relevant for "today"
+        const d = date ? moment(date) : this.getEffectiveDate();
+        const filename = d.format('YYYY-MM-DD');
         return `${this.settings.dailyFolder}/${filename}.md`;
     }
 
@@ -74,8 +76,8 @@ export class VaultManager {
         let file = this.app.vault.getAbstractFileByPath(path);
 
         if (!file) {
-            const effectiveDate = this.getEffectiveDate(date);
-            const content = this.createDailyNoteTemplate(effectiveDate);
+            const d = date ? moment(date) : this.getEffectiveDate();
+            const content = this.createDailyNoteTemplate(d);
             file = await this.app.vault.create(path, content);
         }
 

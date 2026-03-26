@@ -568,6 +568,7 @@ export const en: Record<string, string> = {
     'periodic.openMonthPlan': 'Open monthly plan →',
     'periodic.createMonthPlan': '+ Create monthly plan',
     'periodic.deferToday': 'Defer to today',
+    'periodic.dragToReorder': 'Drag to reorder',
     'periodic.dateLabel': 'Date',
     'periodic.tomorrow': 'Tomorrow',
     'periodic.nextWeek': 'Next week',

@@ -565,14 +565,10 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(isPro ? t('settings.proActive') : t('settings.proFree'));
 
         if (isPro) {
-            const key = this.plugin.settings.proLicense.key;
-            const masked = key.length > 8
-                ? key.slice(0, 3) + '-****-****-' + key.slice(-4)
-                : '****';
             const label = this.plugin.licenseManager.getLicenseLabel();
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
-            statusSetting.setDesc(`✅ ${label} ${t('settings.proActivated')} (${masked})${expiryText}`);
+            statusSetting.setDesc(`✅ ${label} ${t('settings.proActivated')}${expiryText}`);
         } else {
             // Key input + activate
             const keySetting = new Setting(containerEl)

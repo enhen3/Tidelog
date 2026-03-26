@@ -90,9 +90,7 @@ export default class TideLogPlugin extends Plugin {
             void this.activateChatView();
         });
 
-        this.addRibbonIcon('layout-dashboard', t('view.dashboardDisplayText'), () => {
-            void this.openView(DASHBOARD_VIEW_TYPE);
-        });
+
 
         // Add commands
         this.addCommand({
@@ -168,7 +166,7 @@ export default class TideLogPlugin extends Plugin {
         this.addCommand({
             id: 'open-dashboard-view',
             name: 'Open dashboard',
-            callback: () => { void this.openView(DASHBOARD_VIEW_TYPE); },
+            callback: () => { void this.openViewInSidebar(DASHBOARD_VIEW_TYPE); },
         });
 
         // Add settings tab
@@ -276,6 +274,24 @@ export default class TideLogPlugin extends Plugin {
             const leaf = workspace.getLeaf(true);
             await leaf.setViewState({ type: viewType, active: true });
             void workspace.revealLeaf(leaf);
+        }
+    }
+
+    /**
+     * Open a custom view in the right sidebar (not the main editor area)
+     */
+    async openViewInSidebar(viewType: string): Promise<void> {
+        const { workspace } = this.app;
+        const leaves = workspace.getLeavesOfType(viewType);
+
+        if (leaves.length > 0) {
+            void workspace.revealLeaf(leaves[0]);
+        } else {
+            const leaf = workspace.getRightLeaf(false);
+            if (leaf) {
+                await leaf.setViewState({ type: viewType, active: true });
+                void workspace.revealLeaf(leaf);
+            }
         }
     }
 

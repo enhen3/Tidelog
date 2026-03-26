@@ -778,15 +778,11 @@ export class PeriodicRenderer {
         const row = container.createDiv(`tl-periodic-task-row ${task.done ? 'tl-periodic-task-row-done' : ''}`);
         row.dataset.taskText = task.text;
         row.dataset.taskIndent = String(task.indent);
-        row.setAttribute('draggable', 'true');
+        row.setAttribute('draggable', 'false');
         if (task.indent > 0) {
             row.addClass('tl-periodic-task-subtask');
             row.style.setProperty('--tl-indent-pad', `${20 + task.indent * 20}px`);
         }
-
-        // Drag handle
-        const handle = row.createEl('span', { cls: 'tl-task-drag-handle', text: '⡇' });
-        handle.addEventListener('mousedown', () => row.setAttribute('draggable', 'true'));
 
         // Checkbox
         const cb = row.createEl('input', { type: 'checkbox' });
@@ -880,6 +876,16 @@ export class PeriodicRenderer {
                 if (ke.key === 'Escape') { subInput.value = ''; subInput.blur(); }
             });
         });
+
+        // Drag handle — right side, after action buttons
+        const handle = row.createEl('span', { cls: 'tl-task-drag-handle', text: '☰' });
+        handle.setAttribute('title', t('periodic.dragToReorder'));
+        handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            row.setAttribute('draggable', 'true');
+            document.addEventListener('mouseup', () => row.setAttribute('draggable', 'false'), { once: true });
+        });
+        row.addEventListener('dragend', () => row.setAttribute('draggable', 'false'));
 
         // Defer-to-today button — only for uncompleted tasks on past dates
         if (sourceDate && !task.done && sourceDate.isBefore(moment(), 'day')) {
@@ -998,85 +1004,72 @@ export class PeriodicRenderer {
             setTimeout(() => document.addEventListener('click', dismiss, true), 0);
         });
 
-        // Drag & drop with hover-to-nest / drag-left-to-promote
+        // Drag & drop: default = reorder (subtasks auto-promote), hover 1s = nest
         let nestTimer: ReturnType<typeof setTimeout> | null = null;
         let nestMode = false;
-        let promoteMode = false;
-        let currentZone: 'left' | 'right' | null = null;
 
-        const clearTimers = () => {
+        const clearDragState = () => {
             if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
             nestMode = false;
-            promoteMode = false;
-            currentZone = null;
-            row.removeClass('tl-task-row-dragover');
-            row.removeClass('tl-task-row-nest-hint');
-            row.removeClass('tl-task-row-promote-hint');
+            row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below', 'tl-task-row-nest-hint');
         };
 
         row.addEventListener('dragstart', (e) => {
             e.dataTransfer?.setData('text/plain', task.text);
+            e.dataTransfer?.setData('text/x-indent', String(task.indent));
             row.addClass('tl-task-row-dragging');
         });
         row.addEventListener('dragend', () => {
             row.removeClass('tl-task-row-dragging');
+            clearDragState();
         });
         row.addEventListener('dragover', (e) => {
             e.preventDefault();
+            // If already in nest mode, keep it
+            if (nestMode) return;
+
+            // Show reorder indicator
+            row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
             const rect = row.getBoundingClientRect();
-            const offsetX = e.clientX - rect.left;
-            const zone: 'left' | 'right' = offsetX < 30 ? 'left' : 'right';
-
-            // If already in a mode or same zone, just keep it
-            if (nestMode || promoteMode) return;
-            if (zone === currentZone) return;
-
-            // Zone changed — clear old timer and start new one
-            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
-            row.removeClass('tl-task-row-dragover');
-            row.removeClass('tl-task-row-nest-hint');
-            row.removeClass('tl-task-row-promote-hint');
-            currentZone = zone;
-
-            if (zone === 'left') {
-                nestTimer = setTimeout(() => {
-                    promoteMode = true;
-                    row.addClass('tl-task-row-promote-hint');
-                }, 300);
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                row.addClass('tl-task-row-drop-above');
             } else {
-                row.addClass('tl-task-row-dragover');
+                row.addClass('tl-task-row-drop-below');
+            }
+
+            // Start nest timer (1s hover → nest mode)
+            if (!nestTimer) {
                 nestTimer = setTimeout(() => {
                     nestMode = true;
-                    row.removeClass('tl-task-row-dragover');
+                    row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
                     row.addClass('tl-task-row-nest-hint');
-                }, 300);
+                }, 1000);
             }
         });
         row.addEventListener('dragleave', () => {
-            clearTimers();
+            clearDragState();
         });
         row.addEventListener('drop', (e) => {
             e.preventDefault();
             const wasNest = nestMode;
-            const wasPromote = promoteMode;
-            clearTimers();
+            clearDragState();
             const draggedText = e.dataTransfer?.getData('text/plain');
             if (!draggedText || draggedText === task.text) return;
+            const draggedIndent = parseInt(e.dataTransfer?.getData('text/x-indent') || '0', 10);
 
             void (async () => {
-                if (wasPromote) {
-                    // Promote: make dragged task a top-level task
-                    await h.setTaskIndent(file, draggedText, 0);
-                    h.invalidateTabCache('kanban');
-                    h.switchTab('kanban');
-                } else if (wasNest) {
-                    // Nest: make dragged task a sub-task of this task
+                if (wasNest) {
+                    // Nest: make sub-task
                     await h.deleteMdTask(file, draggedText);
                     await h.addSubTask(file, task.text, draggedText);
                     h.invalidateTabCache('kanban');
                     h.switchTab('kanban');
                 } else {
-                    // Quick drop: reorder
+                    // Reorder — if dragged item is a subtask, auto-promote first
+                    if (draggedIndent > 0) {
+                        await h.setTaskIndent(file, draggedText, 0);
+                    }
                     const parent = row.parentElement;
                     if (!parent) return;
                     const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));

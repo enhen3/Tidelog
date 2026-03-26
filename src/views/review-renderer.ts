@@ -475,16 +475,25 @@ export class ReviewRenderer {
                 genBtn.setText(t('review.generating'));
                 genBtn.disabled = true;
                 genBtn.addClass('tl-dash-generate-btn-loading');
+                // Animated dots
+                const baseText = t('review.generating').replace(/\.+$/, '');
+                let dotCount = 0;
+                const dotsInterval = setInterval(() => {
+                    dotCount = (dotCount + 1) % 4;
+                    genBtn.setText(baseText + '.'.repeat(dotCount));
+                }, 500);
                 try {
                     await h.plugin.insightService.generateMonthlyInsight(
                         () => {},
                         () => {
+                            clearInterval(dotsInterval);
                             h.invalidateTabCache('review');
                             h.switchTab('review');
                         },
                         moment(calMonth),
                     );
                 } catch {
+                    clearInterval(dotsInterval);
                     genBtn.setText(t('review.generateFailed'));
                     genBtn.disabled = false;
                     genBtn.removeClass('tl-dash-generate-btn-loading');

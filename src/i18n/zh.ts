@@ -207,6 +207,14 @@ export const zh: Record<string, string> = {
     'periodic.aiWeeklyReport': '🤖 AI 周报摘要',
     'periodic.viewFullReport': '查看完整周报 →',
 
+    // ─── calendar-view.ts ─────────────────────────────────
+    'cal.displayText': '日历',
+    'cal.heatmap': '日历热力图',
+    'cal.legend': '情绪热力图：',
+    'cal.low': '低',
+    'cal.high': '高',
+    'cal.weekdays': '一,二,三,四,五,六,日',
+
     // planning tips
     'tip.0': '🎯 今天最重要的一件事是什么？先把它写下来',
     'tip.1': '⏰ 为每个任务设定一个具体的时间段，而不是「今天做」',
@@ -546,6 +554,7 @@ export const zh: Record<string, string> = {
     'periodic.openMonthPlan': '打开月计划 →',
     'periodic.createMonthPlan': '+ 创建月计划',
     'periodic.deferToday': '顺延到今天',
+    'periodic.dragToReorder': '拖拽排序',
     'periodic.dateLabel': '日期',
     'periodic.tomorrow': '明天',
     'periodic.nextWeek': '下周',

@@ -154,7 +154,7 @@ Review today's plan completion. The focus is not "how many got done" but underst
 </task>
 
 <style>
-Curious, non-judgmental. Reply in 2-3 sentences, at most one follow-up question.
+Curious, non-judgmental. Reply in 2-3 sentences. Do NOT ask any follow-up questions.
 </style>
 
 <examples>
@@ -179,7 +179,7 @@ Flow: "All done — great day! Was there one task that went particularly smoothl
 </task>
 
 <style>
-好奇、不评判。回复 2-3 句话，最多追问一个问题。
+好奇、不评判。回复 2-3 句话，不要提出任何追问。
 </style>
 
 <examples>
@@ -456,7 +456,7 @@ When the user reaches a valuable insight, help them confirm and name it.
 </task>
 
 <style>
-Coach-style questioning, gentle but penetrating. Ask only one question at a time.
+Coach-style response, gentle but penetrating. Give observations and affirmations only. Do NOT ask any questions.
 </style>
 
 <examples>
@@ -483,7 +483,7 @@ Flow: "You said 'again' — so this isn't the first time. Last time you procrast
 </task>
 
 <style>
-教练式追问，温和但有穿透力。每次只问一个问题。
+教练式回应，温和但有穿透力。只给出观察和肯定，不要追问。
 </style>
 
 <examples>
@@ -511,7 +511,7 @@ Key: If the user is too harsh on themselves in question 2, gently remind:
 </task>
 
 <style>
-Socratic questioning, gentle yet deep. Reply in 2-3 sentences.
+Socratic response, gentle yet deep. Reply in 2-3 sentences. Do NOT ask any questions.
 </style>
 
 <examples>
@@ -535,7 +535,7 @@ Flow: "You've identified efficiency and concentration — can you pick the one y
 </task>
 
 <style>
-苏格拉底式提问，温和中有深度。回复 2-3 句话。
+苏格拉底式回应，温和中有深度。回复 2-3 句话，不要提问。
 </style>
 
 <examples>
@@ -587,7 +587,7 @@ Flow: "Great observation. Can you be more specific — what situation today made
 - 思维原则："完成比完美更重要"
 - 情绪原则："焦虑出现时先深呼吸三次再决定怎么做"
 
-用提问引导用户自己说出原则，而非替用户总结。
+帮用户确认并命名他们已经觉察到的原则，不要追问。
 </task>
 
 <style>
