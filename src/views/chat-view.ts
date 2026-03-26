@@ -197,6 +197,8 @@ export class ChatView extends ItemView {
 
     public switchTab(tab: SidebarTab, animate = false): void {
         this.activeTab = tab;
+        // Cancel any pending debounced refresh to prevent queued re-renders
+        if (this.refreshTimer) { clearTimeout(this.refreshTimer); this.refreshTimer = null; }
 
         // Update tab bar active state
         this.tabBarEl.querySelectorAll('.tl-tab-btn').forEach(btn => {
@@ -212,17 +214,18 @@ export class ChatView extends ItemView {
             this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => el.remove());
         } else {
             this.chatPanel.addClass('tl-hidden');
-            // Build new panel first, THEN remove old to avoid white flash
+            // Remove stale panels immediately to prevent double-calendar flash
+            this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => el.remove());
+            // Build new panel
             const panel = this.tabContentEl.createDiv('tl-tab-panel');
             if (animate) panel.addClass('tl-tab-panel-animate');
-            const renderDone = (tab === 'kanban')
+            // Suppress vault-modify re-renders while this render is in progress
+            this._suppressRefresh = true;
+            const render = (tab === 'kanban')
                 ? this.renderKanbanTab(panel)
                 : this.renderReviewTab(panel);
-            void renderDone.then(() => {
-                // Remove stale panels (keep the new one and chat)
-                this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => {
-                    if (el !== panel) el.remove();
-                });
+            void render.finally(() => {
+                this._suppressRefresh = false;
             });
         }
     }
@@ -727,7 +730,7 @@ Click a button above to start, or type your thoughts.`
 
         const messageEl = this.createMessageElement('ai');
         const contentDiv = messageEl.createDiv();
-        MarkdownRenderer.render(
+        void MarkdownRenderer.render(
             this.app,
             getLanguage() === 'en'
                 ? `Free Chat Mode 💬
@@ -815,7 +818,7 @@ You can also use the buttons below to generate insight reports:`
      */
     addAIMessage(content: string): void {
         const messageEl = this.createMessageElement('ai');
-        MarkdownRenderer.render(this.app, content, messageEl, '', this);
+        void MarkdownRenderer.render(this.app, content, messageEl, '', this);
         this.scrollToBottom();
     }
 
@@ -830,7 +833,7 @@ You can also use the buttons below to generate insight reports:`
             if (currentIndex < content.length) {
                 currentIndex = Math.min(currentIndex + 3, content.length);
                 messageEl.empty();
-                MarkdownRenderer.render(this.app, content.substring(0, currentIndex), messageEl, '', this);
+                void MarkdownRenderer.render(this.app, content.substring(0, currentIndex), messageEl, '', this);
                 this.scrollToBottom();
             } else {
                 clearInterval(typewriter);

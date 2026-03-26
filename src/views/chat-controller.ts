@@ -189,7 +189,7 @@ export class ChatController {
             const providerConfig = h.plugin.settings.providers[activeProvider];
             if (!providerConfig.apiKey) {
                 messageEl.empty();
-                MarkdownRenderer.render(
+                void MarkdownRenderer.render(
                     h.app,
                     t('chat.noApiKey', activeProvider.toUpperCase()),
                     messageEl,
@@ -244,7 +244,7 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
                 }
                 fullResponse += chunk;
                 messageEl.empty();
-                MarkdownRenderer.render(h.app, fullResponse, messageEl, '', h);
+                void MarkdownRenderer.render(h.app, fullResponse, messageEl, '', h);
                 h.scrollToBottom();
             });
 
@@ -258,7 +258,7 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
             h.hideThinkingIndicator();
             messageEl.empty();
             const friendlyMsg = formatAPIError(error, this.host.plugin.settings.activeProvider);
-            MarkdownRenderer.render(h.app, friendlyMsg, messageEl, '', h);
+            void MarkdownRenderer.render(h.app, friendlyMsg, messageEl, '', h);
             messageEl.addClass('tl-message-error');
         }
 
@@ -291,7 +291,7 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
                 const existing = messageEl.getAttribute('data-content') || '';
                 const newContent = existing + chunk;
                 messageEl.setAttribute('data-content', newContent);
-                MarkdownRenderer.render(h.app, newContent, messageEl, '', h);
+                void MarkdownRenderer.render(h.app, newContent, messageEl, '', h);
                 h.scrollToBottom();
             },
             (fullReport: string) => {
@@ -302,7 +302,7 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
                         .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
                         .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
                         .trim();
-                    MarkdownRenderer.render(h.app, cleanReport, messageEl, '', h);
+                    void MarkdownRenderer.render(h.app, cleanReport, messageEl, '', h);
                     h.addAIMessage(t('chat.reportSaved'));
                 }
                 h.scrollToBottom();
@@ -331,7 +331,7 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
                     .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
                     .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
                     .trim();
-                MarkdownRenderer.render(h.app, displayContent, messageEl, '', h);
+                void MarkdownRenderer.render(h.app, displayContent, messageEl, '', h);
                 h.scrollToBottom();
             },
             (fullResponse: string) => {

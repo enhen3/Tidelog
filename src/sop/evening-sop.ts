@@ -232,16 +232,16 @@ export class EveningSOP {
         // Add response guide to SYSTEM prompt (not user message) to prevent leaking
         systemPrompt += getLanguage() === 'en'
             ? `\n\nResponse guide:
-- Brief answer → gentle acceptance is enough
-- Substantive sharing → empathize first, may ask one follow-up
-- Full insightful sharing → affirm their awareness
+- Give a brief, warm acknowledgment of what the user shared
+- Empathize and affirm their awareness or effort
 - No more than 3 sentences, make user feel "heard"
+- NEVER ask any follow-up questions — the system will handle the next question automatically
 - Never include any instructions, annotations, or meta-information in brackets`
             : `\n\n回复指南：
-- 简短回答 → 温和接纳即可
-- 有内容的分享 → 先共情，可追问一个问题
-- 完整有洞察的分享 → 肯定觉察力
+- 简短温暖地回应用户分享的内容
+- 共情并肯定用户的觉察或努力
 - 不超过 3 句话，让用户感到"被听见"
+- 绝对不要提出任何追问或新问题——系统会自动处理下一个问题
 - 绝对不要在回复中包含任何括号内的指令、标注或元信息`;
 
         // Generate AI response for follow-up or transition
@@ -304,11 +304,11 @@ export class EveningSOP {
     /**
      * Move to next question
      */
-    private async moveToNextQuestion(
+    private moveToNextQuestion(
         context: SOPContext,
         onMessage: (message: string) => void,
         previousResponse?: string
-    ): Promise<void> {
+    ): void {
         this.currentQuestionIndex++;
 
         if (this.currentQuestionIndex >= this.questionFlow.length) {
@@ -322,7 +322,9 @@ export class EveningSOP {
         context.currentStep = this.currentQuestionIndex + 1;
 
         const message = previousResponse
-            ? `${previousResponse}\n\n---\n\n${nextQuestion.initialMessage}`
+            ? `${previousResponse.trim()}
+
+${nextQuestion.initialMessage}`
             : nextQuestion.initialMessage;
 
         onMessage(message);
@@ -344,7 +346,9 @@ export class EveningSOP {
             : '最后一个问题：**今天整体心情怎么样？** 请用 1-10 分评估一下。\n（1=很糟糕，5=一般，10=非常开心）';
 
         const message = previousResponse
-            ? `${previousResponse}\n\n---\n\n${emotionQ}`
+            ? `${previousResponse.trim()}
+
+${emotionQ}`
             : emotionQ;
 
         onMessage(message);
@@ -440,24 +444,67 @@ export class EveningSOP {
             console.error('[Evening SOP] Failed to update YAML:', error);
         }
 
-        // Build dynamic summary from completed questions
-        let summary = getLanguage() === 'en'
-            ? `✅ Today's review is complete!\n\n**Review summary:**`
-            : `✅ 今天的复盘完成了！\n\n**复盘摘要：**`;
+        // Build a warm AI-generated closing message
+        let summary = '';
+        try {
+            const provider = this.plugin.getAIProvider();
+            // Gather all responses for context
+            const responses = context.responses || {};
+            let reviewContent = '';
+            for (const [key, val] of Object.entries(responses)) {
+                if (val && typeof val === 'string' && val.trim()) {
+                    reviewContent += `${key}: ${val.trim()}\n`;
+                }
+            }
 
-        // List completed question sections
-        for (let i = 0; i < this.currentQuestionIndex && i < this.questionFlow.length; i++) {
-            summary += `\n- ${this.questionFlow[i].sectionName} ✓`;
+            if (provider && reviewContent) {
+                const closingPrompt = getLanguage() === 'en'
+                    ? `The user just finished their evening review. Based on their responses below, write a warm, encouraging closing message in 2-3 sentences. Reference specific things they shared to make it feel personal. End with a good night wish. Do NOT ask any questions.\n\nReview content:\n${reviewContent}`
+                    : `用户刚刚完成了晚间复盘。根据下面的复盘内容，写一段温暖、鼓励的收尾语（2-3句话）。引用用户实际分享的内容让它更有亲切感。以晚安祝福结尾。不要提出任何问题。\n\n复盘内容：\n${reviewContent}`;
+
+                const messages: ChatMessage[] = [
+                    { role: 'user', content: closingPrompt, timestamp: Date.now() }
+                ];
+                const systemPrompt = getLanguage() === 'en'
+                    ? 'You are Flow, a warm personal growth companion. Write a brief, heartfelt closing.'
+                    : '你是 Flow，一个温暖的个人成长伙伴。写一段简短、真诚的收尾语。';
+
+                const closingMsg = await provider.sendMessage(messages, systemPrompt, () => {});
+                if (closingMsg && closingMsg.trim()) {
+                    summary = closingMsg.trim();
+                }
+            }
+        } catch {
+            // Fall through to static message
+        }
+
+        // Fallback static message if AI fails
+        if (!summary) {
+            summary = getLanguage() === 'en'
+                ? `Great job reviewing your day! 🌟 Every moment of reflection is a step toward growth.`
+                : `今天的复盘辛苦了！🌟 每一次回顾都是成长的印记。`;
         }
 
         if (emotionScore) {
-            const emotionLabel = getLanguage() === 'en' ? 'Mood score' : '情绪评分';
-            summary += `\n\n**${emotionLabel}**: ${emotionScore}/10`;
+            const emotionLabel = getLanguage() === 'en' ? 'Mood' : '情绪';
+            summary += `\n\n${emotionLabel}: ${emotionScore}/10`;
         }
 
         summary += getLanguage() === 'en'
-            ? `\n\nAll content has been saved to today's journal. Good night! 🌙`
-            : `\n\n所有内容已保存到今日的日记中。晚安！🌙`;
+            ? `\n\nAll saved to your journal. Good night! 🌙`
+            : `\n\n已保存到日记中，晚安 🌙`;
+
+        // Pro upsell for free users
+        if (!this.plugin.licenseManager.isPro()) {
+            const totalEnabled = this.plugin.settings.eveningQuestions
+                .filter((q: EveningQuestionConfig) => q.enabled).length;
+            if (totalEnabled > 2) {
+                const urls = this.plugin.licenseManager.getPurchaseUrls();
+                summary += getLanguage() === 'en'
+                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. [Upgrade to Pro](${urls.mianbaoduo}) to unlock all questions and deeper insights.*`
+                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。[升级 Pro 版](${urls.mianbaoduo})解锁全部问题和更深入的洞察。*`;
+            }
+        }
 
         onMessage(summary);
 
