@@ -183,7 +183,7 @@ export class ChatView extends ItemView {
         const tabs: { id: SidebarTab; emoji: string; label: string }[] = [
             { id: 'kanban', emoji: '☀️', label: 'Plan' },
             { id: 'chat', emoji: '🌙', label: 'Review' },
-            { id: 'review', emoji: '🌓', label: 'Insights' },
+            { id: 'review', emoji: '🌓', label: 'Trends' },
         ];
 
         for (const tab of tabs) {
