@@ -3,7 +3,7 @@
  * Extracted from chat-view.ts for maintainability.
  */
 
-import { TFile, moment } from 'obsidian';
+import { TFile, moment, Platform } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 import { t, getLanguage } from '../i18n';
@@ -28,6 +28,7 @@ export class ReviewRenderer {
 
     async render(panel: HTMLElement): Promise<void> {
         panel.addClass('tl-review-scroll');
+        if (Platform.isMobile) panel.addClass('is-mobile');
         await this.renderReviewCalendar(panel);
         await this.renderReviewDashboard(panel);
     }
@@ -255,28 +256,52 @@ export class ReviewRenderer {
             // Hover to show popover (no click needed)
             if (data?.filePath) {
                 cell.addClass('tl-cal-cell-clickable');
-                let popoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
-                cell.addEventListener('mouseenter', () => {
-                    popoverTimeout = setTimeout(() => {
-                        this.showTaskPopover(cell, data, dateStr);
-                    }, 200);
-                });
-                cell.addEventListener('mouseleave', () => {
-                    if (popoverTimeout) clearTimeout(popoverTimeout);
-                    // Give a small delay so user can move into popover
-                    setTimeout(() => {
-                        const popover = cell.querySelector('.tl-cal-popover') as HTMLElement;
-                        if (popover && !popover.matches(':hover')) {
-                            popover.remove();
+                if (Platform.isMobile) {
+                    // Mobile: tap to toggle popover, second tap to open note
+                    cell.addEventListener('click', (e) => {
+                        const existing = cell.querySelector('.tl-cal-popover');
+                        if (existing) {
+                            existing.remove();
+                            // Open note on second tap
+                            const f = h.app.vault.getAbstractFileByPath(data.filePath);
+                            if (f instanceof TFile) void h.app.workspace.getLeaf().openFile(f);
+                            return;
                         }
-                    }, 150);
-                });
-                // Click to open note directly
-                cell.addEventListener('click', () => {
-                    const f = h.app.vault.getAbstractFileByPath(data.filePath);
-                    if (f instanceof TFile) void h.app.workspace.getLeaf().openFile(f);
-                });
+                        // Remove any other popovers
+                        document.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
+                        e.stopPropagation();
+                        this.showTaskPopover(cell, data, dateStr);
+                    });
+                    // Dismiss popover on outside tap
+                    document.addEventListener('click', (ev) => {
+                        if (!cell.contains(ev.target as Node)) {
+                            cell.querySelector('.tl-cal-popover')?.remove();
+                        }
+                    });
+                } else {
+                    // Desktop: hover to show popover
+                    let popoverTimeout: ReturnType<typeof setTimeout> | null = null;
+                    cell.addEventListener('mouseenter', () => {
+                        popoverTimeout = setTimeout(() => {
+                            this.showTaskPopover(cell, data, dateStr);
+                        }, 200);
+                    });
+                    cell.addEventListener('mouseleave', () => {
+                        if (popoverTimeout) clearTimeout(popoverTimeout);
+                        setTimeout(() => {
+                            const popover = cell.querySelector('.tl-cal-popover') as HTMLElement;
+                            if (popover && !popover.matches(':hover')) {
+                                popover.remove();
+                            }
+                        }, 150);
+                    });
+                    // Click to open note directly
+                    cell.addEventListener('click', () => {
+                        const f = h.app.vault.getAbstractFileByPath(data.filePath);
+                        if (f instanceof TFile) void h.app.workspace.getLeaf().openFile(f);
+                    });
+                }
             }
         }
     }

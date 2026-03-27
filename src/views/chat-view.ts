@@ -9,6 +9,7 @@ import {
     TFile,
     setIcon,
     moment,
+    Platform,
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
@@ -103,6 +104,7 @@ export class ChatView extends ItemView {
         const container = this.contentEl;
         container.empty();
         container.addClass('tl-chat-container');
+        if (Platform.isMobile) container.addClass('is-mobile');
 
         // Tab bar (top-level navigation — no header)
         this.renderTabBar(container);

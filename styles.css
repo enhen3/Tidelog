@@ -3970,3 +3970,321 @@ button.tl-periodic-open-btn {
 .tl-pro-locked-btn:hover {
 	opacity: 0.9;
 }
+
+/* =============================================================================
+   Mobile Optimization — .is-mobile scope (set via Platform.isMobile)
+   All rules use .is-mobile on the container so desktop is completely unaffected.
+   ============================================================================= */
+
+/* ── Always-visible action buttons (no hover on touch) ── */
+
+.is-mobile .tl-task-delete-btn,
+.is-mobile .tl-task-drag-handle,
+.is-mobile .tl-task-sub-btn,
+.is-mobile .tl-task-defer-btn {
+	opacity: 0.5;
+}
+
+.is-mobile .tl-task-remove-btn,
+.is-mobile .tl-subtask-remove-btn {
+	opacity: 0.7;
+}
+
+/* ── Larger touch targets (Apple HIG 44px minimum) ── */
+
+.is-mobile .tl-periodic-task-row {
+	min-height: 44px;
+	padding: 10px 12px;
+}
+
+.is-mobile .tl-periodic-task-row input[type='checkbox'] {
+	width: 22px;
+	height: 22px;
+}
+
+.is-mobile .tl-periodic-task-row input[type='checkbox']:checked::after {
+	left: 6px;
+	top: 2px;
+	width: 5px;
+	height: 9px;
+}
+
+.is-mobile .tl-task-delete-btn {
+	width: 28px;
+	height: 28px;
+	font-size: 18px;
+}
+
+.is-mobile .tl-task-sub-btn {
+	width: 24px;
+	height: 24px;
+	font-size: 16px;
+}
+
+.is-mobile .tl-task-drag-handle {
+	width: 24px;
+	font-size: 14px;
+}
+
+.is-mobile .tl-task-defer-btn {
+	width: 24px;
+	height: 24px;
+}
+
+.is-mobile .tl-task-defer-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* ── Tab bar: larger touch targets ── */
+
+.is-mobile .tl-tab-btn {
+	padding: var(--tl-sp-10) var(--tl-sp-12);
+	font-size: var(--tl-fs-callout);
+}
+
+.is-mobile .tl-periodic-mode-btn {
+	padding: var(--tl-sp-8) var(--tl-sp-16);
+	font-size: var(--tl-fs-callout);
+}
+
+/* ── Mode buttons: always show text on mobile ── */
+
+.is-mobile .tl-mode-btn span {
+	display: inline;
+}
+
+.is-mobile .tl-mode-btn {
+	padding: var(--tl-sp-8) var(--tl-sp-12);
+}
+
+/* ── Chat input: larger for mobile typing ── */
+
+.is-mobile .tl-input {
+	font-size: 16px; /* prevents iOS zoom on focus */
+	min-height: 48px;
+	padding: var(--tl-sp-12);
+}
+
+.is-mobile .tl-send-btn {
+	padding: 10px var(--tl-sp-24);
+	font-size: var(--tl-fs-title3);
+	min-height: 44px;
+}
+
+/* ── Task input: larger for mobile ── */
+
+.is-mobile .tl-periodic-task-input {
+	font-size: 16px;
+	padding: 8px 10px;
+	min-height: 40px;
+}
+
+.is-mobile .tl-periodic-task-add-btn {
+	width: 32px;
+	height: 32px;
+	font-size: 18px;
+}
+
+.is-mobile .tl-task-field {
+	font-size: 16px;
+	padding: var(--tl-sp-12) var(--tl-sp-8);
+}
+
+.is-mobile .tl-subtask-field {
+	font-size: 16px;
+}
+
+/* ── Calendar: larger cells for touch ── */
+
+.is-mobile .tl-periodic-cal-cell {
+	padding: var(--tl-sp-10) 0;
+	font-size: var(--tl-fs-callout);
+}
+
+.is-mobile .tl-periodic-month-cell {
+	padding: 14px 0;
+	font-size: var(--tl-fs-body);
+}
+
+.is-mobile .tl-cal-cell {
+	min-height: 40px;
+}
+
+.is-mobile .tl-periodic-nav-btn,
+.is-mobile .tl-cal-nav-btn,
+.is-mobile .tl-pyramid-nav-btn {
+	padding: var(--tl-sp-8) var(--tl-sp-16);
+	min-height: 36px;
+}
+
+/* ── Week view: stack columns on mobile ── */
+
+.is-mobile .tl-week-grid {
+	grid-template-columns: 1fr;
+	gap: 8px;
+}
+
+.is-mobile .tl-week-col {
+	border-radius: 8px;
+}
+
+.is-mobile .tl-week-task-area {
+	max-height: none;
+}
+
+/* ── Settings: full-width inputs ── */
+
+.is-mobile .tl-setting-input-wide,
+.is-mobile .tl-setting-input-key,
+.is-mobile .tl-setting-input-model {
+	width: 100%;
+}
+
+.is-mobile .tl-q-row {
+	padding: 10px 12px;
+}
+
+.is-mobile .tl-q-drag-handle {
+	font-size: 18px;
+	padding: 4px;
+}
+
+.is-mobile .tl-q-detail-input,
+.is-mobile .tl-q-detail-textarea {
+	font-size: 16px;
+}
+
+/* ── Disable hover-only transformations on mobile ── */
+
+.is-mobile .tl-mode-btn:hover,
+.is-mobile .tl-insight-btn:hover,
+.is-mobile .tl-task-add-btn:hover,
+.is-mobile .tl-pyramid-task:hover,
+.is-mobile .tl-dash-link:hover,
+.is-mobile .tl-cal-cell-clickable:hover {
+	transform: none;
+	box-shadow: none;
+}
+
+.is-mobile .tl-send-btn:hover:not(:disabled) {
+	transform: none;
+}
+
+/* ── Disable CSS tooltips on mobile (no hover) ── */
+
+.is-mobile .tl-cal-cell-clickable[aria-label]::after {
+	display: none;
+}
+
+/* ── Popover: full-width bottom sheet style on mobile ── */
+
+.is-mobile .tl-cal-popover {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	top: auto;
+	transform: none;
+	width: 100%;
+	border-radius: 16px 16px 0 0;
+	max-height: 60vh;
+	overflow-y: auto;
+	animation: tl-mobile-sheet-in 0.25s var(--tl-ease);
+	z-index: 200;
+}
+
+@keyframes tl-mobile-sheet-in {
+	from {
+		opacity: 0;
+		transform: translateY(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* ── Date popup: centered bottom sheet on mobile ── */
+
+.is-mobile .tl-task-date-popup {
+	position: fixed;
+	bottom: env(safe-area-inset-bottom, 16px);
+	left: 16px;
+	right: 16px;
+	top: auto;
+	border-radius: 14px;
+	padding: 14px 16px;
+}
+
+/* ── Header buttons wrap on mobile ── */
+
+.is-mobile .tl-header-buttons {
+	flex-wrap: wrap;
+}
+
+/* ── Messages area: more padding for readability ── */
+
+.is-mobile .tl-messages {
+	padding: 12px;
+	gap: 10px;
+}
+
+.is-mobile .tl-message {
+	max-width: 95%;
+}
+
+/* ── Pro locked view: responsive padding ── */
+
+.is-mobile .tl-pro-locked-view {
+	padding: 24px 16px;
+	min-height: 300px;
+}
+
+/* ── Pyramid tier body: no max-height on mobile (natural scroll) ── */
+
+.is-mobile .tl-pyramid-week-body,
+.is-mobile .tl-pyramid-month-detail,
+.is-mobile .tl-pyramid-daily-body {
+	max-height: none;
+}
+
+/* ── Plan suggestion: comfortable padding ── */
+
+.is-mobile .tl-plan-suggestion {
+	margin: var(--tl-sp-8);
+	padding: var(--tl-sp-12);
+}
+
+/* ── Insight buttons wrap ── */
+
+.is-mobile .tl-insight-buttons {
+	gap: 6px;
+}
+
+.is-mobile .tl-insight-btn {
+	padding: var(--tl-sp-10) var(--tl-sp-16);
+	font-size: var(--tl-fs-body);
+}
+
+/* ── Question card: comfortable touch ── */
+
+.is-mobile .tl-question-card {
+	padding: var(--tl-sp-16);
+}
+
+.is-mobile .tl-question-textarea {
+	font-size: 16px;
+	min-height: 80px;
+}
+
+/* ── Periodic preview: larger open button ── */
+
+.is-mobile .tl-periodic-open-btn {
+	padding: 12px;
+	font-size: var(--tl-fs-body);
+}
+
+.is-mobile button.tl-periodic-open-btn {
+	min-height: 44px;
+}

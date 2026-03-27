@@ -8,6 +8,7 @@ import {
     PluginSettingTab,
     Setting,
     Notice,
+    Platform,
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
@@ -27,6 +28,7 @@ export class TideLogSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+        if (Platform.isMobile) containerEl.addClass('is-mobile');
 
         // =================================================================
         // Language Setting
@@ -516,12 +518,70 @@ export class TideLogSettingTab extends PluginSettingTab {
 
                 void (async () => {
                     const items = this.plugin.settings.eveningQuestions;
-                    const [moved] = items.splice(dragIdx, 1);
+                    const [moved] = items.splice(dragIdx!, 1);
                     items.splice(index, 0, moved);
                     await this.plugin.saveSettings();
                     this.display();
                 })();
             });
+
+            // --- Touch drag events (mobile) ---
+            if (Platform.isMobile) {
+                let touchStartY = 0;
+                let touchDragging = false;
+                let touchClone: HTMLElement | null = null;
+                handle.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    touchStartY = e.touches[0].clientY;
+                    touchDragging = false;
+                    dragIdx = index;
+                }, { passive: true });
+                handle.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    if (!touchDragging && Math.abs(touch.clientY - touchStartY) > 8) {
+                        touchDragging = true;
+                        row.addClass('tl-q-dragging');
+                        touchClone = row.cloneNode(true) as HTMLElement;
+                        touchClone.style.position = 'fixed';
+                        touchClone.style.left = `${row.getBoundingClientRect().left}px`;
+                        touchClone.style.width = `${row.getBoundingClientRect().width}px`;
+                        touchClone.style.zIndex = '1000';
+                        touchClone.style.opacity = '0.8';
+                        touchClone.style.pointerEvents = 'none';
+                        touchClone.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+                        document.body.appendChild(touchClone);
+                    }
+                    if (touchDragging) {
+                        e.preventDefault();
+                        if (touchClone) touchClone.style.top = `${touch.clientY - 22}px`;
+                        listEl.querySelectorAll('.tl-q-row').forEach(r => r.removeClass('tl-q-dragover'));
+                        const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
+                        if (target && target !== row && listEl.contains(target)) {
+                            target.addClass('tl-q-dragover');
+                        }
+                    }
+                }, { passive: false });
+                handle.addEventListener('touchend', (e) => {
+                    if (touchClone) { touchClone.remove(); touchClone = null; }
+                    row.removeClass('tl-q-dragging');
+                    listEl.querySelectorAll('.tl-q-row').forEach(r => r.removeClass('tl-q-dragover'));
+                    if (!touchDragging) { dragIdx = null; return; }
+                    touchDragging = false;
+                    const touch = e.changedTouches[0];
+                    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
+                    if (!target || target === row || !listEl.contains(target)) { dragIdx = null; return; }
+                    const targetIdx = parseInt(target.dataset.index || '-1', 10);
+                    if (dragIdx === null || dragIdx === targetIdx || targetIdx < 0) { dragIdx = null; return; }
+                    void (async () => {
+                        const items = this.plugin.settings.eveningQuestions;
+                        const [moved] = items.splice(dragIdx!, 1);
+                        items.splice(targetIdx, 0, moved);
+                        dragIdx = null;
+                        await this.plugin.saveSettings();
+                        this.display();
+                    })();
+                }, { passive: true });
+            }
         });
 
         // --- Add question link ---

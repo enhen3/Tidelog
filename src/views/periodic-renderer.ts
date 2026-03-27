@@ -3,7 +3,7 @@
  * Replaces the old kanban-renderer with a day/week/month period selector + content preview.
  */
 
-import { TFile, moment, setIcon } from 'obsidian';
+import { TFile, moment, setIcon, Platform } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 import { t, getLanguage } from '../i18n';
@@ -36,6 +36,7 @@ export class PeriodicRenderer {
 
     async render(panel: HTMLElement): Promise<void> {
         panel.addClass('tl-periodic');
+        if (Platform.isMobile) panel.addClass('is-mobile');
 
         // Sub-tab bar: 日 | 周 | 月
         this.renderModeBar(panel);
@@ -799,17 +800,17 @@ export class PeriodicRenderer {
             })();
         });
 
-        // Label (double-click to edit)
+        // Label — edit trigger: dblclick on desktop, single tap on mobile
         const label = row.createEl('span', { cls: 'tl-periodic-task-text', text: task.text });
         if (task.done) {
             label.addClass('tl-text-done');
         }
-        label.addEventListener('dblclick', () => {
+        const startEdit = (target: HTMLElement) => {
             const input = document.createElement('input');
             input.type = 'text';
             input.value = task.text;
             input.className = 'tl-task-edit-input';
-            label.replaceWith(input);
+            target.replaceWith(input);
             input.focus();
             input.select();
             const save = () => {
@@ -823,8 +824,12 @@ export class PeriodicRenderer {
                     newLabel.className = 'tl-periodic-task-text';
                     newLabel.textContent = task.text;
                     input.replaceWith(newLabel);
-                    // Re-attach dblclick listener
-                    newLabel.addEventListener('dblclick', () => label.dispatchEvent(new Event('dblclick')));
+                    // Re-attach edit listener
+                    if (Platform.isMobile) {
+                        newLabel.addEventListener('click', () => startEdit(newLabel));
+                    } else {
+                        newLabel.addEventListener('dblclick', () => startEdit(newLabel));
+                    }
                 })();
             };
             input.addEventListener('blur', save);
@@ -832,7 +837,12 @@ export class PeriodicRenderer {
                 if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
                 if (e.key === 'Escape') { input.value = task.text; input.blur(); }
             });
-        });
+        };
+        if (Platform.isMobile) {
+            label.addEventListener('click', () => startEdit(label));
+        } else {
+            label.addEventListener('dblclick', () => startEdit(label));
+        }
 
         // Delete button
         const delBtn = row.createEl('span', { cls: 'tl-task-delete-btn', text: '×' });
@@ -880,11 +890,99 @@ export class PeriodicRenderer {
         // Drag handle — right side, after action buttons
         const handle = row.createEl('span', { cls: 'tl-task-drag-handle', text: '☰' });
         handle.setAttribute('title', t('periodic.dragToReorder'));
-        handle.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            row.setAttribute('draggable', 'true');
-            document.addEventListener('mouseup', () => row.setAttribute('draggable', 'false'), { once: true });
-        });
+        if (Platform.isMobile) {
+            // Touch drag-and-drop for mobile
+            let touchStartY = 0;
+            let touchDragging = false;
+            let touchClone: HTMLElement | null = null;
+            handle.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                const touch = e.touches[0];
+                touchStartY = touch.clientY;
+                touchDragging = false;
+            }, { passive: true });
+            handle.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                if (!touchDragging && Math.abs(touch.clientY - touchStartY) > 8) {
+                    touchDragging = true;
+                    row.addClass('tl-task-row-dragging');
+                    // Create a floating clone for visual feedback
+                    touchClone = row.cloneNode(true) as HTMLElement;
+                    touchClone.style.position = 'fixed';
+                    touchClone.style.left = `${row.getBoundingClientRect().left}px`;
+                    touchClone.style.width = `${row.getBoundingClientRect().width}px`;
+                    touchClone.style.zIndex = '1000';
+                    touchClone.style.opacity = '0.8';
+                    touchClone.style.pointerEvents = 'none';
+                    touchClone.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+                    touchClone.style.borderRadius = '8px';
+                    document.body.appendChild(touchClone);
+                }
+                if (touchDragging) {
+                    e.preventDefault(); // Prevent scroll during drag
+                    if (touchClone) {
+                        touchClone.style.top = `${touch.clientY - 22}px`;
+                    }
+                    // Highlight drop target
+                    const parent = row.parentElement;
+                    if (parent) {
+                        parent.querySelectorAll('.tl-periodic-task-row').forEach(r => {
+                            r.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
+                        });
+                        const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-periodic-task-row') as HTMLElement | null;
+                        if (target && target !== row && parent.contains(target)) {
+                            const rect = target.getBoundingClientRect();
+                            if (touch.clientY < rect.top + rect.height / 2) {
+                                target.addClass('tl-task-row-drop-above');
+                            } else {
+                                target.addClass('tl-task-row-drop-below');
+                            }
+                        }
+                    }
+                }
+            }, { passive: false });
+            handle.addEventListener('touchend', (e) => {
+                if (touchClone) { touchClone.remove(); touchClone = null; }
+                row.removeClass('tl-task-row-dragging');
+                if (!touchDragging) return;
+                touchDragging = false;
+                const parent = row.parentElement;
+                if (!parent) return;
+                // Find drop target
+                const touch = e.changedTouches[0];
+                parent.querySelectorAll('.tl-periodic-task-row').forEach(r => {
+                    r.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
+                });
+                const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-periodic-task-row') as HTMLElement | null;
+                if (!target || target === row || !parent.contains(target)) return;
+                const targetText = target.dataset.taskText;
+                if (!targetText || targetText === task.text) return;
+                // Reorder
+                void (async () => {
+                    if (task.indent > 0) {
+                        await h.setTaskIndent(file, task.text, 0);
+                    }
+                    const rows = Array.from(parent.querySelectorAll('.tl-periodic-task-row'));
+                    const texts = rows.map(r => (r as HTMLElement).dataset.taskText || '').filter(t => t);
+                    const fromIdx = texts.indexOf(task.text);
+                    const toIdx = texts.indexOf(targetText);
+                    if (fromIdx >= 0 && toIdx >= 0) {
+                        texts.splice(fromIdx, 1);
+                        texts.splice(toIdx, 0, task.text);
+                        await h.reorderMdTasks(file, texts);
+                        h.invalidateTabCache('kanban');
+                        h.switchTab('kanban');
+                    }
+                })();
+            }, { passive: true });
+        } else {
+            // Desktop: mousedown activates HTML5 drag
+            handle.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                row.setAttribute('draggable', 'true');
+                document.addEventListener('mouseup', () => row.setAttribute('draggable', 'false'), { once: true });
+            });
+        }
         row.addEventListener('dragend', () => row.setAttribute('draggable', 'false'));
 
         // Defer-to-today button — only for uncompleted tasks on past dates
@@ -900,11 +998,8 @@ export class PeriodicRenderer {
             });
         }
 
-        // Right-click context menu with date quick-change
-        row.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
+        // Date quick-change popup — shared builder for both desktop and mobile triggers
+        const showDatePopup = (clientX: number, clientY: number) => {
             // Remove any existing popup
             document.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
 
@@ -985,24 +1080,59 @@ export class PeriodicRenderer {
 
             document.body.appendChild(popup);
 
-            // Position the popup near the click
-            const popupWidth = 220;
-            const popupHeight = 100;
-            let left = e.clientX;
-            let top = e.clientY;
-            if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 8;
-            if (top + popupHeight > window.innerHeight) top = e.clientY - popupHeight;
-            popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
+            if (!Platform.isMobile) {
+                // Desktop: position near the click
+                const popupWidth = 220;
+                const popupHeight = 100;
+                let left = clientX;
+                let top = clientY;
+                if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 8;
+                if (top + popupHeight > window.innerHeight) top = clientY - popupHeight;
+                popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
+            }
+            // else: mobile CSS positions it as a bottom sheet
 
-            // Dismiss on outside click
-            const dismiss = (ev: MouseEvent) => {
-                if (!popup.contains(ev.target as Node)) {
+            // Dismiss on outside click/tap
+            const dismiss = (ev: MouseEvent | TouchEvent) => {
+                const target = ev instanceof TouchEvent ? document.elementFromPoint((ev as TouchEvent).changedTouches[0].clientX, (ev as TouchEvent).changedTouches[0].clientY) : ev.target;
+                if (!popup.contains(target as Node)) {
                     popup.remove();
                     document.removeEventListener('click', dismiss, true);
+                    document.removeEventListener('touchend', dismiss, true);
                 }
             };
-            setTimeout(() => document.addEventListener('click', dismiss, true), 0);
+            setTimeout(() => {
+                document.addEventListener('click', dismiss, true);
+                document.addEventListener('touchend', dismiss, true);
+            }, 0);
+        };
+
+        // Right-click / long-press context menu with date quick-change
+        row.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showDatePopup(e.clientX, e.clientY);
         });
+
+        // Mobile: long-press (500ms) to open date popup
+        if (Platform.isMobile) {
+            let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+            let longPressTriggered = false;
+            row.addEventListener('touchstart', (e) => {
+                longPressTriggered = false;
+                const touch = e.touches[0];
+                longPressTimer = setTimeout(() => {
+                    longPressTriggered = true;
+                    showDatePopup(touch.clientX, touch.clientY);
+                }, 500);
+            }, { passive: true });
+            row.addEventListener('touchmove', () => {
+                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            }, { passive: true });
+            row.addEventListener('touchend', () => {
+                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            }, { passive: true });
+        }
 
         // Drag & drop: default = reorder (subtasks auto-promote), hover 1s = nest
         let nestTimer: ReturnType<typeof setTimeout> | null = null;
