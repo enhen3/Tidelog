@@ -104,7 +104,15 @@ export class LicenseManager {
                 return { success: false, message: data.error || '激活失败' };
             }
         } catch (err) {
-            return { success: false, message: `网络错误：${err instanceof Error ? err.message : '请检查网络连接'}` };
+            const errMsg = err instanceof Error ? err.message : String(err);
+            // ERR_CONNECTION_CLOSED / network errors are common in China due to workers.dev being blocked
+            if (errMsg.includes('ERR_CONNECTION') || errMsg.includes('ECONNREFUSED') || errMsg.includes('ETIMEDOUT') || errMsg.includes('fetch')) {
+                return {
+                    success: false,
+                    message: '网络连接失败，可能需要科学上网后重试。如仍无法激活，请联系开发者手动激活。',
+                };
+            }
+            return { success: false, message: `网络错误：${errMsg}` };
         }
     }
 
