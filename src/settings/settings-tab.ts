@@ -91,7 +91,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(t('settings.dailyFolderDesc'))
             .addText((text) =>
                 text
-                    .setPlaceholder('01-Daily')
+                    .setPlaceholder('01-daily')
                     .setValue(this.plugin.settings.dailyFolder)
                     .onChange((value) => {
                         this.plugin.settings.dailyFolder = value;
@@ -104,7 +104,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(t('settings.planFolderDesc'))
             .addText((text) =>
                 text
-                    .setPlaceholder('02-Plan')
+                    .setPlaceholder('02-plan')
                     .setValue(this.plugin.settings.planFolder)
                     .onChange((value) => {
                         this.plugin.settings.planFolder = value;
@@ -117,7 +117,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(t('settings.archiveFolderDesc'))
             .addText((text) =>
                 text
-                    .setPlaceholder('03-Archive')
+                    .setPlaceholder('03-archive')
                     .setValue(this.plugin.settings.archiveFolder)
                     .onChange((value) => {
                         this.plugin.settings.archiveFolder = value;
