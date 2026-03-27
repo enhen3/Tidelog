@@ -463,7 +463,6 @@ export class PeriodicRenderer {
         const trailPad = 7 - lastDay.isoWeekday();
         for (let i = 1; i <= trailPad; i++) {
             const nextMonthDay = moment(lastDay).add(i, 'days');
-            const dateStr = nextMonthDay.format('YYYY-MM-DD');
             const weekStartStr = moment(nextMonthDay).startOf('isoWeek').format('YYYY-MM-DD');
             const isInSelectedWeek = weekStartStr === selWeekStart;
 

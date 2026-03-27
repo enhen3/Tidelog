@@ -80,7 +80,7 @@ export class KanbanView extends ItemView {
         const prevBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '‹' });
         prevBtn.addEventListener('click', () => { this.currentWeekOffset--; void this.render(); });
 
-        const title = header.createEl('span', { cls: 'tl-kanban-title', text: `${weekRef}  ${weekLabel}` });
+        header.createEl('span', { cls: 'tl-kanban-title', text: `${weekRef}  ${weekLabel}` });
 
         const nextBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '›' });
         nextBtn.addEventListener('click', () => { this.currentWeekOffset++; void this.render(); });

@@ -115,7 +115,7 @@ export class CalendarView extends ItemView {
         legend.createEl('span', { cls: 'tl-cal-legend-item', text: t('cal.legend') });
         const gradient = legend.createDiv('tl-cal-legend-gradient');
         gradient.createEl('span', { text: t('cal.low') });
-        const bar = gradient.createEl('div', { cls: 'tl-cal-gradient-bar' });
+        gradient.createEl('div', { cls: 'tl-cal-gradient-bar' });
         gradient.createEl('span', { text: t('cal.high') });
 
         // Day-of-week header
