@@ -18,6 +18,53 @@ const PURCHASE_URLS = {
     gumroad: 'https://tidelog.gumroad.com/l/pro',
 };
 
+/** Max retry attempts for API calls */
+const MAX_RETRIES = 2;
+
+/**
+ * Robust HTTP POST with retry + fetch fallback.
+ * Obsidian's requestUrl sometimes doesn't route through system VPN/proxy,
+ * so we fall back to native fetch when it fails.
+ */
+async function apiPost(url: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const jsonBody = JSON.stringify(body);
+    const headers = { 'Content-Type': 'application/json' };
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            // First try Obsidian's requestUrl
+            const response = await requestUrl({
+                url,
+                method: 'POST',
+                headers,
+                body: jsonBody,
+            });
+            return response.json;
+        } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            // On connection errors, try native fetch as fallback
+            if (attempt < MAX_RETRIES) {
+                try {
+                    const fetchResponse = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        body: jsonBody,
+                    });
+                    return await fetchResponse.json() as Record<string, unknown>;
+                } catch (fetchErr) {
+                    lastError = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
+                }
+            }
+            // Wait before retry
+            if (attempt < MAX_RETRIES) {
+                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            }
+        }
+    }
+    throw lastError || new Error('Request failed after retries');
+}
+
 export class LicenseManager {
     private plugin: TideLogPlugin;
 
@@ -79,14 +126,7 @@ export class LicenseManager {
         const deviceId = this.getOrCreateDeviceId();
 
         try {
-            const response = await requestUrl({
-                url: `${API_BASE}/license/activate`,
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: trimmed, deviceId }),
-            });
-
-            const data = response.json;
+            const data = await apiPost(`${API_BASE}/license/activate`, { key: trimmed, deviceId });
 
             if (data.success) {
                 this.plugin.settings.proLicense = {
@@ -95,24 +135,20 @@ export class LicenseManager {
                     activatedAt: Date.now(),
                     deviceId,
                     lastVerified: Date.now(),
-                    licenseType: data.licenseType || 'lifetime',
-                    expiresAt: data.expiresAt ? data.expiresAt * 1000 : undefined, // API returns seconds
+                    licenseType: (data.licenseType as 'annual' | 'lifetime') || 'lifetime',
+                    expiresAt: data.expiresAt ? (data.expiresAt as number) * 1000 : undefined,
                 };
                 await this.plugin.saveSettings();
-                return { success: true, message: data.message || '激活成功' };
+                return { success: true, message: (data.message as string) || '激活成功' };
             } else {
-                return { success: false, message: data.error || '激活失败' };
+                return { success: false, message: (data.error as string) || '激活失败' };
             }
         } catch (err) {
             const errMsg = err instanceof Error ? err.message : String(err);
-            // ERR_CONNECTION_CLOSED / network errors are common in China due to workers.dev being blocked
-            if (errMsg.includes('ERR_CONNECTION') || errMsg.includes('ECONNREFUSED') || errMsg.includes('ETIMEDOUT') || errMsg.includes('fetch')) {
-                return {
-                    success: false,
-                    message: '网络连接失败，可能需要科学上网后重试。如仍无法激活，请联系开发者手动激活。',
-                };
-            }
-            return { success: false, message: `网络错误：${errMsg}` };
+            return {
+                success: false,
+                message: `网络连接失败，请检查网络后重试。如仍无法激活，请联系开发者。(${errMsg})`,
+            };
         }
     }
 
@@ -124,31 +160,22 @@ export class LicenseManager {
         if (!license.activated || !license.key || !license.deviceId) return;
 
         try {
-            const response = await requestUrl({
-                url: `${API_BASE}/license/verify`,
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    key: license.key,
-                    deviceId: license.deviceId,
-                }),
+            const data = await apiPost(`${API_BASE}/license/verify`, {
+                key: license.key,
+                deviceId: license.deviceId,
             });
-
-            const data = response.json;
 
             if (data.success && data.valid) {
                 this.plugin.settings.proLicense.lastVerified = Date.now();
-                // Update license type and expiry from server
                 if (data.licenseType) {
-                    this.plugin.settings.proLicense.licenseType = data.licenseType;
+                    this.plugin.settings.proLicense.licenseType = data.licenseType as 'annual' | 'lifetime';
                 }
                 if (data.expiresAt) {
-                    this.plugin.settings.proLicense.expiresAt = data.expiresAt * 1000;
+                    this.plugin.settings.proLicense.expiresAt = (data.expiresAt as number) * 1000;
                 }
                 await this.plugin.saveSettings();
             } else if (data.success && !data.valid) {
                 if (data.status === 'expired') {
-                    // Annual expired — deactivate locally
                     this.plugin.settings.proLicense.activated = false;
                     await this.plugin.saveSettings();
                 }
@@ -167,14 +194,9 @@ export class LicenseManager {
 
         if (license.key && license.deviceId) {
             try {
-                await requestUrl({
-                    url: `${API_BASE}/license/deactivate`,
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        key: license.key,
-                        deviceId: license.deviceId,
-                    }),
+                await apiPost(`${API_BASE}/license/deactivate`, {
+                    key: license.key,
+                    deviceId: license.deviceId,
                 });
             } catch {
                 console.warn('[TideLog] Deactivate network error — clearing locally');
