@@ -60,20 +60,14 @@ export class DashboardView extends ItemView {
         locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `🔒 ${featureName}` });
         locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('settings.purchaseDesc') });
 
-        const urls = this.plugin.licenseManager.getPurchaseUrls();
+        const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
         const btnGroup = locked.createDiv('tl-pro-locked-buttons');
-        const cnBtn = btnGroup.createEl('a', {
+        const buyBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: t('settings.purchaseDomestic'),
-            href: urls.mianbaoduo,
+            text: t('pro.purchase'),
+            href: purchaseUrl,
         });
-        cnBtn.setAttr('target', '_blank');
-        const intlBtn = btnGroup.createEl('a', {
-            cls: 'tl-pro-cta-btn tl-pro-cta-intl',
-            text: '🌍 Gumroad',
-            href: urls.gumroad,
-        });
-        intlBtn.setAttr('target', '_blank');
+        buyBtn.setAttr('target', '_blank');
     }
 
     async onClose(): Promise<void> {

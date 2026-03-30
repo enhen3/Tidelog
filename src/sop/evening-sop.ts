@@ -499,10 +499,10 @@ ${emotionQ}`
             const totalEnabled = this.plugin.settings.eveningQuestions
                 .filter((q: EveningQuestionConfig) => q.enabled).length;
             if (totalEnabled > 2) {
-                const urls = this.plugin.licenseManager.getPurchaseUrls();
+                const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
                 summary += getLanguage() === 'en'
-                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. [Upgrade to Pro](${urls.mianbaoduo}) to unlock all questions and deeper insights.*`
-                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。[升级 Pro 版](${urls.mianbaoduo})解锁全部问题和更深入的洞察。*`;
+                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. [Upgrade to Pro](${purchaseUrl}) to unlock all questions and deeper insights.*`
+                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。[升级 Pro 版](${purchaseUrl})解锁全部问题和更深入的洞察。*`;
             }
         }
 

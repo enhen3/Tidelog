@@ -50,24 +50,17 @@ export class ProModal extends Modal {
             features.createEl('li', { text: f });
         }
 
-        // Purchase buttons
-        const urls = this.licenseManager.getPurchaseUrls();
+        // Purchase button
+        const purchaseUrl = this.licenseManager.getPurchaseUrl();
 
         const btnGroup = contentEl.createDiv('tl-pro-modal-buttons');
 
-        const cnBtn = btnGroup.createEl('a', {
+        const buyBtn = btnGroup.createEl('a', {
             cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: t('pro.mianbaoduo'),
-            href: urls.mianbaoduo,
+            text: t('pro.purchase'),
+            href: purchaseUrl,
         });
-        cnBtn.setAttr('target', '_blank');
-
-        const intlBtn = btnGroup.createEl('a', {
-            cls: 'tl-pro-cta-btn tl-pro-cta-intl',
-            text: t('pro.gumroad'),
-            href: urls.gumroad,
-        });
-        intlBtn.setAttr('target', '_blank');
+        buyBtn.setAttr('target', '_blank');
 
         // Settings link
         const settingsLink = contentEl.createDiv('tl-pro-modal-settings-link');

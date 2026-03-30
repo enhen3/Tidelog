@@ -601,8 +601,9 @@ export const zh: Record<string, string> = {
     'settings.verifying': '⏳ 验证中...',
     'settings.purchasePro': '购买 Pro 版',
     'settings.purchaseDesc': '解锁完整晚间复盘、AI 洞察报告、仪表盘等全部功能',
-    'settings.purchaseDomestic': '🇨🇳 面包多（国内）',
-    'settings.purchaseIntl': '🌍 Gumroad（国际）',
+    'settings.purchaseDomestic': '🛒 购买 Pro',
+    'settings.purchaseIntl': '🛒 购买 Pro',
+    'pro.purchase': '🛒 购买 Pro',
 
     // constants.ts evening questions
     'evening.q1': '今天过得怎么样？计划里的事情推进得顺利吗？',

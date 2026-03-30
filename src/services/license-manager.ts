@@ -12,11 +12,8 @@ const API_BASE = 'https://tidelog-license-api.tidelog.workers.dev';
 /** Offline grace period: 7 days in milliseconds */
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Purchase URLs — replace with real product links when ready */
-const PURCHASE_URLS = {
-    mianbaoduo: 'https://mbd.pub/o/tidelog',
-    gumroad: 'https://tidelog.gumroad.com/l/pro',
-};
+/** Purchase URL */
+const PURCHASE_URL = 'https://afdian.com/item/463307362c2f11f1b39d52540025c377';
 
 /** Max retry attempts for API calls */
 const MAX_RETRIES = 2;
@@ -214,8 +211,8 @@ export class LicenseManager {
     /**
      * Get purchase URLs
      */
-    getPurchaseUrls(): { mianbaoduo: string; gumroad: string } {
-        return PURCHASE_URLS;
+    getPurchaseUrl(): string {
+        return PURCHASE_URL;
     }
 
     // =========================================================================

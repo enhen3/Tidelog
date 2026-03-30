@@ -671,22 +671,17 @@ export class TideLogSettingTab extends PluginSettingTab {
                     })
             );
 
-            // Purchase links
-            const urls = this.plugin.licenseManager.getPurchaseUrls();
+            // Purchase link
+            const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
             const purchaseSetting = new Setting(containerEl)
                 .setName(t('settings.purchasePro'))
                 .setDesc(t('settings.purchaseDesc'));
 
             purchaseSetting.addButton((button) =>
                 button
-                    .setButtonText(t('settings.purchaseDomestic'))
-                    .onClick(() => { window.open(urls.mianbaoduo); })
-            );
-
-            purchaseSetting.addButton((button) =>
-                button
-                    .setButtonText(t('settings.purchaseIntl'))
-                    .onClick(() => { window.open(urls.gumroad); })
+                    .setButtonText(t('pro.purchase'))
+                    .setCta()
+                    .onClick(() => { window.open(purchaseUrl); })
             );
         }
     }

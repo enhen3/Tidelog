@@ -322,8 +322,7 @@ export const en: Record<string, string> = {
     'pro.feature4': '📅 Calendar heatmap',
     'pro.feature5': '🏠 Data dashboard',
     'pro.feature6': '🔄 Automatic pattern / principle extraction',
-    'pro.mianbaoduo': '🇨🇳 mianbaoduo (china)',
-    'pro.gumroad': '🌍 Gumroad (international)',
+    'pro.purchase': '🛒 Purchase Pro',
     'pro.hasCode': 'Already have a code?',
     'pro.goToSettings': 'Go to settings to enter →',
 
@@ -615,8 +614,7 @@ export const en: Record<string, string> = {
     'settings.verifying': '⏳ Verifying...',
     'settings.purchasePro': 'Purchase pro',
     'settings.purchaseDesc': 'Unlock full evening review, AI insight reports, dashboard, and more',
-    'settings.purchaseDomestic': '🇨🇳 mianbaoduo (china)',
-    'settings.purchaseIntl': '🌍 Gumroad (international)',
+    'settings.purchaseBtn': '🛒 Purchase Pro',
 
     // constants.ts evening questions
     'evening.q1': 'How was your day? Did things go according to plan?',
