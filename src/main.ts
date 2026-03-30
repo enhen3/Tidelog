@@ -47,6 +47,15 @@ export default class TideLogPlugin extends Plugin {
 
     async onload(): Promise<void> {
 
+        // Register views FIRST — before any async work.
+        // Obsidian restores saved workspace leaves during onload; if the view
+        // factory isn't registered yet, restored leaves show the
+        // "plugin is no longer active" error.
+        this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this));
+        this.registerView(KANBAN_VIEW_TYPE, (leaf) => new KanbanView(leaf, this));
+        this.registerView(CALENDAR_VIEW_TYPE, (leaf) => new CalendarView(leaf, this));
+        this.registerView(DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this));
+
         // Load settings
         await this.loadSettings();
 
@@ -68,12 +77,6 @@ export default class TideLogPlugin extends Plugin {
 
         // Ensure vault structure exists
         await this.initializeVaultStructure();
-
-        // Register views
-        this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this));
-        this.registerView(KANBAN_VIEW_TYPE, (leaf) => new KanbanView(leaf, this));
-        this.registerView(CALENDAR_VIEW_TYPE, (leaf) => new CalendarView(leaf, this));
-        this.registerView(DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this));
 
         // Register custom tide icon for ribbon
         addIcon('tidelog-wave', `<path d="M8 50 Q20 30 32 50 Q44 70 56 50 Q68 30 80 50 Q92 70 96 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 70 Q16 50 28 70 Q40 90 52 70 Q64 50 76 70 Q88 90 96 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="22" r="8" fill="currentColor"/><path d="M42 22 Q50 8 58 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
