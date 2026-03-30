@@ -326,7 +326,8 @@ export class ChatView extends ItemView {
 
     /**
      * Append a new task to a markdown file.
-     * Inserts after the last existing task line, or at the end.
+     * For daily notes (files with a Plan section), inserts within the Plan section.
+     * For other files (weekly/monthly plans), inserts after the last existing task line.
      */
     public async addMdTask(file: TFile, taskText: string, indent = 0): Promise<void> {
         this._suppressRefresh = true;
@@ -336,18 +337,66 @@ export class ChatView extends ItemView {
             const newLine = `${prefix}- [ ] ${taskText}`;
             const lines = content.split('\n');
 
-            // Find the last task line index
-            let lastTaskIdx = -1;
+            // Detect Plan section (daily notes have ## 计划 or ## Plan)
+            let planSectionIdx = -1;
+            let planSectionEnd = -1;
             for (let i = 0; i < lines.length; i++) {
-                if (lines[i].match(/^\s*- \[[ x]\] /)) {
-                    lastTaskIdx = i;
+                const trimmed = lines[i].trim();
+                if (trimmed === '## 计划' || trimmed === '## Plan' || trimmed === `## ${t('vault.sectionPlan')}`) {
+                    planSectionIdx = i;
+                    // Find the end of the Plan section (next ## heading or end of file)
+                    planSectionEnd = lines.length;
+                    for (let j = i + 1; j < lines.length; j++) {
+                        if (lines[j].startsWith('## ')) {
+                            planSectionEnd = j;
+                            break;
+                        }
+                    }
+                    break;
                 }
             }
 
-            if (lastTaskIdx >= 0) {
-                lines.splice(lastTaskIdx + 1, 0, newLine);
+            if (planSectionIdx >= 0) {
+                // Daily note: insert within the Plan section
+                // Find last task line within the Plan section
+                let lastTaskInSection = -1;
+                for (let i = planSectionIdx + 1; i < planSectionEnd; i++) {
+                    if (lines[i].match(/^\s*- \[[ x]\] /)) {
+                        lastTaskInSection = i;
+                    }
+                }
+
+                if (lastTaskInSection >= 0) {
+                    // Insert after the last task in the Plan section
+                    lines.splice(lastTaskInSection + 1, 0, newLine);
+                } else {
+                    // No tasks yet in Plan section — insert after the section header
+                    // Skip any blank lines and HTML comments right after the header
+                    let insertIdx = planSectionIdx + 1;
+                    while (insertIdx < planSectionEnd) {
+                        const line = lines[insertIdx].trim();
+                        if (line === '' || line.startsWith('<!--')) {
+                            insertIdx++;
+                        } else {
+                            break;
+                        }
+                    }
+                    lines.splice(insertIdx, 0, newLine);
+                }
             } else {
-                lines.push(newLine);
+                // Non-daily file (weekly/monthly plans): insert after last task or append
+                let lastTaskIdx = -1;
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].match(/^\s*- \[[ x]\] /)) {
+                        lastTaskIdx = i;
+                    }
+                }
+
+                if (lastTaskIdx >= 0) {
+                    lines.splice(lastTaskIdx + 1, 0, newLine);
+                } else {
+                    lines.push(newLine);
+                }
             }
 
             await this.app.vault.modify(file, lines.join('\n'));
@@ -440,6 +489,45 @@ export class ChatView extends ItemView {
             if (sourceFile.path === targetNote.path) return;
 
             await this.addMdTask(targetNote, taskText);
+
+            // Remove from source file
+            let content = await this.app.vault.read(sourceFile);
+            const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            content = content.replace(pat, '');
+            await this.app.vault.modify(sourceFile, content);
+
+            this.invalidateTabCache('kanban');
+            this.switchTab('kanban');
+        } finally {
+            setTimeout(() => { this._suppressRefresh = false; }, 200);
+        }
+    }
+
+
+    /**
+     * Move a task from one plan file to another plan file (week→week or month→month)
+     */
+    public async moveTaskToPlan(sourceFile: TFile, taskText: string, targetPlanPath: string): Promise<void> {
+        this._suppressRefresh = true;
+        try {
+            // Don't move if source and target are the same file
+            if (sourceFile.path === targetPlanPath) return;
+
+            // Ensure target file exists (auto-create with minimal template)
+            let targetFile = this.app.vault.getAbstractFileByPath(targetPlanPath);
+            if (!targetFile) {
+                const folder = targetPlanPath.substring(0, targetPlanPath.lastIndexOf('/'));
+                if (!this.app.vault.getAbstractFileByPath(folder)) {
+                    await this.app.vault.createFolder(folder);
+                }
+                const basename = targetPlanPath.split('/').pop()?.replace('.md', '') || 'Plan';
+                targetFile = await this.app.vault.create(targetPlanPath, `# ${basename}\n\n`);
+            }
+
+            if (targetFile instanceof TFile) {
+                await this.addMdTask(targetFile, taskText);
+            }
 
             // Remove from source file
             let content = await this.app.vault.read(sourceFile);

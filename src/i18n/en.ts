@@ -173,6 +173,7 @@ export const en: Record<string, string> = {
     'periodic.todayLabel': 'Today',
     'periodic.tomorrowLabel': 'Tomorrow',
     'periodic.nextWeekLabel': 'Next week',
+    'periodic.nextMonthLabel': 'Next month',
     'periodic.customLabel': 'Custom',
     'periodic.nextMondayTitle': 'Next monday',
     'periodic.customDateTitle': 'Custom date',

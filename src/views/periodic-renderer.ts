@@ -27,6 +27,7 @@ export interface PeriodicHost {
     reorderMdTasks(file: TFile, orderedTexts: string[]): Promise<void>;
     deferTaskToToday(sourceFile: TFile, taskText: string): Promise<void>;
     moveTaskToDate(sourceFile: TFile, taskText: string, targetDate: Date): Promise<void>;
+    moveTaskToPlan(sourceFile: TFile, taskText: string, targetPlanPath: string): Promise<void>;
     invalidateTabCache(tab: string): void;
     switchTab(tab: string): void;
 }
@@ -180,7 +181,7 @@ export class PeriodicRenderer {
             if (inProgress.length > 0) {
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('kanban.inProgress', String(inProgress.length)) });
                 for (const task of inProgress) {
-                    this.renderTask(taskSection, task, file, date);
+                    this.renderTask(taskSection, task, file, 'day', date);
                 }
             }
             if (completed.length > 0) {
@@ -194,7 +195,7 @@ export class PeriodicRenderer {
                     indicator.setText(collapsed ? '▸' : '▾');
                 });
                 for (const task of completed) {
-                    this.renderTask(doneBody, task, file, date);
+                    this.renderTask(doneBody, task, file, 'day', date);
                 }
             }
         } else {
@@ -505,7 +506,7 @@ export class PeriodicRenderer {
             if (tasks.length > 0) {
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.weekTasks', String(tasks.length)) });
                 for (const task of tasks) {
-                    this.renderTask(taskSection, task, weekFile);
+                    this.renderTask(taskSection, task, weekFile as TFile, 'week');
                 }
             }
             this.renderTaskInput(taskSection, weekFile);
@@ -728,7 +729,7 @@ export class PeriodicRenderer {
             if (tasks.length > 0) {
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.monthTasks', String(tasks.length)) });
                 for (const task of tasks) {
-                    this.renderTask(taskSection, task, monthFile);
+                    this.renderTask(taskSection, task, monthFile as TFile, 'month');
                 }
             }
             this.renderTaskInput(taskSection, monthFile);
@@ -773,7 +774,7 @@ export class PeriodicRenderer {
     // Shared task renderer & input (Things/TickTick style)
     // ──────────────────────────────────────────────────────
 
-    private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile, sourceDate?: moment.Moment): void {
+    private renderTask(container: HTMLElement, task: { text: string; done: boolean; indent: number }, file: TFile, scope: 'day' | 'week' | 'month' = 'day', sourceDate?: moment.Moment): void {
         const h = this.host;
         const row = container.createDiv(`tl-periodic-task-row ${task.done ? 'tl-periodic-task-row-done' : ''}`);
         row.dataset.taskText = task.text;
@@ -997,7 +998,7 @@ export class PeriodicRenderer {
             });
         }
 
-        // Date quick-change popup — shared builder for both desktop and mobile triggers
+        // Date quick-change popup — scope-aware (day/week/month)
         const showDatePopup = (clientX: number, clientY: number) => {
             // Remove any existing popup
             document.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
@@ -1011,71 +1012,133 @@ export class PeriodicRenderer {
             // Button row
             const btnRow = popup.createDiv('tl-task-date-popup-buttons');
 
-            const todayDate = moment();
-            const tomorrowDate = moment().add(1, 'day');
-            const nextWeekDate = moment().startOf('isoWeek').add(1, 'week');
+            if (scope === 'day') {
+                // Daily tasks: today / tomorrow / next week / custom date
+                const todayDate = moment();
+                const tomorrowDate = moment().add(1, 'day');
+                const nextWeekDate = moment().startOf('isoWeek').add(1, 'week');
 
-            // Today
-            const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('kanban.today') } });
-            const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(todayIcon, 'sun');
-            todayBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('kanban.today') });
-            todayBtn.addEventListener('click', () => {
-                popup.remove();
-                void (async () => {
-                    await h.moveTaskToDate(file, task.text, todayDate.toDate());
-                    row.remove();
-                })();
-            });
+                // Today
+                const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('kanban.today') } });
+                const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(todayIcon, 'sun');
+                todayBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('kanban.today') });
+                todayBtn.addEventListener('click', () => {
+                    popup.remove();
+                    void (async () => {
+                        await h.moveTaskToDate(file, task.text, todayDate.toDate());
+                        row.remove();
+                    })();
+                });
 
-            // Tomorrow
-            const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.tomorrow') } });
-            const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(tmrIcon, 'sunrise');
-            tmrBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.tomorrow') });
-            tmrBtn.addEventListener('click', () => {
-                popup.remove();
-                void (async () => {
-                    await h.moveTaskToDate(file, task.text, tomorrowDate.toDate());
-                    row.remove();
-                })();
-            });
+                // Tomorrow
+                const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.tomorrow') } });
+                const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(tmrIcon, 'sunrise');
+                tmrBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.tomorrow') });
+                tmrBtn.addEventListener('click', () => {
+                    popup.remove();
+                    void (async () => {
+                        await h.moveTaskToDate(file, task.text, tomorrowDate.toDate());
+                        row.remove();
+                    })();
+                });
 
-            // Next week
-            const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeek') } });
-            const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(weekIcon, 'calendar-plus');
-            weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextWeek') });
-            weekBtn.addEventListener('click', () => {
-                popup.remove();
-                void (async () => {
-                    await h.moveTaskToDate(file, task.text, nextWeekDate.toDate());
-                    row.remove();
-                })();
-            });
+                // Next week
+                const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeek') } });
+                const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(weekIcon, 'calendar-plus');
+                weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextWeek') });
+                weekBtn.addEventListener('click', () => {
+                    popup.remove();
+                    void (async () => {
+                        await h.moveTaskToDate(file, task.text, nextWeekDate.toDate());
+                        row.remove();
+                    })();
+                });
 
-            // Custom date picker
-            const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.customDate') } });
-            const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(customIcon, 'calendar-search');
-            customBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.custom') });
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'date';
-            hiddenInput.className = 'tl-task-date-hidden-input';
-            popup.appendChild(hiddenInput);
-            hiddenInput.addEventListener('change', () => {
-                popup.remove();
-                if (!hiddenInput.value) return;
-                const picked = new Date(hiddenInput.value + 'T00:00:00');
-                void (async () => {
-                    await h.moveTaskToDate(file, task.text, picked);
-                    row.remove();
-                })();
-            });
-            customBtn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                hiddenInput.showPicker();
-            });
+                // Custom date picker
+                const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.customDate') } });
+                const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(customIcon, 'calendar-search');
+                customBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.custom') });
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'date';
+                hiddenInput.className = 'tl-task-date-hidden-input';
+                popup.appendChild(hiddenInput);
+                hiddenInput.addEventListener('change', () => {
+                    popup.remove();
+                    if (!hiddenInput.value) return;
+                    const picked = new Date(hiddenInput.value + 'T00:00:00');
+                    void (async () => {
+                        await h.moveTaskToDate(file, task.text, picked);
+                        row.remove();
+                    })();
+                });
+                customBtn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    hiddenInput.showPicker();
+                });
+
+            } else if (scope === 'week') {
+                // Weekly tasks: next week / next month (stay as plan tasks)
+                const nextWeekStart = moment().startOf('isoWeek').add(1, 'week');
+                const nextWeekLabel = `W${nextWeekStart.format('ww')}`;
+                const nextWeekPath = `${h.plugin.settings.planFolder}/Weekly/${nextWeekStart.isoWeekYear()}-${nextWeekLabel}.md`;
+
+                const nextMonthDate = moment().add(1, 'month').startOf('month');
+                const nextMonthPath = `${h.plugin.settings.planFolder}/Monthly/${nextMonthDate.format('YYYY-MM')}.md`;
+
+                // Next week
+                const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeekLabel') } });
+                const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(weekIcon, 'calendar-plus');
+                weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextWeekLabel') });
+                weekBtn.addEventListener('click', () => {
+                    popup.remove();
+                    void (async () => {
+                        await h.moveTaskToPlan(file, task.text, nextWeekPath);
+                        row.remove();
+                        h.invalidateTabCache('kanban');
+                        h.switchTab('kanban');
+                    })();
+                });
+
+                // Next month
+                const monthBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextMonthLabel') } });
+                const monthIcon = monthBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(monthIcon, 'calendar-range');
+                monthBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
+                monthBtn.addEventListener('click', () => {
+                    popup.remove();
+                    void (async () => {
+                        await h.moveTaskToPlan(file, task.text, nextMonthPath);
+                        row.remove();
+                        h.invalidateTabCache('kanban');
+                        h.switchTab('kanban');
+                    })();
+                });
+
+            } else {
+                // Monthly tasks: next month (stay as plan tasks)
+                const nextMonthDate = moment().add(1, 'month').startOf('month');
+                const nextMonthPath = `${h.plugin.settings.planFolder}/Monthly/${nextMonthDate.format('YYYY-MM')}.md`;
+
+                // Next month
+                const monthBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextMonthLabel') } });
+                const monthIcon = monthBtn.createDiv('tl-task-date-btn-icon');
+                setIcon(monthIcon, 'calendar-range');
+                monthBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
+                monthBtn.addEventListener('click', () => {
+                    popup.remove();
+                    void (async () => {
+                        await h.moveTaskToPlan(file, task.text, nextMonthPath);
+                        row.remove();
+                        h.invalidateTabCache('kanban');
+                        h.switchTab('kanban');
+                    })();
+                });
+            }
 
             document.body.appendChild(popup);
 
@@ -1089,7 +1152,6 @@ export class PeriodicRenderer {
                 if (top + popupHeight > window.innerHeight) top = clientY - popupHeight;
                 popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
             }
-            // else: mobile CSS positions it as a bottom sheet
 
             // Dismiss on outside click/tap
             const dismiss = (ev: MouseEvent | TouchEvent) => {

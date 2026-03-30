@@ -173,6 +173,7 @@ export const zh: Record<string, string> = {
     'periodic.todayLabel': '今天',
     'periodic.tomorrowLabel': '明天',
     'periodic.nextWeekLabel': '下周',
+    'periodic.nextMonthLabel': '下月',
     'periodic.customLabel': '自定义',
     'periodic.nextMondayTitle': '下周一',
     'periodic.customDateTitle': '自定义日期',
