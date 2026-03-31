@@ -77,13 +77,22 @@ export class EveningSOP {
     }
 
     /**
-     * Public progress info for the UI progress bar
+     * Public progress info for the UI progress bar.
+     * `total` always reflects all enabled questions in settings (not Pro-limited),
+     * so the progress bar matches what the user configured.
      */
     getProgressInfo(): { current: number; total: number; currentLabel: string } {
-        const flow = this.questionFlow.length > 0 ? this.questionFlow : this.buildQuestionFlow();
-        const total = flow.length;
+        // Total = all enabled questions from user settings
+        const allEnabled = this.plugin.settings.eveningQuestions
+            .filter((q: EveningQuestionConfig) => q.enabled);
+        const total = allEnabled.length;
+
+        // Current step within the actual flow
+        const flow = this.questionFlow.length > 0 ? this.questionFlow : allEnabled;
         const current = this.currentQuestionIndex;
-        const currentLabel = current < total ? flow[current].sectionName : (getLanguage() === 'en' ? 'Done' : '完成');
+        const currentLabel = current < flow.length
+            ? (flow[current].sectionName ?? flow[current].initialMessage ?? '')
+            : (getLanguage() === 'en' ? 'Done' : '完成');
         return { current, total, currentLabel };
     }
 

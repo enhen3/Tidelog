@@ -193,6 +193,17 @@ export default class TideLogPlugin extends Plugin {
 
     onunload(): void {
         this.fileLinkService.stopListening();
+
+        // Detach all custom view leaves to prevent orphaned
+        // "plugin is no longer active" panes when the plugin is
+        // disabled mid-session (e.g. via BRAT update or manual toggle).
+        // Note: On normal quit Obsidian saves workspace state BEFORE
+        // calling onunload, so detaching here does NOT affect the saved
+        // layout — views are still restored on next cold start.
+        this.app.workspace.detachLeavesOfType(CHAT_VIEW_TYPE);
+        this.app.workspace.detachLeavesOfType(KANBAN_VIEW_TYPE);
+        this.app.workspace.detachLeavesOfType(CALENDAR_VIEW_TYPE);
+        this.app.workspace.detachLeavesOfType(DASHBOARD_VIEW_TYPE);
     }
 
     async loadSettings(): Promise<void> {
