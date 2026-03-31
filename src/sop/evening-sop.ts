@@ -56,8 +56,7 @@ export class EveningSOP {
      */
     private buildQuestionFlow(): QuestionConfig[] {
         const userQuestions = this.plugin.settings.eveningQuestions;
-        const allEnabled = userQuestions
-            .filter((q: EveningQuestionConfig) => q.enabled)
+        const all = userQuestions
             .map((q: EveningQuestionConfig) => ({
                 type: q.type,
                 prompt: getPromptMap()[q.type] || '',
@@ -67,9 +66,9 @@ export class EveningSOP {
 
         // Free users: limit to first 2 questions
         if (!this.plugin.licenseManager.isPro()) {
-            return allEnabled.slice(0, 2);
+            return all.slice(0, 2);
         }
-        return allEnabled;
+        return all;
     }
 
     constructor(plugin: TideLogPlugin) {
@@ -82,13 +81,12 @@ export class EveningSOP {
      * so the progress bar matches what the user configured.
      */
     getProgressInfo(): { current: number; total: number; currentLabel: string } {
-        // Total = all enabled questions from user settings
-        const allEnabled = this.plugin.settings.eveningQuestions
-            .filter((q: EveningQuestionConfig) => q.enabled);
-        const total = allEnabled.length;
+        // Total = all questions from user settings (no enabled filter — UI has no toggle)
+        const allQuestions = this.plugin.settings.eveningQuestions;
+        const total = allQuestions.length;
 
         // Current step within the actual flow
-        const flow = this.questionFlow.length > 0 ? this.questionFlow : allEnabled;
+        const flow = this.questionFlow.length > 0 ? this.questionFlow : allQuestions;
         const current = this.currentQuestionIndex;
         const currentLabel = current < flow.length
             ? (flow[current].sectionName ?? flow[current].initialMessage ?? '')
@@ -505,8 +503,7 @@ ${emotionQ}`
 
         // Pro upsell for free users
         if (!this.plugin.licenseManager.isPro()) {
-            const totalEnabled = this.plugin.settings.eveningQuestions
-                .filter((q: EveningQuestionConfig) => q.enabled).length;
+            const totalEnabled = this.plugin.settings.eveningQuestions.length;
             if (totalEnabled > 2) {
                 const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
                 summary += getLanguage() === 'en'
