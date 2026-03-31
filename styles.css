@@ -286,6 +286,76 @@
 	opacity: 1;
 }
 
+/* --- Active (selected) state for Daily / Insight sub-tabs --- */
+.tl-mode-btn.tl-mode-btn-active.tl-mode-btn-review {
+	background: var(--tl-review-medium);
+	border-color: color-mix(in srgb, var(--tl-review) 35%, transparent);
+	color: var(--tl-review);
+	font-weight: var(--tl-fw-semibold);
+	box-shadow: var(--tl-shadow-sm);
+}
+
+.tl-mode-btn.tl-mode-btn-active.tl-mode-btn-insight {
+	background: var(--tl-review-light);
+	border-color: color-mix(in srgb, var(--tl-review) 25%, transparent);
+	color: var(--tl-review);
+	font-weight: var(--tl-fw-semibold);
+	box-shadow: var(--tl-shadow-sm);
+}
+
+.tl-mode-btn.tl-mode-btn-active svg {
+	opacity: 1;
+}
+
+/* --- SOP Progress Bar (Evening Review) --- */
+
+.tl-sop-progress {
+	padding: 0 var(--tl-sp-16) var(--tl-sp-8);
+	animation: tl-slideUp var(--tl-duration-normal) var(--tl-ease);
+}
+
+.tl-sop-progress.tl-hidden {
+	display: none;
+}
+
+.tl-sop-progress-label {
+	font-size: var(--tl-fs-caption);
+	font-weight: var(--tl-fw-semibold);
+	color: var(--tl-review);
+	margin-bottom: var(--tl-sp-6);
+	letter-spacing: 0.2px;
+}
+
+.tl-sop-progress-track {
+	display: flex;
+	gap: 3px;
+	height: 4px;
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.tl-sop-progress-seg {
+	flex: 1;
+	height: 100%;
+	border-radius: 2px;
+	background: var(--tl-border);
+	transition: background var(--tl-duration-normal) var(--tl-ease);
+}
+
+.tl-sop-progress-seg-done {
+	background: var(--tl-review);
+}
+
+.tl-sop-progress-seg-active {
+	background: color-mix(in srgb, var(--tl-review) 45%, transparent);
+	animation: tl-progress-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tl-progress-pulse {
+	0%, 100% { opacity: 0.5; }
+	50% { opacity: 1; }
+}
+
 /* =============================================================================
    Messages
    ============================================================================= */
@@ -2913,14 +2983,21 @@
 }
 
 .tl-periodic-mode-btn-active {
-	background: var(--tl-accent-light);
-	color: var(--tl-accent);
+	background: var(--tl-plan-light);
+	border-color: color-mix(in srgb, var(--tl-plan) 25%, transparent);
+	box-shadow: 0 1px 4px rgba(59, 142, 165, 0.12);
+}
+
+.tl-periodic-mode-btn-active span {
+	background: linear-gradient(135deg, var(--tl-plan) 20%, color-mix(in srgb, var(--tl-plan) 45%, white) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
 	font-weight: var(--tl-fw-semibold);
-	border-color: color-mix(in srgb, var(--tl-accent) 25%, transparent);
-	box-shadow: var(--tl-shadow-sm);
 }
 
 .tl-periodic-mode-btn-active svg {
+	color: var(--tl-plan);
 	opacity: 1;
 }
 

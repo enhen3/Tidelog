@@ -33,6 +33,8 @@ export interface ChatControllerHost extends Component {
     startEveningSOP(): Promise<void>;
     showThinkingIndicator(): void;
     hideThinkingIndicator(): void;
+    updateProgressBar(): void;
+    hideProgressBar(): void;
     morningSOP: MorningSOP;
     eveningSOP: EveningSOP;
 }
@@ -154,6 +156,12 @@ export class ChatController {
                 h.hideThinkingIndicator();
                 h.streamAIMessage(message);
             });
+            // Update or hide progress bar after the step resolves
+            if (h.sopContext.type === 'evening') {
+                h.updateProgressBar();
+            } else {
+                h.hideProgressBar();
+            }
         } else {
             // Free chat
             await this.handleFreeChat(content);

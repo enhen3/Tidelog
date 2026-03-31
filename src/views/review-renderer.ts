@@ -56,6 +56,27 @@ export class ReviewRenderer {
                 const m = line.match(/^- \[([ x])\] (.+)$/);
                 if (m) tasks.push({ done: m[1] === 'x', text: m[2].trim() });
             }
+            // Determine whether the Review section has actual content
+            // (not just the template header + placeholder comment)
+            const hasReviewContent = (() => {
+                const reviewHeaders = ['## 复盘', '## Review'];
+                for (const hdr of reviewHeaders) {
+                    const idx = content.indexOf(hdr);
+                    if (idx < 0) continue;
+                    // Extract text after the header until the next ## or end of file
+                    let sectionText = content.substring(idx + hdr.length);
+                    const nextH = sectionText.search(/\n## /);
+                    if (nextH > 0) sectionText = sectionText.substring(0, nextH);
+                    // Strip HTML comments, blank lines, whitespace, and horizontal rules
+                    const cleaned = sectionText
+                        .replace(/<!--[\s\S]*?-->/g, '')
+                        .replace(/^---$/gm, '')
+                        .trim();
+                    if (cleaned.length > 0) return true;
+                }
+                return false;
+            })();
+
             return {
                 emotionScore,
                 taskCount: tasks.length,
@@ -64,7 +85,7 @@ export class ReviewRenderer {
                 status,
                 filePath: file.path,
                 hasPlan: (content.includes('## 计划') || content.includes('## Plan')) && tasks.length > 0,
-                hasReview: content.includes('## 复盘') || content.includes('## Review'),
+                hasReview: hasReviewContent,
             };
         } catch { return null; }
     }

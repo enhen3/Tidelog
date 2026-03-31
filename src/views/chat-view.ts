@@ -48,6 +48,13 @@ export class ChatView extends ItemView {
     public isTaskInputMode = false;
     public quickUpdateMode = false;
 
+    // Chat sub-mode: track which Review sub-tab is active
+    private chatMode: 'daily' | 'insight' = 'daily';
+    private chatModeButtonsEl: HTMLElement | null = null;
+
+    // SOP progress bar
+    private progressBarEl: HTMLElement | null = null;
+
     // Tab system
     private activeTab: SidebarTab = 'chat';
     private tabContentEl!: HTMLElement;
@@ -115,6 +122,8 @@ export class ChatView extends ItemView {
         // Chat panel (SOP buttons + messages + input)
         this.chatPanel = this.tabContentEl.createDiv('tl-tab-panel tl-tab-panel-chat');
         this.renderSOPButtons(this.chatPanel);
+        this.progressBarEl = this.chatPanel.createDiv('tl-sop-progress');
+        this.progressBarEl.addClass('tl-hidden');
         this.messagesContainer = this.chatPanel.createDiv('tl-messages');
         this.renderInputArea(this.chatPanel);
         this.showWelcomeMessage();
@@ -156,20 +165,48 @@ export class ChatView extends ItemView {
      */
     private renderSOPButtons(container: HTMLElement): void {
         const buttons = container.createDiv('tl-header-buttons');
+        this.chatModeButtonsEl = buttons;
 
         const eveningBtn = buttons.createEl('button', {
             cls: 'tl-mode-btn tl-mode-btn-review',
+            attr: { 'data-chat-mode': 'daily' },
         });
         setIcon(eveningBtn, 'moon');
         eveningBtn.createSpan({ text: 'Daily' });
-        eveningBtn.addEventListener('click', () => this.startSOP('evening'));
+        eveningBtn.addEventListener('click', () => {
+            this.setChatMode('daily');
+            this.startSOP('evening');
+        });
 
         const insightBtn = buttons.createEl('button', {
             cls: 'tl-mode-btn tl-mode-btn-insight',
+            attr: { 'data-chat-mode': 'insight' },
         });
         setIcon(insightBtn, 'lightbulb');
         insightBtn.createSpan({ text: 'Insight' });
-        insightBtn.addEventListener('click', () => this.startFreeChat());
+        insightBtn.addEventListener('click', () => {
+            this.setChatMode('insight');
+            this.startFreeChat();
+        });
+
+        // Apply initial active state
+        this.updateChatModeButtons();
+    }
+
+    /** Update visual active state on Daily / Insight sub-tab buttons */
+    private setChatMode(mode: 'daily' | 'insight'): void {
+        this.chatMode = mode;
+        this.updateChatModeButtons();
+    }
+
+    private updateChatModeButtons(): void {
+        if (!this.chatModeButtonsEl) return;
+        this.chatModeButtonsEl.querySelectorAll('.tl-mode-btn').forEach(btn => {
+            btn.removeClass('tl-mode-btn-active');
+            if (btn.getAttribute('data-chat-mode') === this.chatMode) {
+                btn.addClass('tl-mode-btn-active');
+            }
+        });
     }
 
     // =========================================================================
@@ -780,6 +817,7 @@ Click a button above to start, or type your thoughts.`
         await this.eveningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
         });
+        this.updateProgressBar();
     }
 
     /**
@@ -817,6 +855,7 @@ Click a button above to start, or type your thoughts.`
 
         this.messages = [];
         this.messagesContainer.empty();
+        this.hideProgressBar();
 
         const messageEl = this.createMessageElement('ai');
         const contentDiv = messageEl.createDiv();
@@ -916,6 +955,11 @@ You can also use the buttons below to generate insight reports:`
      * Stream an AI message (for SOP responses)
      */
     streamAIMessage(content: string): void {
+        // Update progress bar whenever an AI message streams during evening SOP
+        if (this.sopContext.type === 'evening') {
+            this.updateProgressBar();
+        }
+
         const messageEl = this.createMessageElement('ai');
         let currentIndex = 0;
 
@@ -929,6 +973,53 @@ You can also use the buttons below to generate insight reports:`
                 clearInterval(typewriter);
             }
         }, 15);
+    }
+
+    /**
+     * Update the SOP progress bar with current step info from the evening SOP.
+     */
+    updateProgressBar(): void {
+        if (!this.progressBarEl) return;
+
+        // Only show during evening SOP
+        if (this.sopContext.type !== 'evening') {
+            this.progressBarEl.addClass('tl-hidden');
+            return;
+        }
+
+        const { current, total, currentLabel } = this.eveningSOP.getProgressInfo();
+        if (total === 0) {
+            this.progressBarEl.addClass('tl-hidden');
+            return;
+        }
+
+        this.progressBarEl.removeClass('tl-hidden');
+        this.progressBarEl.empty();
+
+        // "Step 2/5 · 成功日记~"
+        const isComplete = current >= total;
+        const labelText = isComplete
+            ? (getLanguage() === 'en' ? 'Review complete ✓' : '复盘完成 ✓')
+            : (getLanguage() === 'en'
+                ? `Step ${current + 1}/${total} · ${currentLabel}`
+                : `第 ${current + 1}/${total} 步 · ${currentLabel}`);
+
+        this.progressBarEl.createDiv({ cls: 'tl-sop-progress-label', text: labelText });
+
+        // Segmented progress track
+        const track = this.progressBarEl.createDiv('tl-sop-progress-track');
+        for (let i = 0; i < total; i++) {
+            const seg = track.createDiv('tl-sop-progress-seg');
+            if (i < current) seg.addClass('tl-sop-progress-seg-done');
+            else if (i === current && !isComplete) seg.addClass('tl-sop-progress-seg-active');
+        }
+    }
+
+    /**
+     * Hide the SOP progress bar (e.g. when SOP finishes).
+     */
+    hideProgressBar(): void {
+        if (this.progressBarEl) this.progressBarEl.addClass('tl-hidden');
     }
 
     /**
