@@ -1,12 +1,18 @@
 name = "tidelog-license-api"
 main = "src/index.ts"
 compatibility_date = "2024-05-29"
+workers_dev = false
+
+# Custom domain route (China-accessible)
+routes = [
+  { pattern = "tidelog-api.mydreamchronicle.com/*", zone_name = "mydreamchronicle.com" }
+]
 
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
 database_name = "tidelog-license-db"
-database_id = "84ab01ff-6b0d-45ba-8ce8-6a59efd49ad8"
+database_id = "7930769b-81dd-44ae-a133-ba4150f37742"
 
 # Environment variables (set via wrangler secret)
 # ADMIN_TOKEN — protects /admin/* endpoints

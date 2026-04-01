@@ -7,7 +7,7 @@ import { requestUrl } from 'obsidian';
 import TideLogPlugin from '../main';
 
 /** API base URL */
-const API_BASE = 'https://tidelog-license-api.tidelog.workers.dev';
+const API_BASE = 'https://tidelog-api.mydreamchronicle.com';
 
 /** Offline grace period: 7 days in milliseconds */
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
