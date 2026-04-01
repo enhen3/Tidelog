@@ -3122,18 +3122,18 @@
 	font-size: 9px;
 	font-weight: 700;
 	color: #fff;
-	background: #ff6b6b;
+	background: #e0a243;
 	border-radius: 7px;
 	text-align: center;
 	padding: 0 3px;
 	pointer-events: none;
-	box-shadow: 0 1px 3px rgba(255, 80, 80, 0.35);
+	box-shadow: 0 1px 3px rgba(200, 140, 40, 0.35);
 	z-index: 2;
 }
 
 .tl-periodic-cal-cell-selected .tl-periodic-cal-badge {
-	background: #ff4757;
-	box-shadow: 0 1px 4px rgba(255, 71, 87, 0.5);
+	background: #d4952e;
+	box-shadow: 0 1px 4px rgba(190, 130, 30, 0.5);
 }
 
 .tl-periodic-cal-cell-week-highlight {
