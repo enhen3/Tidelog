@@ -603,7 +603,20 @@ export const zh: Record<string, string> = {
     'settings.purchaseDesc': '解锁完整晚间复盘、AI 洞察报告、仪表盘等全部功能',
     'settings.purchaseDomestic': '🛒 购买 Pro',
     'settings.purchaseIntl': '🛒 购买 Pro',
+    // ─── pro-modal.ts / pro-locked ──────────────────────
+    'pro.featureTitle': '{0} 是 Pro 专属功能',
+    'pro.upgradeDesc': '升级到 TideLog Pro，解锁全部深度洞察功能：',
+    'pro.dashboardDesc': '升级到 TideLog Pro，解锁数据仪表盘、日历热力图等深度洞察功能。',
+    'pro.calendarDesc': '升级到 TideLog Pro，解锁日历热力图、数据仪表盘等深度洞察功能。',
+    'pro.feature1': '🌙 完整晚间复盘（全部问题维度）',
+    'pro.feature2': '📊 AI 周报 / 月报洞察',
+    'pro.feature3': '👤 AI 用户画像分析',
+    'pro.feature4': '📅 日历热力图',
+    'pro.feature5': '🏠 数据仪表盘',
+    'pro.feature6': '🔄 自动模式 / 原则提炼',
     'pro.purchase': '🛒 购买 Pro',
+    'pro.hasCode': '已有兑换码？',
+    'pro.goToSettings': '去设置中输入 →',
 
     // constants.ts evening questions
     'evening.q1': '今天过得怎么样？计划里的事情推进得顺利吗？',

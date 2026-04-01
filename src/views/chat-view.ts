@@ -747,20 +747,20 @@ export class ChatView extends ItemView {
         this.addAIMessage(getLanguage() === 'en'
             ? `Hello 👋
 
-I'm your AI coach, helping you build habits for continuous growth.
+Here, record every rise and fall of your daily tides.
 
-**🌙 Daily** — Review your day, record achievements & emotions
-**💡 Insight** — Insight analysis, generate reports
+🌙 Daily — Review today's stories & emotions
+💡 Insight — Discover your rhythms & patterns
 
-Click a button above to start, or type your thoughts.`
+Tap a button above, or just chat anytime ✨`
             : `你好 👋
 
-我是你的 AI 教练，帮助你建立持续成长的习惯。
+在这里，记录每天的潮汐涨落。
 
-**🌙 Daily** — 回顾一天，记录成就与情绪
-**💡 Insight** — 洞察分析，生成报告
+🌙 Daily — 回顾今天的故事与心情
+💡 Insight — 发现你的节奏与模式
 
-点击上方按钮开始，或直接输入你的想法。`);
+点击上方按钮，或随时聊聊 ✨`);
     }
 
     /**
