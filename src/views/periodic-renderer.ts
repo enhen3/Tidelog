@@ -132,6 +132,7 @@ export class PeriodicRenderer {
             cell.setText(`${d}`);
             cell.addEventListener('click', () => {
                 h.periodicSelectedDate = moment(calMonth).date(d);
+                h.periodicMonthOffset = 0;
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
@@ -472,6 +473,7 @@ export class PeriodicRenderer {
             cell.setText(`${d}`);
             cell.addEventListener('click', () => {
                 h.periodicSelectedDate = moment(dayMoment);
+                h.periodicMonthOffset = 0;
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
@@ -489,6 +491,7 @@ export class PeriodicRenderer {
             cell.setText(`${nextMonthDay.date()}`);
             cell.addEventListener('click', () => {
                 h.periodicSelectedDate = moment(nextMonthDay);
+                h.periodicMonthOffset = 0;
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
