@@ -144,7 +144,7 @@ export class LicenseManager {
             const errMsg = err instanceof Error ? err.message : String(err);
             return {
                 success: false,
-                message: `网络连接失败，请检查网络后重试。如仍无法激活，请联系开发者。(${errMsg})`,
+                message: `网络连接失败，请检查网络后重试。如仍无法激活，请将以下信息发送给开发者：\n激活码: ${trimmed}\n设备ID: ${deviceId}\n错误: ${errMsg}`,
             };
         }
     }
