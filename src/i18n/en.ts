@@ -18,7 +18,7 @@ export const en: Record<string, string> = {
     'view.chatDisplayText': 'TideLog',
 
     // ─── settings-tab.ts ───────────────────────────────────
-    'settings.title': 'TideLog settings',
+    'settings.title': 'Settings',
     'settings.language': 'Language',
     'settings.languageDesc': 'Choose the display language for the plugin',
     'settings.aiProvider': 'AI provider',
@@ -31,7 +31,7 @@ export const en: Record<string, string> = {
     'settings.modelPlaceholder': 'Enter custom model name',
     'settings.baseUrl': 'API base URL',
     'settings.baseUrlDesc': 'Custom API base URL (leave empty for default)',
-    'settings.baseUrlPlaceholder': 'HTTPS://api.example.com/v1',
+    'settings.baseUrlPlaceholder': 'https://api.example.com/v1',
     'settings.dailyFolder': 'Daily notes folder',
     'settings.dailyFolderDesc': 'Folder path for daily journal notes',
     'settings.planFolder': 'Plans folder',
@@ -41,9 +41,9 @@ export const en: Record<string, string> = {
     'settings.dayBoundaryHour': 'Day boundary hour',
     'settings.dayBoundaryHourDesc': 'Hour before which entries count as the previous day (for late-night journaling)',
     'settings.enableMorning': 'Enable morning planning',
-    'settings.enableMorningDesc': 'Enable the morning planning sop workflow',
+    'settings.enableMorningDesc': 'Enable the morning planning SOP workflow',
     'settings.enableEvening': 'Enable evening review',
-    'settings.enableEveningDesc': 'Enable the evening review sop workflow',
+    'settings.enableEveningDesc': 'Enable the evening review SOP workflow',
     'settings.eveningQuestions': 'Review questions',
     'settings.eveningQuestionsDesc': 'Customize the evening review question list',
     'settings.deleteQuestion': 'Delete',
@@ -53,10 +53,10 @@ export const en: Record<string, string> = {
     'settings.sectionGeneral': 'General',
     'settings.sectionAI': 'AI settings',
     'settings.sectionFolders': 'Folders',
-    'settings.sectionSOP': 'Sop workflow',
+    'settings.sectionSOP': 'SOP workflow',
 
     // ─── chat-view.ts ──────────────────────────────────────
-    'chat.welcomeTitle': '👋 Hi, i\'m flow',
+    'chat.welcomeTitle': '👋 Hi, I\'m Flow',
     'chat.welcomeSubtitle': 'Your personal growth companion',
     'chat.welcomeDesc': 'I can help you with morning planning, evening reviews, or just chat.',
     'chat.tabPlan': 'Plan',
@@ -81,7 +81,7 @@ export const en: Record<string, string> = {
     'chat.reenterTasks': 'Okay, please re-enter your tasks:',
     'chat.modifyTasks': 'You can modify or add tasks:',
     'chat.enterTasks': 'Please enter tasks to add:',
-    'chat.noApiKey': '⚠️ **API key not configured**\n\nPlease configure the {0} API key in Obsidian settings → TideLog first.\n\nYou can start chatting once configured.',
+    'chat.noApiKey': '⚠️ **API key not configured**\n\nPlease configure the {0} API key in the plugin settings first.\n\nYou can start chatting once configured.',
     'chat.thisWeek': 'This week',
     'chat.thisMonth': 'This month',
     'chat.generatingInsight': '📊 Generating {0} insight report, please wait...',
@@ -109,14 +109,14 @@ export const en: Record<string, string> = {
     'ctrl.reEnterTasks': 'Okay, please re-enter your tasks:',
     'ctrl.modifyOrAddTasks': 'You can modify or add tasks:',
     'ctrl.enterTasks': 'Please enter tasks to add:',
-    'ctrl.apiKeyMissing': '⚠️ **API key not configured**\n\nPlease configure the {0} API key in Obsidian settings → TideLog first.\n\nYou can start chatting once configured.',
+    'ctrl.apiKeyMissing': '⚠️ **API key not configured**\n\nPlease configure the {0} API key in the plugin settings first.\n\nYou can start chatting once configured.',
     'ctrl.freeChatSystemPrompt': 'You are flow, the user\'s personal growth companion. This is free chat mode.',
     'ctrl.freeChatStrategy': `Naturally detect what the user needs from their message:
 - Venting emotions → Empathize first: "It sounds like this made you feel..."
 - Seeking advice → Understand the full situation first, then offer a thinking framework
 - Thinking aloud → Be a thinking partner, use follow-up questions to help clarify
 - Sharing good news → Be genuinely happy for them, help them savor the joy`,
-    'ctrl.freeChatPrinciples': 'Respond to emotions before content. Guide discovery through questions. Watch for emerging patterns. Keep responses to 2-4 sentences. Reply in english.\nIf the user mentions "update plan", "modify plan", or "adjust tasks", guide them to click the morning button or say "update plan".',
+    'ctrl.freeChatPrinciples': 'Respond to emotions before content. Guide discovery through questions. Watch for emerging patterns. Keep responses to 2-4 sentences. Reply in English.\nIf the user mentions "update plan", "modify plan", or "adjust tasks", guide them to click the morning button or say "update plan".',
     'ctrl.freeChatProfileNote': 'Naturally weave what you know about the user into the conversation.',
     'ctrl.insightGenerating': '📊 Generating {0} insight report, please wait...',
     'ctrl.insightWeekLabel': 'Weekly',
@@ -258,12 +258,12 @@ export const en: Record<string, string> = {
     'dash.linkCalendar': 'Calendar',
 
     // ─── error-formatter.ts ────────────────────────────────
-    'error.credits': '💳 **Insufficient API credits**\n\nYour {0} account balance is low or depleted.\n\n**Solutions:**\n- Log in to {0} to recharge or purchase credits\n- Or switch to another AI provider in TideLog settings',
-    'error.auth': '🔑 **Invalid or expired API key**\n\nPlease check the {0} API key in Obsidian settings → TideLog.',
+    'error.credits': '💳 **Insufficient API credits**\n\nYour {0} account balance is low or depleted.\n\n**Solutions:**\n- Log in to {0} to recharge or purchase credits\n- Or switch to another AI provider in the plugin settings',
+    'error.auth': '🔑 **Invalid or expired API key**\n\nPlease check the {0} API key in the plugin settings.',
     'error.rateLimit': '⏳ **Too many requests**\n\n{0}\'s rate limit has been reached. Please try again later.',
-    'error.modelNotFound': '🔍 **model unavailable**\n\nThe configured AI model cannot be accessed. Please check the model name in TideLog settings.',
+    'error.modelNotFound': '🔍 **Model unavailable**\n\nThe configured AI model cannot be accessed. Please check the model name in the plugin settings.',
     'error.serverError': '🔧 **AI service temporarily unavailable**\n\n{0}\'s server is experiencing issues. Please try again later.',
-    'error.network': '🌐 **network connection failed**\n\nPlease check your network connection and try again. If using a proxy, verify your proxy settings.',
+    'error.network': '🌐 **Network connection failed**\n\nPlease check your network connection and try again. If using a proxy, verify your proxy settings.',
     'error.unknown': '⚠️ **An unexpected error occurred**\n\nPlease check your {0} API settings or try switching to another AI provider.\n\nIf the issue persists, restart Obsidian and try again.',
 
     // ─── vault-manager.ts ──────────────────────────────────
@@ -284,7 +284,7 @@ export const en: Record<string, string> = {
     'morning.greeting': 'Good morning! ☀️ Let\'s plan your day.\n\nFirst, how\'s your energy level today? (1-10)',
     'morning.invalidEnergy': 'Please enter a number between 1 and 10 to rate your energy level~',
     'morning.askGoals': 'Energy level: {0}/10\n\nNext, what are your most important goals for today? What do you want to accomplish?\n(Describe freely, I\'ll help organize)',
-    'morning.askGoalsFallback': 'Got it.\n\nNext, what are your most important goals for today? What do you want to accomplish?\n(describe freely, i\'ll help organize)',
+    'morning.askGoalsFallback': 'Got it.\n\nNext, what are your most important goals for today? What do you want to accomplish?\n(Describe freely, I\'ll help organize)',
 
     // ─── evening-sop.ts ────────────────────────────────────
     'evening.complete': 'Today\'s review is complete! Great work 🌙 rest well, and keep going tomorrow!',
@@ -313,9 +313,9 @@ export const en: Record<string, string> = {
 
     // ─── pro-modal.ts / pro-locked ──────────────────────
     'pro.featureTitle': '{0} is a Pro feature',
-    'pro.upgradeDesc': 'Upgrade to TideLog pro to unlock all deep insight features:',
-    'pro.dashboardDesc': 'Upgrade to TideLog pro to unlock the data dashboard, calendar heatmap, and other deep insight features.',
-    'pro.calendarDesc': 'Upgrade to TideLog pro to unlock the calendar heatmap, data dashboard, and other deep insight features.',
+    'pro.upgradeDesc': 'Upgrade to Pro to unlock all deep insight features:',
+    'pro.dashboardDesc': 'Upgrade to Pro to unlock the data dashboard, calendar heatmap, and other deep insight features.',
+    'pro.calendarDesc': 'Upgrade to Pro to unlock the calendar heatmap, data dashboard, and other deep insight features.',
     'pro.feature1': '🌙 Full evening review (all question dimensions)',
     'pro.feature2': '📊 AI weekly / monthly insight reports',
     'pro.feature3': '👤 AI user profile analysis',
@@ -441,10 +441,10 @@ export const en: Record<string, string> = {
     'tmpl.principlesDesc': '> record your life principles distilled from experience. AI will help discover and refine new principles during reviews.',
     'tmpl.principleDecision': '## decision making',
     'tmpl.principleDecisionComment': '<!-- principles to help you make better decisions -->',
-    'tmpl.principleDecisionExample': 'Example: When facing a choice, ask yourself "how will i view this decision in 5 years?"',
+    'tmpl.principleDecisionExample': 'Example: When facing a choice, ask yourself "how will I view this decision in 5 years?"',
     'tmpl.principleEmotion': '## emotion management',
     'tmpl.principleEmotionComment': '<!-- principles to help you manage emotions -->',
-    'tmpl.principleEmotionExample': 'Example: When feeling anxious, first ask yourself "can i control this?"',
+    'tmpl.principleEmotionExample': 'Example: When feeling anxious, first ask yourself "can I control this?"',
     'tmpl.principleEfficiency': '## efficiency',
     'tmpl.principleEfficiencyComment': '<!-- principles to improve efficiency -->',
     'tmpl.principleEfficiencyExample': 'Example: Do the most important tasks in the morning when energy is highest',
@@ -515,7 +515,7 @@ export const en: Record<string, string> = {
     'dashSvc.noPrinciple': '_no principles yet. AI will help you extract them after reviews._',
     'dashSvc.activePattern': 'Active pattern',
     'dashSvc.noPattern': '_no active patterns yet. AI will analyze your behavior patterns after some time._',
-    'dashSvc.footer': '_this page is auto-generated by TideLog. Run the "refresh dashboard" command to update anytime._',
+    'dashSvc.footer': '_This page is auto-generated. Run the "refresh dashboard" command to update anytime._',
 
     // review-renderer.ts
     'review.plan': 'Plan',

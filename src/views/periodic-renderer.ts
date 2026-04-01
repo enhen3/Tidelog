@@ -527,7 +527,7 @@ export class PeriodicRenderer {
             if (tasks.length > 0) {
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.weekTasks', String(tasks.length)) });
                 for (const task of tasks) {
-                    this.renderTask(taskSection, task, weekFile as TFile, 'week');
+                    this.renderTask(taskSection, task, weekFile, 'week');
                 }
             }
             this.renderTaskInput(taskSection, weekFile);
@@ -750,7 +750,7 @@ export class PeriodicRenderer {
             if (tasks.length > 0) {
                 taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.monthTasks', String(tasks.length)) });
                 for (const task of tasks) {
-                    this.renderTask(taskSection, task, monthFile as TFile, 'month');
+                    this.renderTask(taskSection, task, monthFile, 'month');
                 }
             }
             this.renderTaskInput(taskSection, monthFile);
@@ -929,20 +929,14 @@ export class PeriodicRenderer {
                     row.addClass('tl-task-row-dragging');
                     // Create a floating clone for visual feedback
                     touchClone = row.cloneNode(true) as HTMLElement;
-                    touchClone.style.position = 'fixed';
-                    touchClone.style.left = `${row.getBoundingClientRect().left}px`;
-                    touchClone.style.width = `${row.getBoundingClientRect().width}px`;
-                    touchClone.style.zIndex = '1000';
-                    touchClone.style.opacity = '0.8';
-                    touchClone.style.pointerEvents = 'none';
-                    touchClone.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
-                    touchClone.style.borderRadius = '8px';
+                    touchClone.addClass('tl-touch-drag-clone');
+                    touchClone.setCssProps({ '--tl-drag-left': `${row.getBoundingClientRect().left}px`, '--tl-drag-width': `${row.getBoundingClientRect().width}px` });
                     document.body.appendChild(touchClone);
                 }
                 if (touchDragging) {
                     e.preventDefault(); // Prevent scroll during drag
                     if (touchClone) {
-                        touchClone.style.top = `${touch.clientY - 22}px`;
+                        touchClone.setCssProps({ '--tl-drag-top': `${touch.clientY - 22}px` });
                     }
                     // Highlight drop target
                     const parent = row.parentElement;

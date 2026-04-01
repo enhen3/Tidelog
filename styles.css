@@ -4390,3 +4390,19 @@ button.tl-periodic-open-btn {
 .is-mobile button.tl-periodic-open-btn {
 	min-height: 44px;
 }
+
+/* =============================================================================
+   Touch Drag Clone — replaces inline styles for bot compliance
+   ============================================================================= */
+
+.tl-touch-drag-clone {
+	position: fixed;
+	left: var(--tl-drag-left, 0);
+	top: var(--tl-drag-top, 0);
+	width: var(--tl-drag-width, auto);
+	z-index: 1000;
+	opacity: 0.8;
+	pointer-events: none;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	border-radius: 8px;
+}

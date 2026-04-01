@@ -30,7 +30,6 @@ async function apiPost(url: string, body: Record<string, unknown>): Promise<Reco
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-            // First try Obsidian's requestUrl
             const response = await requestUrl({
                 url,
                 method: 'POST',
@@ -40,19 +39,6 @@ async function apiPost(url: string, body: Record<string, unknown>): Promise<Reco
             return response.json;
         } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
-            // On connection errors, try native fetch as fallback
-            if (attempt < MAX_RETRIES) {
-                try {
-                    const fetchResponse = await fetch(url, {
-                        method: 'POST',
-                        headers,
-                        body: jsonBody,
-                    });
-                    return await fetchResponse.json() as Record<string, unknown>;
-                } catch (fetchErr) {
-                    lastError = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
-                }
-            }
             // Wait before retry
             if (attempt < MAX_RETRIES) {
                 await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));

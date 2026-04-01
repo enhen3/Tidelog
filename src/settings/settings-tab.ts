@@ -542,18 +542,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                         touchDragging = true;
                         row.addClass('tl-q-dragging');
                         touchClone = row.cloneNode(true) as HTMLElement;
-                        touchClone.style.position = 'fixed';
-                        touchClone.style.left = `${row.getBoundingClientRect().left}px`;
-                        touchClone.style.width = `${row.getBoundingClientRect().width}px`;
-                        touchClone.style.zIndex = '1000';
-                        touchClone.style.opacity = '0.8';
-                        touchClone.style.pointerEvents = 'none';
-                        touchClone.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+                        touchClone.addClass('tl-touch-drag-clone');
+                        touchClone.setCssProps({ '--tl-drag-left': `${row.getBoundingClientRect().left}px`, '--tl-drag-width': `${row.getBoundingClientRect().width}px` });
                         document.body.appendChild(touchClone);
                     }
                     if (touchDragging) {
                         e.preventDefault();
-                        if (touchClone) touchClone.style.top = `${touch.clientY - 22}px`;
+                        if (touchClone) touchClone.setCssProps({ '--tl-drag-top': `${touch.clientY - 22}px` });
                         listEl.querySelectorAll('.tl-q-row').forEach(r => r.removeClass('tl-q-dragover'));
                         const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
                         if (target && target !== row && listEl.contains(target)) {
