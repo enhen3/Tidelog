@@ -120,6 +120,7 @@ export class PeriodicRenderer {
             const dateStr = moment(calMonth).date(d).format('YYYY-MM-DD');
             const isToday = dateStr === todayStr;
             const isSelected = dateStr === selStr;
+            const isPast = dateStr < todayStr;
 
             // Check if note exists AND has real content (tasks)
             const notePath = `${h.plugin.settings.dailyFolder}/${dateStr}.md`;
@@ -134,6 +135,23 @@ export class PeriodicRenderer {
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
+
+            // Badge: show incomplete task count for past dates
+            if (isPast && noteFile instanceof TFile && hasNote) {
+                void (async () => {
+                    try {
+                        const content = await h.app.vault.cachedRead(noteFile);
+                        const tasks = h.parseMdTasks(content).filter(t => t.isTask);
+                        const incomplete = tasks.filter(t => !t.done).length;
+                        if (incomplete > 0) {
+                            cell.createEl('span', {
+                                cls: 'tl-periodic-cal-badge',
+                                text: String(incomplete),
+                            });
+                        }
+                    } catch { /* skip */ }
+                })();
+            }
         }
 
         // Preview area
