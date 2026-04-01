@@ -1,6 +1,6 @@
 {
     "name": "tidelog",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "description": "TideLog — AI-guided daily planning and reflection for Obsidian",
     "main": "main.js",
     "type": "module",
