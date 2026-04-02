@@ -239,6 +239,23 @@ export class ChatView extends ItemView {
         // Cancel any pending debounced refresh to prevent queued re-renders
         if (this.refreshTimer) { clearTimeout(this.refreshTimer); this.refreshTimer = null; }
 
+        // When the user actively clicks a tab (animate=true), reset state to
+        // "today / current month" so each tab always opens fresh.
+        if (animate) {
+            if (tab === 'kanban') {
+                // Plan tab: reset periodic navigator to today
+                this.periodicMode = 'day';
+                this.periodicSelectedDate = moment();
+                this.periodicMonthOffset = 0;
+            } else if (tab === 'review') {
+                // Trends tab: reset calendar to the current month
+                this.calendarMonth = moment();
+                this.calendarViewMode = 'month';
+                this.calendarWeekOffset = 0;
+            }
+            // Review (chat) tab has no persistent navigation state to reset
+        }
+
         // Update tab bar active state
         this.tabBarEl.querySelectorAll('.tl-tab-btn').forEach(btn => {
             btn.removeClass('tl-tab-btn-active');
