@@ -57,6 +57,7 @@ export class KanbanView extends ItemView {
     }
 
     async onClose(): Promise<void> {
+        await Promise.resolve();
         this.containerEl_ = null;
     }
 

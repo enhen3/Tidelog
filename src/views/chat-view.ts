@@ -108,6 +108,7 @@ export class ChatView extends ItemView {
     }
 
     async onOpen(): Promise<void> {
+        await Promise.resolve();
         const container = this.contentEl;
         container.empty();
         container.addClass('tl-chat-container');
@@ -146,6 +147,7 @@ export class ChatView extends ItemView {
     }
 
     async onClose(): Promise<void> {
+        await Promise.resolve();
         if (this.refreshTimer) clearTimeout(this.refreshTimer);
     }
 

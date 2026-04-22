@@ -71,6 +71,7 @@ export class DashboardView extends ItemView {
     }
 
     async onClose(): Promise<void> {
+        await Promise.resolve();
         this.containerEl_ = null;
     }
 

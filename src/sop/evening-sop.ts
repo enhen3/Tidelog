@@ -191,7 +191,7 @@ export class EveningSOP {
 
         // Check for skip/end — user can skip any question
         if (this.isSkip(content)) {
-            await this.moveToNextQuestion(context, onMessage);
+            this.moveToNextQuestion(context, onMessage);
             return;
         }
 
@@ -285,11 +285,11 @@ export class EveningSOP {
             });
 
             // Move to next question after response
-            await this.moveToNextQuestion(context, onMessage, response);
+            this.moveToNextQuestion(context, onMessage, response);
         } catch (error) {
             const saveMsg = getLanguage() === 'en' ? 'Saved!' : '保存成功！';
             onMessage(`${saveMsg}\n\n${error ? formatAPIError(error, this.plugin.settings.activeProvider) : ''}`);
-            await this.moveToNextQuestion(context, onMessage);
+            this.moveToNextQuestion(context, onMessage);
         }
     }
 
