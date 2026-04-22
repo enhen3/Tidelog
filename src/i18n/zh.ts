@@ -636,4 +636,15 @@ export const zh: Record<string, string> = {
     'kanban.today': '今天',
     'kanban.inProgress': '⏳ 进行中 ({0})',
     'kanban.noTasks': '暂无任务',
+
+    // ─── quick-capture (灵感收集) ──────────────────────────
+    'capture.title': '💡 灵感收集',
+    'capture.placeholder': '记录灵感...',
+    'capture.empty': '暂无灵感，随时记录你的想法',
+    'capture.addToDate': '安排到日期',
+    'capture.today': '今天',
+    'capture.tomorrow': '明天',
+    'capture.nextWeek': '下周一',
+    'capture.custom': '自定义',
+    'capture.promoted': '✅ 已安排到 {0}',
 };

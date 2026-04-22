@@ -3746,6 +3746,202 @@
 	padding: var(--tl-sp-2) 0;
 }
 
+/* ---- Quick Capture (灵感收集) ---- */
+.tl-capture-section {
+	margin-top: var(--tl-sp-12);
+	background: var(--tl-surface-raised);
+	border-radius: var(--tl-radius-md);
+	border: 0.5px solid var(--tl-border);
+	overflow: hidden;
+}
+
+.tl-capture-header {
+	padding: 10px 12px 6px;
+	border-bottom: 0.5px solid var(--tl-border);
+}
+
+.tl-capture-title {
+	font-size: var(--tl-fs-footnote);
+	font-weight: var(--tl-fw-semibold);
+	color: var(--tl-text-secondary);
+	letter-spacing: 0.3px;
+}
+
+.tl-capture-list {
+	padding: 0;
+}
+
+.tl-capture-empty {
+	padding: 16px 12px;
+	font-size: var(--tl-fs-footnote);
+	color: var(--tl-text-tertiary);
+	text-align: center;
+	font-style: italic;
+}
+
+.tl-capture-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	font-size: 13px;
+	line-height: 1.4;
+	color: var(--tl-text-primary);
+	border-bottom: 0.5px solid var(--tl-border);
+	transition: background 0.15s ease;
+	cursor: default;
+}
+
+.tl-capture-item:last-child {
+	border-bottom: none;
+}
+
+.tl-capture-item:hover {
+	background: rgba(0, 0, 0, 0.02);
+}
+
+.theme-dark .tl-capture-item:hover {
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.tl-capture-bullet {
+	flex-shrink: 0;
+	width: 12px;
+	text-align: center;
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--tl-accent);
+	line-height: 1;
+	opacity: 0.6;
+}
+
+.tl-capture-text {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tl-capture-edit-input {
+	flex: 1;
+	padding: 2px 6px;
+	border: none;
+	border-bottom: 1.5px solid var(--tl-accent);
+	border-radius: 0;
+	background: transparent;
+	color: var(--tl-text-primary);
+	font-size: 13px;
+	outline: none;
+}
+
+.tl-capture-del-btn {
+	opacity: 0;
+	cursor: pointer;
+	color: var(--tl-text-tertiary);
+	font-size: 15px;
+	font-weight: 400;
+	flex-shrink: 0;
+	width: 20px;
+	text-align: center;
+	margin-left: auto;
+	transition: opacity 0.2s ease, color 0.15s ease;
+}
+
+.tl-capture-item:hover .tl-capture-del-btn {
+	opacity: 0.4;
+}
+
+.tl-capture-del-btn:hover {
+	opacity: 1 !important;
+	color: #ff3b30;
+}
+
+.tl-capture-schedule-btn {
+	opacity: 0;
+	cursor: pointer;
+	color: var(--tl-text-tertiary);
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	transition: opacity 0.2s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.tl-capture-schedule-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.tl-capture-item:hover .tl-capture-schedule-btn {
+	opacity: 0.5;
+}
+
+.tl-capture-schedule-btn:hover {
+	opacity: 1 !important;
+	color: var(--tl-accent);
+	background: var(--tl-accent-light);
+}
+
+.tl-capture-input-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	border-top: 0.5px solid var(--tl-border);
+}
+
+.tl-capture-input {
+	flex: 1;
+	padding: 5px 8px;
+	border: 1px solid var(--tl-border);
+	border-radius: var(--tl-radius-sm);
+	background: var(--tl-surface);
+	color: var(--tl-text-primary);
+	font-size: var(--tl-fs-footnote);
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.tl-capture-input:focus {
+	border-color: var(--tl-accent);
+}
+
+.tl-capture-input::placeholder {
+	color: var(--tl-text-tertiary);
+}
+
+.tl-capture-add-btn {
+	width: 24px;
+	height: 24px;
+	border: none;
+	border-radius: 50%;
+	background: var(--tl-accent);
+	color: white;
+	font-size: 14px;
+	font-weight: var(--tl-fw-semibold);
+	line-height: 1;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.tl-capture-add-btn:hover {
+	transform: scale(1.1);
+	opacity: 0.9;
+}
+
+/* Mobile: always show action buttons on capture items */
+.is-mobile .tl-capture-del-btn,
+.is-mobile .tl-capture-schedule-btn {
+	opacity: 0.3;
+}
+
 /* ---- Open/Create Button ---- */
 .tl-periodic-open-btn {
 	padding: 8px 12px;

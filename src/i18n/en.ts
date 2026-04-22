@@ -634,4 +634,15 @@ export const en: Record<string, string> = {
     'kanban.today': 'Today',
     'kanban.inProgress': '⏳ In progress ({0})',
     'kanban.noTasks': 'No tasks',
+
+    // ─── quick-capture ──────────────────────────────────────
+    'capture.title': '💡 Quick capture',
+    'capture.placeholder': 'Capture an idea...',
+    'capture.empty': 'No ideas yet — jot down your thoughts anytime',
+    'capture.addToDate': 'Schedule to date',
+    'capture.today': 'Today',
+    'capture.tomorrow': 'Tomorrow',
+    'capture.nextWeek': 'Next monday',
+    'capture.custom': 'Custom',
+    'capture.promoted': '✅ Scheduled to {0}',
 };

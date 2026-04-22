@@ -2,7 +2,7 @@
  * Vault Manager - Handles file and folder operations
  */
 
-import { App, CachedMetadata, TFile, TFolder, moment } from 'obsidian';
+import { App, CachedMetadata, TFile, TFolder, moment, Plugin } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
 
@@ -69,7 +69,9 @@ export class VaultManager {
     }
 
     /**
-     * Get or create today's daily note
+     * Get or create today's daily note.
+     * Respects templates from Daily Notes core plugin, Periodic Notes, or Templater.
+     * Falls back to TideLog's built-in template only when no user template is configured.
      */
     async getOrCreateDailyNote(date?: Date): Promise<TFile> {
         const path = this.getDailyNotePath(date);
@@ -77,8 +79,26 @@ export class VaultManager {
 
         if (!file) {
             const d = date ? moment(date) : this.getEffectiveDate();
-            const content = this.createDailyNoteTemplate(d);
-            file = await this.app.vault.create(path, content);
+
+            // Try to use the user's configured daily note template
+            const userTemplate = await this.getUserDailyNoteTemplate(d);
+
+            if (userTemplate !== null) {
+                // User has a template — use it, then ensure TideLog sections exist
+                file = await this.app.vault.create(path, userTemplate);
+
+                if (file instanceof TFile) {
+                    // Attempt Templater processing if available
+                    await this.triggerTemplaterIfAvailable(file);
+
+                    // Ensure TideLog YAML fields & sections exist
+                    await this.ensureTideLogFields(file, d);
+                }
+            } else {
+                // No user template — use TideLog's built-in default
+                const content = this.createDefaultDailyNoteTemplate(d);
+                file = await this.app.vault.create(path, content);
+            }
         }
 
         if (!(file instanceof TFile)) {
@@ -88,9 +108,139 @@ export class VaultManager {
     }
 
     /**
-     * Create daily note template content
+     * Read the user's daily note template from known sources.
+     * Checks: Daily Notes core plugin → Periodic Notes → returns null if none found.
      */
-    private createDailyNoteTemplate(date: moment.Moment): string {
+    private async getUserDailyNoteTemplate(date: moment.Moment): Promise<string | null> {
+        let templatePath: string | null = null;
+
+        // 1) Daily Notes core plugin
+        try {
+            const internalPlugins = (this.app as unknown as Record<string, unknown>).internalPlugins as
+                { getPluginById(id: string): { enabled: boolean; instance?: { options?: { template?: string } } } | null } | undefined;
+            if (internalPlugins) {
+                const dailyNotes = internalPlugins.getPluginById('daily-notes');
+                if (dailyNotes?.enabled && dailyNotes.instance?.options?.template) {
+                    templatePath = dailyNotes.instance.options.template;
+                }
+            }
+        } catch { /* ignore */ }
+
+        // 2) Periodic Notes community plugin (overrides core if configured)
+        if (!templatePath) {
+            try {
+                const plugins = (this.app as unknown as Record<string, unknown>).plugins as
+                    { getPlugin(id: string): Plugin & { settings?: { daily?: { template?: string } } } | null } | undefined;
+                if (plugins) {
+                    const periodicNotes = plugins.getPlugin('periodic-notes');
+                    if (periodicNotes) {
+                        const pnSettings = (periodicNotes as Plugin & { settings?: { daily?: { template?: string } } }).settings;
+                        if (pnSettings?.daily?.template) {
+                            templatePath = pnSettings.daily.template;
+                        }
+                    }
+                }
+            } catch { /* ignore */ }
+        }
+
+        if (!templatePath) return null;
+
+        // Normalize path: add .md if missing
+        if (!templatePath.endsWith('.md')) {
+            templatePath += '.md';
+        }
+
+        // Read the template file
+        const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+        if (!templateFile || !(templateFile instanceof TFile)) return null;
+
+        let content = await this.app.vault.cachedRead(templateFile);
+
+        // Process basic Obsidian-style variables: {{date}}, {{title}}, {{time}}
+        const dateStr = date.format('YYYY-MM-DD');
+        content = content
+            .replace(/\{\{\s*date\s*\}\}/gi, dateStr)
+            .replace(/\{\{\s*title\s*\}\}/gi, dateStr)
+            .replace(/\{\{\s*time\s*\}\}/gi, date.format('HH:mm'));
+
+        // Process {{date:FORMAT}} patterns
+        content = content.replace(/\{\{\s*date:([^}]+)\}\}/gi, (_match, fmt: string) => {
+            return date.format(fmt.trim());
+        });
+
+        return content;
+    }
+
+    /**
+     * If the Templater plugin is available, trigger its processing on the file.
+     * Templater syntax like <% tp.date.now() %> requires Templater's own engine.
+     */
+    private async triggerTemplaterIfAvailable(file: TFile): Promise<void> {
+        try {
+            const plugins = (this.app as unknown as Record<string, unknown>).plugins as
+                { getPlugin(id: string): Plugin | null } | undefined;
+            if (!plugins) return;
+
+            const templater = plugins.getPlugin('templater-obsidian');
+            if (!templater) return;
+
+            // Templater exposes overwite_file_commands or a templater object
+            const tp = templater as Plugin & { templater?: { overwrite_file_commands?: (file: TFile) => Promise<void> } };
+            if (tp.templater?.overwrite_file_commands) {
+                await tp.templater.overwrite_file_commands(file);
+            }
+        } catch (e) {
+            console.warn('[TideLog] Templater processing skipped:', e);
+        }
+    }
+
+    /**
+     * Ensure TideLog's required YAML frontmatter fields and sections exist
+     * in a daily note that was created from the user's own template.
+     * Does NOT overwrite existing content — only adds what's missing.
+     */
+    private async ensureTideLogFields(file: TFile, date: moment.Moment): Promise<void> {
+        // 1) Ensure required YAML frontmatter fields
+        const weekRef = this.getWeekRef(date);
+        const monthRef = date.format('YYYY-MM');
+
+        await this.app.fileManager.processFrontMatter(file, (fm) => {
+            if (fm.type === undefined) fm.type = 'daily';
+            if (fm.date === undefined) fm.date = date.format('YYYY-MM-DD');
+            if (fm.emotion_score === undefined) fm.emotion_score = null;
+            if (fm.status === undefined) fm.status = 'todo';
+            if (fm.tasks_total === undefined) fm.tasks_total = 0;
+            if (fm.tasks_done === undefined) fm.tasks_done = 0;
+            if (fm.weekly_ref === undefined) fm.weekly_ref = `[[${weekRef}]]`;
+            if (fm.monthly_ref === undefined) fm.monthly_ref = `[[${monthRef}]]`;
+        });
+
+        // 2) Ensure Plan and Review sections exist
+        const content = await this.app.vault.read(file);
+        const planHeader = `## ${t('vault.sectionPlan')}`;
+        const reviewHeader = `## ${t('vault.sectionReview')}`;
+
+        // Check both localized and hardcoded variants
+        const hasPlan = content.includes('## 计划') || content.includes('## Plan') || content.includes(planHeader);
+        const hasReview = content.includes('## 复盘') || content.includes('## Review') || content.includes(reviewHeader);
+
+        if (!hasPlan || !hasReview) {
+            let appendContent = '';
+            if (!hasPlan) {
+                appendContent += `\n${planHeader}\n\n${t('vault.planComment')}\n`;
+            }
+            if (!hasReview) {
+                appendContent += `\n${reviewHeader}\n\n${t('vault.reviewComment')}\n`;
+            }
+            await this.app.vault.modify(file, content + appendContent);
+        }
+    }
+
+    /**
+     * TideLog's built-in default daily note template.
+     * Used only when no user template is configured.
+     */
+    private createDefaultDailyNoteTemplate(date: moment.Moment): string {
         const dateStr = date.format('YYYY-MM-DD');
         const weekday = date.format('dddd');
         const weekRef = this.getWeekRef(date);
@@ -561,5 +711,90 @@ ${t('vault.reviewComment')}
         }
 
         await this.app.vault.modify(file, lines.join('\n'));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Quick Capture (灵感收集)
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * Get the quick capture file path
+     */
+    getQuickCapturePath(): string {
+        return `${this.settings.archiveFolder}/quick_capture.md`;
+    }
+
+    /**
+     * Read all quick capture items as an array of strings
+     */
+    async getQuickCaptureItems(): Promise<string[]> {
+        const path = this.getQuickCapturePath();
+        const file = this.app.vault.getAbstractFileByPath(path);
+        if (!file || !(file instanceof TFile)) return [];
+
+        try {
+            const content = await this.app.vault.cachedRead(file);
+            return content
+                .split('\n')
+                .filter(line => line.startsWith('- '))
+                .map(line => line.substring(2).trim())
+                .filter(text => text.length > 0);
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Add a quick capture item
+     */
+    async addQuickCaptureItem(text: string): Promise<void> {
+        const path = this.getQuickCapturePath();
+        const line = `- ${text}`;
+        let file = this.app.vault.getAbstractFileByPath(path);
+
+        if (!file) {
+            // Ensure folder exists
+            await this.ensureFolder(this.settings.archiveFolder);
+            await this.app.vault.create(path, line + '\n');
+        } else if (file instanceof TFile) {
+            const content = await this.app.vault.read(file);
+            // Prepend new item so latest appears first
+            await this.app.vault.modify(file, line + '\n' + content);
+        }
+    }
+
+    /**
+     * Remove a quick capture item by its text
+     */
+    async removeQuickCaptureItem(text: string): Promise<void> {
+        const path = this.getQuickCapturePath();
+        const file = this.app.vault.getAbstractFileByPath(path);
+        if (!file || !(file instanceof TFile)) return;
+
+        const content = await this.app.vault.read(file);
+        const lines = content.split('\n');
+        const target = `- ${text}`;
+        const idx = lines.findIndex(l => l.trim() === target.trim());
+        if (idx >= 0) {
+            lines.splice(idx, 1);
+            await this.app.vault.modify(file, lines.join('\n'));
+        }
+    }
+
+    /**
+     * Edit a quick capture item
+     */
+    async editQuickCaptureItem(oldText: string, newText: string): Promise<void> {
+        const path = this.getQuickCapturePath();
+        const file = this.app.vault.getAbstractFileByPath(path);
+        if (!file || !(file instanceof TFile)) return;
+
+        const content = await this.app.vault.read(file);
+        const oldLine = `- ${oldText}`;
+        const newLine = `- ${newText}`;
+        const updated = content.replace(oldLine, newLine);
+        if (updated !== content) {
+            await this.app.vault.modify(file, updated);
+        }
     }
 }

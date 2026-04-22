@@ -184,6 +184,8 @@ export class PeriodicRenderer {
                     void h.app.workspace.getLeaf().openFile(f);
                 })();
             });
+            // Quick Capture section (灵感收集) — cross-day persistent
+            await this.renderQuickCapture(body);
             return;
         }
 
@@ -238,6 +240,9 @@ export class PeriodicRenderer {
         openBtn.addEventListener('click', () => {
             void h.app.workspace.getLeaf().openFile(file);
         });
+
+        // Quick Capture section (灵感收集) — cross-day persistent
+        await this.renderQuickCapture(body);
     }
 
     /**
@@ -380,6 +385,266 @@ export class PeriodicRenderer {
         section.createDiv({ cls: 'tl-plan-suggestion-line', text: tip });
     }
 
+    // ──────────────────────────────────────────────────────
+    // Quick Capture (灵感收集)
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * Render the quick capture section — a persistent cross-day idea inbox.
+     * Shows below the daily preview. Items are stored in a standalone file.
+     */
+    private async renderQuickCapture(container: HTMLElement): Promise<void> {
+        const h = this.host;
+        const items = await h.plugin.vaultManager.getQuickCaptureItems();
+
+        const section = container.createDiv('tl-capture-section');
+
+        // Header
+        const header = section.createDiv('tl-capture-header');
+        header.createEl('span', { cls: 'tl-capture-title', text: t('capture.title') });
+
+        // Items list
+        const list = section.createDiv('tl-capture-list');
+
+        if (items.length === 0) {
+            list.createDiv({ cls: 'tl-capture-empty', text: t('capture.empty') });
+        } else {
+            for (const itemText of items) {
+                this.renderCaptureItem(list, itemText);
+            }
+        }
+
+        // Input row
+        const inputRow = section.createDiv('tl-capture-input-row');
+        const input = inputRow.createEl('input', {
+            type: 'text',
+            cls: 'tl-capture-input',
+            attr: { placeholder: t('capture.placeholder') },
+        });
+        const addBtn = inputRow.createEl('button', {
+            cls: 'tl-capture-add-btn',
+            text: '+',
+        });
+
+        const doAdd = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            await h.plugin.vaultManager.addQuickCaptureItem(text);
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
+        };
+
+        addBtn.addEventListener('click', () => void doAdd());
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') { e.preventDefault(); void doAdd(); }
+        });
+    }
+
+    /**
+     * Render a single quick capture item with edit, delete, and date-promote actions.
+     */
+    private renderCaptureItem(container: HTMLElement, text: string): void {
+        const h = this.host;
+        const row = container.createDiv('tl-capture-item');
+
+        // Bullet
+        row.createEl('span', { cls: 'tl-capture-bullet', text: '·' });
+
+        // Label — edit trigger: dblclick on desktop, single tap on mobile
+        const label = row.createEl('span', { cls: 'tl-capture-text', text });
+        const startEdit = (target: HTMLElement) => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = text;
+            input.className = 'tl-capture-edit-input';
+            target.replaceWith(input);
+            input.focus();
+            input.select();
+            const save = () => {
+                void (async () => {
+                    const newText = input.value.trim();
+                    if (newText && newText !== text) {
+                        await h.plugin.vaultManager.editQuickCaptureItem(text, newText);
+                    }
+                    h.invalidateTabCache('kanban');
+                    h.switchTab('kanban');
+                })();
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', (e: KeyboardEvent) => {
+                if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+                if (e.key === 'Escape') { input.value = text; input.blur(); }
+            });
+        };
+        if (Platform.isMobile) {
+            label.addEventListener('click', () => startEdit(label));
+        } else {
+            label.addEventListener('dblclick', () => startEdit(label));
+        }
+
+        // Delete button
+        const delBtn = row.createEl('span', { cls: 'tl-capture-del-btn', text: '×' });
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            void (async () => {
+                await h.plugin.vaultManager.removeQuickCaptureItem(text);
+                row.remove();
+                // Show empty state if no items left
+                const remaining = container.querySelectorAll('.tl-capture-item');
+                if (remaining.length === 0) {
+                    container.createDiv({ cls: 'tl-capture-empty', text: t('capture.empty') });
+                }
+            })();
+        });
+
+        // Date-promote popup — right-click (desktop) / long-press (mobile)
+        const showPromotePopup = (clientX: number, clientY: number) => {
+            // Remove any existing popup
+            document.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
+
+            const popup = document.createElement('div');
+            popup.className = 'tl-task-date-popup';
+
+            // Header
+            popup.createEl('div', { cls: 'tl-task-date-popup-header', text: t('capture.addToDate') });
+
+            // Buttons
+            const btnRow = popup.createDiv('tl-task-date-popup-buttons');
+
+            const todayDate = moment();
+            const tomorrowDate = moment().add(1, 'day');
+            const nextWeekDate = moment().startOf('isoWeek').add(1, 'week');
+
+            // Today
+            const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
+            const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(todayIcon, 'sun');
+            todayBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.today') });
+            todayBtn.addEventListener('click', () => {
+                popup.remove();
+                void this.promoteCapture(text, todayDate.toDate(), row);
+            });
+
+            // Tomorrow
+            const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
+            const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(tmrIcon, 'sunrise');
+            tmrBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.tomorrow') });
+            tmrBtn.addEventListener('click', () => {
+                popup.remove();
+                void this.promoteCapture(text, tomorrowDate.toDate(), row);
+            });
+
+            // Next week
+            const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
+            const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(weekIcon, 'calendar-plus');
+            weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.nextWeek') });
+            weekBtn.addEventListener('click', () => {
+                popup.remove();
+                void this.promoteCapture(text, nextWeekDate.toDate(), row);
+            });
+
+            // Custom date picker
+            const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
+            const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
+            setIcon(customIcon, 'calendar-search');
+            customBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.custom') });
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'date';
+            hiddenInput.className = 'tl-task-date-hidden-input';
+            popup.appendChild(hiddenInput);
+            hiddenInput.addEventListener('change', () => {
+                popup.remove();
+                if (!hiddenInput.value) return;
+                const picked = new Date(hiddenInput.value + 'T00:00:00');
+                void this.promoteCapture(text, picked, row);
+            });
+            customBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                hiddenInput.showPicker();
+            });
+
+            document.body.appendChild(popup);
+
+            if (!Platform.isMobile) {
+                const popupWidth = 220;
+                const popupHeight = 100;
+                let left = clientX;
+                let top = clientY;
+                if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 8;
+                if (top + popupHeight > window.innerHeight) top = clientY - popupHeight;
+                popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
+            }
+
+            // Dismiss on outside click/tap
+            const dismiss = (ev: MouseEvent | TouchEvent) => {
+                const target = ev instanceof TouchEvent ? document.elementFromPoint((ev as TouchEvent).changedTouches[0].clientX, (ev as TouchEvent).changedTouches[0].clientY) : ev.target;
+                if (!popup.contains(target as Node)) {
+                    popup.remove();
+                    document.removeEventListener('click', dismiss, true);
+                    document.removeEventListener('touchend', dismiss, true);
+                }
+            };
+            setTimeout(() => {
+                document.addEventListener('click', dismiss, true);
+                document.addEventListener('touchend', dismiss, true);
+            }, 0);
+        };
+
+        // Schedule button — clickable icon to promote to a dated task
+        const schedBtn = row.createEl('span', { cls: 'tl-capture-schedule-btn' });
+        setIcon(schedBtn, 'calendar-clock');
+        schedBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = schedBtn.getBoundingClientRect();
+            showPromotePopup(rect.left, rect.bottom + 4);
+        });
+        // Insert before delete button in DOM order
+        row.insertBefore(schedBtn, delBtn);
+
+        // Desktop: right-click
+        row.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showPromotePopup(e.clientX, e.clientY);
+        });
+
+        // Mobile: long-press (500ms)
+        if (Platform.isMobile) {
+            let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+            row.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                longPressTimer = setTimeout(() => {
+                    showPromotePopup(touch.clientX, touch.clientY);
+                }, 500);
+            }, { passive: true });
+            row.addEventListener('touchmove', () => {
+                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            }, { passive: true });
+            row.addEventListener('touchend', () => {
+                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            }, { passive: true });
+        }
+    }
+
+    /**
+     * Promote a quick capture item to a task on a specific date.
+     * Removes from capture file and adds as - [ ] task to that day's daily note.
+     */
+    private async promoteCapture(text: string, date: Date, rowEl: HTMLElement): Promise<void> {
+        const h = this.host;
+        // 1. Remove from quick capture
+        await h.plugin.vaultManager.removeQuickCaptureItem(text);
+        // 2. Add as task to the target date
+        await h.plugin.vaultManager.addTaskToDaily(text, date);
+        // 3. Animate out the row
+        rowEl.remove();
+        // 4. Refresh if the target is the currently selected date
+        h.invalidateTabCache('kanban');
+        h.switchTab('kanban');
+    }
 
 
     /** Extract and render 复盘 sections from daily note content */
@@ -596,6 +861,9 @@ export class PeriodicRenderer {
                 })();
             });
         }
+
+        // Quick Capture section (灵感收集) — persistent across modes
+        await this.renderQuickCapture(body);
     }
 
     /** Load and render the AI weekly insight report summary */
@@ -789,6 +1057,9 @@ export class PeriodicRenderer {
                 })();
             });
         }
+
+        // Quick Capture section (灵感收集) — persistent across modes
+        await this.renderQuickCapture(body);
     }
 
     // ──────────────────────────────────────────────────────
