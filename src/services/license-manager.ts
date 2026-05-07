@@ -36,12 +36,12 @@ async function apiPost(url: string, body: Record<string, unknown>): Promise<Reco
                 headers,
                 body: jsonBody,
             });
-            return response.json;
+            return response.json as Record<string, unknown>;
         } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
             // Wait before retry
             if (attempt < MAX_RETRIES) {
-                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                await new Promise(r => activeWindow.setTimeout(r, 1000 * (attempt + 1)));
             }
         }
     }

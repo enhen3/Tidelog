@@ -6,6 +6,7 @@
 import { TFile, moment, setIcon, Platform } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
+import type { ChatMessage } from '../types';
 import { t, getLanguage } from '../i18n';
 
 export type PeriodicMode = 'day' | 'week' | 'month';
@@ -97,7 +98,7 @@ export class PeriodicRenderer {
         const calSection = body.createDiv('tl-periodic-selector');
         const calNav = calSection.createDiv('tl-periodic-cal-nav');
         const prevBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '‹' });
-        calNav.createEl('span', { cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? calMonth.format('MMMM YYYY') : calMonth.format('YYYY年 M月') });
+        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? calMonth.format('MMMM YYYY') : calMonth.format('YYYY年 M月') });
         const nextBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '›' });
         prevBtn.addEventListener('click', () => { h.periodicMonthOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         nextBtn.addEventListener('click', () => { h.periodicMonthOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -106,7 +107,7 @@ export class PeriodicRenderer {
         const grid = calSection.createDiv('tl-periodic-mini-cal');
         const weekdays = t('cal.weekdays').split(',');
         for (const wd of weekdays) {
-            grid.createEl('div', { cls: 'tl-periodic-cal-wd', text: wd });
+            grid.createDiv({ cls: 'tl-periodic-cal-wd', text: wd });
         }
 
         const firstDay = moment(calMonth).startOf('month');
@@ -145,7 +146,7 @@ export class PeriodicRenderer {
                         const tasks = h.parseMdTasks(content).filter(t => t.isTask);
                         const incomplete = tasks.filter(t => !t.done).length;
                         if (incomplete > 0) {
-                            cell.createEl('span', {
+                            cell.createSpan({
                                 cls: 'tl-periodic-cal-badge',
                                 text: String(incomplete),
                             });
@@ -168,7 +169,7 @@ export class PeriodicRenderer {
 
         const preview = body.createDiv('tl-periodic-preview');
         const previewHeader = preview.createDiv('tl-periodic-preview-header');
-        previewHeader.createEl('span', { cls: 'tl-periodic-preview-date', text: `${dateStr} ${dayName}` });
+        previewHeader.createSpan({ cls: 'tl-periodic-preview-date', text: `${dateStr} ${dayName}` });
 
         if (!file || !(file instanceof TFile)) {
             // Show task input even for future/empty dates — auto-create file
@@ -207,7 +208,7 @@ export class PeriodicRenderer {
             }
             if (completed.length > 0) {
                 const doneLabel = taskSection.createDiv({ cls: 'tl-periodic-task-group-label tl-periodic-task-group-done-label' });
-                const indicator = doneLabel.createEl('span', { cls: 'tl-periodic-toggle-indicator', text: '▾' });
+                const indicator = doneLabel.createSpan({ cls: 'tl-periodic-toggle-indicator', text: '▾' });
                 doneLabel.appendText(` ${t('kanban.completedSection', String(completed.length))}`);
                 const doneBody = taskSection.createDiv('tl-periodic-task-done-body');
                 doneLabel.addEventListener('click', () => {
@@ -336,11 +337,11 @@ export class PeriodicRenderer {
 - 每条以"💡"开头，不超过30字
 - 直接输出建议，不要加前言`;
 
-                const messages: { role: string; content: string; timestamp: number }[] = [
+                const messages: ChatMessage[] = [
                     { role: 'user', content: `我的昨日复盘：\n${reviewContent}`, timestamp: Date.now() }
                 ];
 
-                const suggestions = await provider.sendMessage(messages as any, systemPrompt, () => {});
+                const suggestions = await provider.sendMessage(messages, systemPrompt, () => { /* no-op */ });
 
                 loadingEl.remove();
 
@@ -401,7 +402,7 @@ export class PeriodicRenderer {
 
         // Header
         const header = section.createDiv('tl-capture-header');
-        header.createEl('span', { cls: 'tl-capture-title', text: t('capture.title') });
+        header.createSpan({ cls: 'tl-capture-title', text: t('capture.title') });
 
         // Items list
         const list = section.createDiv('tl-capture-list');
@@ -449,12 +450,12 @@ export class PeriodicRenderer {
         const row = container.createDiv('tl-capture-item');
 
         // Bullet
-        row.createEl('span', { cls: 'tl-capture-bullet', text: '·' });
+        row.createSpan({ cls: 'tl-capture-bullet', text: '·' });
 
         // Label — edit trigger: dblclick on desktop, single tap on mobile
-        const label = row.createEl('span', { cls: 'tl-capture-text', text });
+        const label = row.createSpan({ cls: 'tl-capture-text', text });
         const startEdit = (target: HTMLElement) => {
-            const input = document.createElement('input');
+            const input = activeDocument.createEl('input');
             input.type = 'text';
             input.value = text;
             input.className = 'tl-capture-edit-input';
@@ -484,7 +485,7 @@ export class PeriodicRenderer {
         }
 
         // Delete button
-        const delBtn = row.createEl('span', { cls: 'tl-capture-del-btn', text: '×' });
+        const delBtn = row.createSpan({ cls: 'tl-capture-del-btn', text: '×' });
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             void (async () => {
@@ -501,13 +502,13 @@ export class PeriodicRenderer {
         // Date-promote popup — right-click (desktop) / long-press (mobile)
         const showPromotePopup = (clientX: number, clientY: number) => {
             // Remove any existing popup
-            document.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
+            activeDocument.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
 
-            const popup = document.createElement('div');
+            const popup = activeDocument.createDiv();
             popup.className = 'tl-task-date-popup';
 
             // Header
-            popup.createEl('div', { cls: 'tl-task-date-popup-header', text: t('capture.addToDate') });
+            popup.createDiv({ cls: 'tl-task-date-popup-header', text: t('capture.addToDate') });
 
             // Buttons
             const btnRow = popup.createDiv('tl-task-date-popup-buttons');
@@ -520,7 +521,7 @@ export class PeriodicRenderer {
             const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
             const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
             setIcon(todayIcon, 'sun');
-            todayBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.today') });
+            todayBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.today') });
             todayBtn.addEventListener('click', () => {
                 popup.remove();
                 void this.promoteCapture(text, todayDate.toDate(), row);
@@ -530,7 +531,7 @@ export class PeriodicRenderer {
             const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
             const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
             setIcon(tmrIcon, 'sunrise');
-            tmrBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.tomorrow') });
+            tmrBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.tomorrow') });
             tmrBtn.addEventListener('click', () => {
                 popup.remove();
                 void this.promoteCapture(text, tomorrowDate.toDate(), row);
@@ -540,7 +541,7 @@ export class PeriodicRenderer {
             const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
             const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
             setIcon(weekIcon, 'calendar-plus');
-            weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.nextWeek') });
+            weekBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.nextWeek') });
             weekBtn.addEventListener('click', () => {
                 popup.remove();
                 void this.promoteCapture(text, nextWeekDate.toDate(), row);
@@ -550,8 +551,8 @@ export class PeriodicRenderer {
             const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
             const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
             setIcon(customIcon, 'calendar-search');
-            customBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('capture.custom') });
-            const hiddenInput = document.createElement('input');
+            customBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.custom') });
+            const hiddenInput = activeDocument.createEl('input');
             hiddenInput.type = 'date';
             hiddenInput.className = 'tl-task-date-hidden-input';
             popup.appendChild(hiddenInput);
@@ -566,7 +567,7 @@ export class PeriodicRenderer {
                 hiddenInput.showPicker();
             });
 
-            document.body.appendChild(popup);
+            activeDocument.body.appendChild(popup);
 
             if (!Platform.isMobile) {
                 const popupWidth = 220;
@@ -580,21 +581,21 @@ export class PeriodicRenderer {
 
             // Dismiss on outside click/tap
             const dismiss = (ev: MouseEvent | TouchEvent) => {
-                const target = ev instanceof TouchEvent ? document.elementFromPoint((ev as TouchEvent).changedTouches[0].clientX, (ev as TouchEvent).changedTouches[0].clientY) : ev.target;
+                const target = ev instanceof TouchEvent ? activeDocument.elementFromPoint((ev).changedTouches[0].clientX, (ev).changedTouches[0].clientY) : ev.target;
                 if (!popup.contains(target as Node)) {
                     popup.remove();
-                    document.removeEventListener('click', dismiss, true);
-                    document.removeEventListener('touchend', dismiss, true);
+                    activeDocument.removeEventListener('click', dismiss, true);
+                    activeDocument.removeEventListener('touchend', dismiss, true);
                 }
             };
-            setTimeout(() => {
-                document.addEventListener('click', dismiss, true);
-                document.addEventListener('touchend', dismiss, true);
+            activeWindow.setTimeout(() => {
+                activeDocument.addEventListener('click', dismiss, true);
+                activeDocument.addEventListener('touchend', dismiss, true);
             }, 0);
         };
 
         // Schedule button — clickable icon to promote to a dated task
-        const schedBtn = row.createEl('span', { cls: 'tl-capture-schedule-btn' });
+        const schedBtn = row.createSpan({ cls: 'tl-capture-schedule-btn' });
         setIcon(schedBtn, 'calendar-clock');
         schedBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -613,18 +614,18 @@ export class PeriodicRenderer {
 
         // Mobile: long-press (500ms)
         if (Platform.isMobile) {
-            let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+            let longPressTimer: number | null = null;
             row.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
-                longPressTimer = setTimeout(() => {
+                longPressTimer = activeWindow.setTimeout(() => {
                     showPromotePopup(touch.clientX, touch.clientY);
                 }, 500);
             }, { passive: true });
             row.addEventListener('touchmove', () => {
-                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
             row.addEventListener('touchend', () => {
-                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
         }
     }
@@ -686,11 +687,11 @@ export class PeriodicRenderer {
             if (lines.length === 0) continue;
 
             const item = section.createDiv('tl-periodic-review-item');
-            item.createEl('span', { cls: 'tl-periodic-review-icon', text: sub.icon });
+            item.createSpan({ cls: 'tl-periodic-review-icon', text: sub.icon });
             const textDiv = item.createDiv('tl-periodic-review-text');
-            textDiv.createEl('div', { cls: 'tl-periodic-review-title', text: sub.title });
+            textDiv.createDiv({ cls: 'tl-periodic-review-title', text: sub.title });
             for (const line of lines.slice(0, 2)) {
-                textDiv.createEl('div', { cls: 'tl-periodic-review-line', text: line.replace(/^\d+\.\s*\*\*.*?\*\*[:：]\s*/, '').replace(/^[-*]\s*/, '') });
+                textDiv.createDiv({ cls: 'tl-periodic-review-line', text: line.replace(/^\d+\.\s*\*\*.*?\*\*[:：]\s*/, '').replace(/^[-*]\s*/, '') });
             }
         }
     }
@@ -708,7 +709,7 @@ export class PeriodicRenderer {
         const calSection = body.createDiv('tl-periodic-selector');
         const calNav = calSection.createDiv('tl-periodic-cal-nav');
         const prevBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '‹' });
-        calNav.createEl('span', { cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? calMonth.format('MMMM YYYY') : calMonth.format('YYYY年 M月') });
+        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? calMonth.format('MMMM YYYY') : calMonth.format('YYYY年 M月') });
         const nextBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '›' });
         prevBtn.addEventListener('click', () => { h.periodicMonthOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         nextBtn.addEventListener('click', () => { h.periodicMonthOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -717,7 +718,7 @@ export class PeriodicRenderer {
         const grid = calSection.createDiv('tl-periodic-mini-cal');
         const weekdays = t('cal.weekdays').split(',');
         for (const wd of weekdays) {
-            grid.createEl('div', { cls: 'tl-periodic-cal-wd', text: wd });
+            grid.createDiv({ cls: 'tl-periodic-cal-wd', text: wd });
         }
 
         const firstDay = moment(calMonth).startOf('month');
@@ -774,7 +775,7 @@ export class PeriodicRenderer {
 
         const preview = body.createDiv('tl-periodic-preview');
         const previewHeader = preview.createDiv('tl-periodic-preview-header');
-        previewHeader.createEl('span', {
+        previewHeader.createSpan({
             cls: 'tl-periodic-preview-date',
             text: `${weekStart.isoWeekYear()}-${weekLabel} (${weekStart.format('M/D')}—${moment(weekStart).add(6, 'days').format('M/D')})`,
         });
@@ -828,12 +829,12 @@ export class PeriodicRenderer {
             aggSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.weekDiaryTasks', String(undone.length), String(done.length)) });
             for (const t of undone.slice(0, 10)) {
                 const row = aggSection.createDiv('tl-periodic-task-row');
-                row.createEl('span', { cls: 'tl-periodic-task-check', text: '○' });
-                row.createEl('span', { cls: 'tl-periodic-task-text', text: t.text });
-                row.createEl('span', { cls: 'tl-periodic-task-date-badge', text: t.date });
+                row.createSpan({ cls: 'tl-periodic-task-check', text: '○' });
+                row.createSpan({ cls: 'tl-periodic-task-text', text: t.text });
+                row.createSpan({ cls: 'tl-periodic-task-date-badge', text: t.date });
             }
             if (undone.length > 10) {
-                aggSection.createEl('span', { cls: 'tl-periodic-task-more', text: t('periodic.moreItems', String(undone.length - 10)) });
+                aggSection.createSpan({ cls: 'tl-periodic-task-more', text: t('periodic.moreItems', String(undone.length - 10)) });
             }
         }
 
@@ -934,7 +935,7 @@ export class PeriodicRenderer {
         const calSection = body.createDiv('tl-periodic-selector');
         const calNav = calSection.createDiv('tl-periodic-cal-nav');
         const prevBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '‹' });
-        calNav.createEl('span', { cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? String(year) : `${year}年` });
+        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? String(year) : `${year}年` });
         const nextBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '›' });
         prevBtn.addEventListener('click', () => {
             h.periodicSelectedDate = moment(sel).subtract(1, 'year');
@@ -980,7 +981,7 @@ export class PeriodicRenderer {
 
         const preview = body.createDiv('tl-periodic-preview');
         const previewHeader = preview.createDiv('tl-periodic-preview-header');
-        previewHeader.createEl('span', { cls: 'tl-periodic-preview-date', text: t('periodic.monthPlan', monthStr) });
+        previewHeader.createSpan({ cls: 'tl-periodic-preview-date', text: t('periodic.monthPlan', monthStr) });
 
         // Load monthly plan
         const monthPath = `${h.plugin.settings.planFolder}/Monthly/${monthStr}.md`;
@@ -1006,9 +1007,9 @@ export class PeriodicRenderer {
 
             if (goalLines.length > 0) {
                 const goalsDiv = preview.createDiv('tl-periodic-goals');
-                goalsDiv.createEl('div', { cls: 'tl-periodic-goals-label', text: t('periodic.monthGoals') });
+                goalsDiv.createDiv({ cls: 'tl-periodic-goals-label', text: t('periodic.monthGoals') });
                 for (const g of goalLines.slice(0, 8)) {
-                    goalsDiv.createEl('div', { cls: 'tl-periodic-goal-line', text: g.replace(/^[-*]\s*/, '') });
+                    goalsDiv.createDiv({ cls: 'tl-periodic-goal-line', text: g.replace(/^[-*]\s*/, '') });
                 }
             }
 
@@ -1033,7 +1034,7 @@ export class PeriodicRenderer {
         const allFiles = h.app.vault.getFiles().filter(f => f.path.startsWith(dailyFolder + '/') && f.name.startsWith(monthStr));
         if (allFiles.length > 0) {
             const statsDiv = preview.createDiv('tl-periodic-stats');
-            statsDiv.createEl('span', { text: t('periodic.diaryCount', String(allFiles.length)) });
+            statsDiv.createSpan({ text: t('periodic.diaryCount', String(allFiles.length)) });
         }
 
         if (!monthFile && allFiles.length === 0) {
@@ -1093,12 +1094,12 @@ export class PeriodicRenderer {
         });
 
         // Label — edit trigger: dblclick on desktop, single tap on mobile
-        const label = row.createEl('span', { cls: 'tl-periodic-task-text', text: task.text });
+        const label = row.createSpan({ cls: 'tl-periodic-task-text', text: task.text });
         if (task.done) {
             label.addClass('tl-text-done');
         }
         const startEdit = (target: HTMLElement) => {
-            const input = document.createElement('input');
+            const input = activeDocument.createEl('input');
             input.type = 'text';
             input.value = task.text;
             input.className = 'tl-task-edit-input';
@@ -1112,7 +1113,7 @@ export class PeriodicRenderer {
                         await h.editMdTask(file, task.text, newText);
                         task.text = newText;
                     }
-                    const newLabel = document.createElement('span');
+                    const newLabel = activeDocument.createSpan();
                     newLabel.className = 'tl-periodic-task-text';
                     newLabel.textContent = task.text;
                     input.replaceWith(newLabel);
@@ -1137,7 +1138,7 @@ export class PeriodicRenderer {
         }
 
         // Delete button
-        const delBtn = row.createEl('span', { cls: 'tl-task-delete-btn', text: '×' });
+        const delBtn = row.createSpan({ cls: 'tl-task-delete-btn', text: '×' });
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             void (async () => {
@@ -1147,14 +1148,14 @@ export class PeriodicRenderer {
         });
 
         // Add sub-task button
-        const subBtn = row.createEl('span', { cls: 'tl-task-sub-btn', text: '+' });
+        const subBtn = row.createSpan({ cls: 'tl-task-sub-btn', text: '+' });
         subBtn.setAttribute('title', t('task.addSubtask'));
         subBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (row.nextElementSibling?.hasClass('tl-subtask-input-row')) return;
-            const subRow = document.createElement('div');
+            const subRow = activeDocument.createDiv();
             subRow.className = 'tl-subtask-input-row';
-            const subInput = document.createElement('input');
+            const subInput = activeDocument.createEl('input');
             subInput.type = 'text';
             subInput.className = 'tl-periodic-task-input tl-subtask-input';
             subInput.placeholder = t('task.subtaskPlaceholder');
@@ -1180,7 +1181,7 @@ export class PeriodicRenderer {
         });
 
         // Drag handle — right side, after action buttons
-        const handle = row.createEl('span', { cls: 'tl-task-drag-handle', text: '☰' });
+        const handle = row.createSpan({ cls: 'tl-task-drag-handle', text: '☰' });
         handle.setAttribute('title', t('periodic.dragToReorder'));
         if (Platform.isMobile) {
             // Touch drag-and-drop for mobile
@@ -1202,7 +1203,7 @@ export class PeriodicRenderer {
                     touchClone = row.cloneNode(true) as HTMLElement;
                     touchClone.addClass('tl-touch-drag-clone');
                     touchClone.setCssProps({ '--tl-drag-left': `${row.getBoundingClientRect().left}px`, '--tl-drag-width': `${row.getBoundingClientRect().width}px` });
-                    document.body.appendChild(touchClone);
+                    activeDocument.body.appendChild(touchClone);
                 }
                 if (touchDragging) {
                     e.preventDefault(); // Prevent scroll during drag
@@ -1215,7 +1216,7 @@ export class PeriodicRenderer {
                         parent.querySelectorAll('.tl-periodic-task-row').forEach(r => {
                             r.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
                         });
-                        const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-periodic-task-row') as HTMLElement | null;
+                        const target = activeDocument.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-periodic-task-row') as HTMLElement | null;
                         if (target && target !== row && parent.contains(target)) {
                             const rect = target.getBoundingClientRect();
                             if (touch.clientY < rect.top + rect.height / 2) {
@@ -1239,7 +1240,7 @@ export class PeriodicRenderer {
                 parent.querySelectorAll('.tl-periodic-task-row').forEach(r => {
                     r.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
                 });
-                const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-periodic-task-row') as HTMLElement | null;
+                const target = activeDocument.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-periodic-task-row') as HTMLElement | null;
                 if (!target || target === row || !parent.contains(target)) return;
                 const targetText = target.dataset.taskText;
                 if (!targetText || targetText === task.text) return;
@@ -1266,14 +1267,14 @@ export class PeriodicRenderer {
             handle.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
                 row.setAttribute('draggable', 'true');
-                document.addEventListener('mouseup', () => row.setAttribute('draggable', 'false'), { once: true });
+                activeDocument.addEventListener('mouseup', () => row.setAttribute('draggable', 'false'), { once: true });
             });
         }
         row.addEventListener('dragend', () => row.setAttribute('draggable', 'false'));
 
         // Defer-to-today button — only for uncompleted tasks on past dates
         if (sourceDate && !task.done && sourceDate.isBefore(moment(), 'day')) {
-            const deferBtn = row.createEl('span', { cls: 'tl-task-defer-btn', attr: { title: t('periodic.deferToday') } });
+            const deferBtn = row.createSpan({ cls: 'tl-task-defer-btn', attr: { title: t('periodic.deferToday') } });
             setIcon(deferBtn, 'forward');
             deferBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1287,13 +1288,13 @@ export class PeriodicRenderer {
         // Date quick-change popup — scope-aware (day/week/month)
         const showDatePopup = (clientX: number, clientY: number) => {
             // Remove any existing popup
-            document.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
+            activeDocument.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
 
-            const popup = document.createElement('div');
+            const popup = activeDocument.createDiv();
             popup.className = 'tl-task-date-popup';
 
             // Header
-            popup.createEl('div', { cls: 'tl-task-date-popup-header', text: t('periodic.dateLabel') });
+            popup.createDiv({ cls: 'tl-task-date-popup-header', text: t('periodic.dateLabel') });
 
             // Button row
             const btnRow = popup.createDiv('tl-task-date-popup-buttons');
@@ -1308,7 +1309,7 @@ export class PeriodicRenderer {
                 const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('kanban.today') } });
                 const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(todayIcon, 'sun');
-                todayBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('kanban.today') });
+                todayBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('kanban.today') });
                 todayBtn.addEventListener('click', () => {
                     popup.remove();
                     void (async () => {
@@ -1321,7 +1322,7 @@ export class PeriodicRenderer {
                 const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.tomorrow') } });
                 const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(tmrIcon, 'sunrise');
-                tmrBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.tomorrow') });
+                tmrBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.tomorrow') });
                 tmrBtn.addEventListener('click', () => {
                     popup.remove();
                     void (async () => {
@@ -1334,7 +1335,7 @@ export class PeriodicRenderer {
                 const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeek') } });
                 const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(weekIcon, 'calendar-plus');
-                weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextWeek') });
+                weekBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextWeek') });
                 weekBtn.addEventListener('click', () => {
                     popup.remove();
                     void (async () => {
@@ -1347,8 +1348,8 @@ export class PeriodicRenderer {
                 const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.customDate') } });
                 const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(customIcon, 'calendar-search');
-                customBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.custom') });
-                const hiddenInput = document.createElement('input');
+                customBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.custom') });
+                const hiddenInput = activeDocument.createEl('input');
                 hiddenInput.type = 'date';
                 hiddenInput.className = 'tl-task-date-hidden-input';
                 popup.appendChild(hiddenInput);
@@ -1379,7 +1380,7 @@ export class PeriodicRenderer {
                 const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeekLabel') } });
                 const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(weekIcon, 'calendar-plus');
-                weekBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextWeekLabel') });
+                weekBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextWeekLabel') });
                 weekBtn.addEventListener('click', () => {
                     popup.remove();
                     void (async () => {
@@ -1394,7 +1395,7 @@ export class PeriodicRenderer {
                 const monthBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextMonthLabel') } });
                 const monthIcon = monthBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(monthIcon, 'calendar-range');
-                monthBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
+                monthBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
                 monthBtn.addEventListener('click', () => {
                     popup.remove();
                     void (async () => {
@@ -1414,7 +1415,7 @@ export class PeriodicRenderer {
                 const monthBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextMonthLabel') } });
                 const monthIcon = monthBtn.createDiv('tl-task-date-btn-icon');
                 setIcon(monthIcon, 'calendar-range');
-                monthBtn.createEl('span', { cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
+                monthBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
                 monthBtn.addEventListener('click', () => {
                     popup.remove();
                     void (async () => {
@@ -1426,7 +1427,7 @@ export class PeriodicRenderer {
                 });
             }
 
-            document.body.appendChild(popup);
+            activeDocument.body.appendChild(popup);
 
             if (!Platform.isMobile) {
                 // Desktop: position near the click
@@ -1441,16 +1442,16 @@ export class PeriodicRenderer {
 
             // Dismiss on outside click/tap
             const dismiss = (ev: MouseEvent | TouchEvent) => {
-                const target = ev instanceof TouchEvent ? document.elementFromPoint((ev as TouchEvent).changedTouches[0].clientX, (ev as TouchEvent).changedTouches[0].clientY) : ev.target;
+                const target = ev instanceof TouchEvent ? activeDocument.elementFromPoint((ev).changedTouches[0].clientX, (ev).changedTouches[0].clientY) : ev.target;
                 if (!popup.contains(target as Node)) {
                     popup.remove();
-                    document.removeEventListener('click', dismiss, true);
-                    document.removeEventListener('touchend', dismiss, true);
+                    activeDocument.removeEventListener('click', dismiss, true);
+                    activeDocument.removeEventListener('touchend', dismiss, true);
                 }
             };
-            setTimeout(() => {
-                document.addEventListener('click', dismiss, true);
-                document.addEventListener('touchend', dismiss, true);
+            activeWindow.setTimeout(() => {
+                activeDocument.addEventListener('click', dismiss, true);
+                activeDocument.addEventListener('touchend', dismiss, true);
             }, 0);
         };
 
@@ -1463,30 +1464,27 @@ export class PeriodicRenderer {
 
         // Mobile: long-press (500ms) to open date popup
         if (Platform.isMobile) {
-            let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-            let longPressTriggered = false;
+            let longPressTimer: number | null = null;
             row.addEventListener('touchstart', (e) => {
-                longPressTriggered = false;
                 const touch = e.touches[0];
-                longPressTimer = setTimeout(() => {
-                    longPressTriggered = true;
+                longPressTimer = activeWindow.setTimeout(() => {
                     showDatePopup(touch.clientX, touch.clientY);
                 }, 500);
             }, { passive: true });
             row.addEventListener('touchmove', () => {
-                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
             row.addEventListener('touchend', () => {
-                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
         }
 
         // Drag & drop: default = reorder (subtasks auto-promote), hover 1s = nest
-        let nestTimer: ReturnType<typeof setTimeout> | null = null;
+        let nestTimer: number | null = null;
         let nestMode = false;
 
         const clearDragState = () => {
-            if (nestTimer) { clearTimeout(nestTimer); nestTimer = null; }
+            if (nestTimer) { activeWindow.clearTimeout(nestTimer); nestTimer = null; }
             nestMode = false;
             row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below', 'tl-task-row-nest-hint');
         };
@@ -1517,7 +1515,7 @@ export class PeriodicRenderer {
 
             // Start nest timer (1s hover → nest mode)
             if (!nestTimer) {
-                nestTimer = setTimeout(() => {
+                nestTimer = activeWindow.setTimeout(() => {
                     nestMode = true;
                     row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
                     row.addClass('tl-task-row-nest-hint');

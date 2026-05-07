@@ -58,7 +58,7 @@ export class CalendarView extends ItemView {
      */
     private renderProLocked(container: HTMLElement, featureName: string): void {
         const locked = container.createDiv('tl-pro-locked-view');
-        locked.createEl('div', { cls: 'tl-pro-locked-icon', text: '🔒' });
+        locked.createDiv({ cls: 'tl-pro-locked-icon', text: '🔒' });
         locked.createEl('h3', { cls: 'tl-pro-locked-title', text: t('pro.featureTitle', featureName) });
         locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('pro.calendarDesc') });
 
@@ -94,7 +94,7 @@ export class CalendarView extends ItemView {
             void this.render();
         });
 
-        header.createEl('span', {
+        header.createSpan({
             cls: 'tl-cal-title',
             text: getLanguage() === 'en' ? this.currentMonth.format('MMMM YYYY') : this.currentMonth.format('YYYY年 M月'),
         });
@@ -107,18 +107,18 @@ export class CalendarView extends ItemView {
 
         // Legend
         const legend = this.containerEl_.createDiv('tl-cal-legend');
-        legend.createEl('span', { cls: 'tl-cal-legend-item', text: t('cal.legend') });
+        legend.createSpan({ cls: 'tl-cal-legend-item', text: t('cal.legend') });
         const gradient = legend.createDiv('tl-cal-legend-gradient');
-        gradient.createEl('span', { text: t('cal.low') });
-        gradient.createEl('div', { cls: 'tl-cal-gradient-bar' });
-        gradient.createEl('span', { text: t('cal.high') });
+        gradient.createSpan({ text: t('cal.low') });
+        gradient.createDiv({ cls: 'tl-cal-gradient-bar' });
+        gradient.createSpan({ text: t('cal.high') });
 
         // Day-of-week header
         const weekdays = t('cal.weekdays').split(',');
         const grid = this.containerEl_.createDiv('tl-cal-grid');
 
         for (const wd of weekdays) {
-            grid.createEl('div', { cls: 'tl-cal-weekday', text: wd });
+            grid.createDiv({ cls: 'tl-cal-weekday', text: wd });
         }
 
         // Get data for this month
@@ -143,7 +143,7 @@ export class CalendarView extends ItemView {
             const cell = grid.createDiv(`tl-cal-cell ${isToday ? 'tl-cal-cell-today' : ''}`);
 
             // Date number
-            cell.createEl('div', { cls: 'tl-cal-date', text: `${d}` });
+            cell.createDiv({ cls: 'tl-cal-date', text: `${d}` });
 
             // Emotion heatmap background
             if (data?.emotionScore !== undefined && data.emotionScore !== null) {
@@ -157,7 +157,7 @@ export class CalendarView extends ItemView {
                 const dots = cell.createDiv('tl-cal-dots');
                 const total = Math.min(data.taskCount, 5);
                 for (let i = 0; i < total; i++) {
-                    const dot = dots.createEl('span', { cls: 'tl-cal-dot' });
+                    const dot = dots.createSpan({ cls: 'tl-cal-dot' });
                     if (data.completedCount > i) {
                         dot.addClass('tl-cal-dot-done');
                     }
@@ -166,7 +166,7 @@ export class CalendarView extends ItemView {
 
             // Status badge
             if (data?.status === 'completed') {
-                cell.createEl('div', { cls: 'tl-cal-status-badge tl-cal-status-done', text: '✓' });
+                cell.createDiv({ cls: 'tl-cal-status-badge tl-cal-status-done', text: '✓' });
             }
 
             // Click to open daily note

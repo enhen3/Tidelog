@@ -11,7 +11,7 @@ export class FileLinkService {
     private settings: TideLogSettings;
     private kanbanService: KanbanService;
     private syncing = false;
-    private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private debounceTimer: number | null = null;
     private eventRef: EventRef | null = null;
 
     constructor(app: App, settings: TideLogSettings, kanbanService: KanbanService) {
@@ -44,7 +44,7 @@ export class FileLinkService {
             this.eventRef = null;
         }
         if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
+            activeWindow.clearTimeout(this.debounceTimer);
             this.debounceTimer = null;
         }
     }
@@ -54,10 +54,10 @@ export class FileLinkService {
      */
     private debouncedSync(file: TFile): void {
         if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
+            activeWindow.clearTimeout(this.debounceTimer);
         }
 
-        this.debounceTimer = setTimeout(() => {
+        this.debounceTimer = activeWindow.setTimeout(() => {
             void this.syncDailyNoteToKanban(file);
         }, 800);
     }

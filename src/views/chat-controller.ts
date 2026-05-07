@@ -287,9 +287,12 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
         const messageEl = h.createMessageElement('ai');
         const insightService = h.plugin.insightService;
 
-        const handler = type === 'weekly'
-            ? insightService.generateWeeklyInsight.bind(insightService)
-            : insightService.generateMonthlyInsight.bind(insightService);
+        const handler = (
+            onChunk: (chunk: string) => void,
+            onComplete: (fullReport: string) => void,
+        ): Promise<void> => type === 'weekly'
+            ? insightService.generateWeeklyInsight(onChunk, onComplete)
+            : insightService.generateMonthlyInsight(onChunk, onComplete);
 
         void handler(
             (chunk: string) => {

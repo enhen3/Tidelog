@@ -134,7 +134,7 @@ export class VaultManager {
                 if (plugins) {
                     const periodicNotes = plugins.getPlugin('periodic-notes');
                     if (periodicNotes) {
-                        const pnSettings = (periodicNotes as Plugin & { settings?: { daily?: { template?: string } } }).settings;
+                        const pnSettings = (periodicNotes).settings;
                         if (pnSettings?.daily?.template) {
                             templatePath = pnSettings.daily.template;
                         }
@@ -204,7 +204,8 @@ export class VaultManager {
         const weekRef = this.getWeekRef(date);
         const monthRef = date.format('YYYY-MM');
 
-        await this.app.fileManager.processFrontMatter(file, (fm) => {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+            const fm = frontmatter as Record<string, unknown>;
             if (fm.type === undefined) fm.type = 'daily';
             if (fm.date === undefined) fm.date = date.format('YYYY-MM-DD');
             if (fm.emotion_score === undefined) fm.emotion_score = null;
@@ -291,7 +292,8 @@ ${t('vault.reviewComment')}
         const file = this.app.vault.getAbstractFileByPath(filePath);
         if (!file || !(file instanceof TFile)) return;
 
-        await this.app.fileManager.processFrontMatter(file, (fm) => {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+            const fm = frontmatter as Record<string, unknown>;
             for (const [key, value] of Object.entries(fields)) {
                 fm[key] = value;
             }

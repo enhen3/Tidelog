@@ -81,7 +81,7 @@ export class KanbanView extends ItemView {
         const prevBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '‹' });
         prevBtn.addEventListener('click', () => { this.currentWeekOffset--; void this.render(); });
 
-        header.createEl('span', { cls: 'tl-kanban-title', text: `${weekRef}  ${weekLabel}` });
+        header.createSpan({ cls: 'tl-kanban-title', text: `${weekRef}  ${weekLabel}` });
 
         const nextBtn = header.createEl('button', { cls: 'tl-kanban-nav-btn', text: '›' });
         nextBtn.addEventListener('click', () => { this.currentWeekOffset++; void this.render(); });
@@ -101,8 +101,8 @@ export class KanbanView extends ItemView {
             const colEl = grid.createDiv('tl-kanban-column');
 
             const colHeader = colEl.createDiv('tl-kanban-col-header');
-            colHeader.createEl('span', { text: col.label });
-            colHeader.createEl('span', {
+            colHeader.createSpan({ text: col.label });
+            colHeader.createSpan({
                 cls: 'tl-kanban-badge',
                 text: `${col.tasks.length}`,
             });
@@ -127,7 +127,7 @@ export class KanbanView extends ItemView {
                     })();
                 });
 
-                const label = card.createEl('span', {
+                const label = card.createSpan({
                     cls: 'tl-kanban-card-text',
                     text: task.text,
                 });
@@ -199,7 +199,7 @@ export class KanbanView extends ItemView {
     }
 
     private async toggleTask(
-        columnId: string,
+        _columnId: string,
         taskText: string,
         newDone: boolean,
         date?: Date,

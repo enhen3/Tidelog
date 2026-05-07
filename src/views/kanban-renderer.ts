@@ -60,8 +60,8 @@ export class KanbanRenderer {
         navLeft.addEventListener('click', () => { h.kanbanMonthOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
         const titleArea = header.createDiv('tl-pyramid-week-title-area');
-        titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '🏔️' });
-        titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: t('kanban.monthGoals', monthLabel) });
+        titleArea.createSpan({ cls: 'tl-pyramid-layer-icon', text: '🏔️' });
+        titleArea.createSpan({ cls: 'tl-pyramid-layer-title', text: t('kanban.monthGoals', monthLabel) });
         titleArea.addClass('tl-clickable');
 
         const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
@@ -104,7 +104,7 @@ export class KanbanRenderer {
             const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
             const progressFill = progressBar.createDiv('tl-pyramid-progress-fill tl-dynamic-width');
             progressFill.style.setProperty('--tl-width', `${(doneCount / goals.length) * 100}%`);
-            progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: t('kanban.completed', String(doneCount), String(goals.length)) });
+            progressWrap.createSpan({ cls: 'tl-pyramid-progress-label', text: t('kanban.completed', String(doneCount), String(goals.length)) });
         }
 
         // Task list body (same pattern as weekly/daily)
@@ -133,7 +133,7 @@ export class KanbanRenderer {
                         label.toggleClass('tl-text-done', goal.done);
                     })();
                 });
-                const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: goal.text });
+                const label = card.createSpan({ cls: 'tl-pyramid-task-text', text: goal.text });
                 if (goal.done) { label.addClass('tl-text-done'); }
             }
         }
@@ -160,8 +160,8 @@ export class KanbanRenderer {
         navLeft.addEventListener('click', () => { h.kanbanWeekOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
         const titleArea = header.createDiv('tl-pyramid-week-title-area');
-        titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
-        titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: weekLabel });
+        titleArea.createSpan({ cls: 'tl-pyramid-layer-icon', text: '📅' });
+        titleArea.createSpan({ cls: 'tl-pyramid-layer-title', text: weekLabel });
         titleArea.addClass('tl-clickable');
 
         const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
@@ -209,7 +209,7 @@ export class KanbanRenderer {
                 const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
                 const progressFill = progressBar.createDiv('tl-pyramid-progress-fill tl-dynamic-width');
                 progressFill.style.setProperty('--tl-width', `${(doneCount / keyItems.length) * 100}%`);
-                progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: t('kanban.completed', String(doneCount), String(keyItems.length)) });
+                progressWrap.createSpan({ cls: 'tl-pyramid-progress-label', text: t('kanban.completed', String(doneCount), String(keyItems.length)) });
             }
 
             // Render all items with checkboxes
@@ -234,7 +234,7 @@ export class KanbanRenderer {
                         label.toggleClass('tl-text-done', item.done);
                     })();
                 });
-                const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: item.text });
+                const label = card.createSpan({ cls: 'tl-pyramid-task-text', text: item.text });
                 if (item.done) { label.addClass('tl-text-done'); }
             }
         }
@@ -264,8 +264,8 @@ export class KanbanRenderer {
         navLeft.addEventListener('click', () => { h.kanbanDayOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
 
         const titleArea = header.createDiv('tl-pyramid-week-title-area');
-        titleArea.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📋' });
-        titleArea.createEl('span', { cls: 'tl-pyramid-layer-title', text: dayLabel });
+        titleArea.createSpan({ cls: 'tl-pyramid-layer-icon', text: '📋' });
+        titleArea.createSpan({ cls: 'tl-pyramid-layer-title', text: dayLabel });
         titleArea.addClass('tl-clickable');
 
         const navRight = header.createEl('button', { cls: 'tl-pyramid-nav-btn', text: '›' });
@@ -321,7 +321,7 @@ export class KanbanRenderer {
             const progressBar = progressWrap.createDiv('tl-pyramid-progress-bar');
             const progressFill = progressBar.createDiv('tl-pyramid-progress-fill tl-dynamic-width');
             progressFill.style.setProperty('--tl-width', `${(doneCount / tasks.length) * 100}%`);
-            progressWrap.createEl('span', { cls: 'tl-pyramid-progress-label', text: t('kanban.completed', String(doneCount), String(tasks.length)) });
+            progressWrap.createSpan({ cls: 'tl-pyramid-progress-label', text: t('kanban.completed', String(doneCount), String(tasks.length)) });
         }
 
         // Task list body
@@ -338,12 +338,12 @@ export class KanbanRenderer {
                 if (carryTasks.length > 0) {
                     const carrySection = body.createDiv('tl-carry-forward');
                     const carryHeader = carrySection.createDiv('tl-carry-forward-header');
-                    carryHeader.createEl('span', { text: t('kanban.carryForward', String(carryTasks.length)) });
+                    carryHeader.createSpan({ text: t('kanban.carryForward', String(carryTasks.length)) });
 
                     for (const ct of carryTasks) {
                         const row = carrySection.createDiv('tl-carry-forward-row');
-                        row.createEl('span', { cls: 'tl-carry-forward-text', text: ct.text });
-                        row.createEl('span', { cls: 'tl-carry-forward-date', text: ct.date.substring(5) });
+                        row.createSpan({ cls: 'tl-carry-forward-text', text: ct.text });
+                        row.createSpan({ cls: 'tl-carry-forward-date', text: ct.date.substring(5) });
                         const addBtn = row.createEl('button', { cls: 'tl-carry-forward-add', text: '+' });
                         addBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
@@ -415,7 +415,7 @@ export class KanbanRenderer {
                 label.toggleClass('tl-text-done', task.done);
             })();
         });
-        const label = card.createEl('span', { cls: 'tl-pyramid-task-text', text: task.text });
+        const label = card.createSpan({ cls: 'tl-pyramid-task-text', text: task.text });
         if (task.done) { label.addClass('tl-text-done'); }
     }
 }

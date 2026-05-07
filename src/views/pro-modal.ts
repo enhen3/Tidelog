@@ -64,16 +64,17 @@ export class ProModal extends Modal {
 
         // Settings link
         const settingsLink = contentEl.createDiv('tl-pro-modal-settings-link');
-        settingsLink.createEl('span', { text: t('pro.hasCode') });
+        settingsLink.createSpan({ text: t('pro.hasCode') });
         const link = settingsLink.createEl('a', { text: t('pro.goToSettings') });
         link.addEventListener('click', (e) => {
             e.preventDefault();
             this.close();
-            // Open plugin settings
-            // @ts-expect-error — Obsidian internal API
-            this.app.setting?.open?.();
-            // @ts-expect-error — Obsidian internal API
-            this.app.setting?.openTabById?.('tidelog');
+            // Open plugin settings via Obsidian's internal API.
+            const setting = (this.app as unknown as {
+                setting?: { open?: () => void; openTabById?: (id: string) => void };
+            }).setting;
+            setting?.open?.();
+            setting?.openTabById?.('tidelog');
         });
     }
 

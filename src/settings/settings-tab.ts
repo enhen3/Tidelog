@@ -65,10 +65,13 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(t('settings.aiProviderDesc'))
             .addDropdown((dropdown) =>
                 dropdown
+                    // OpenRouter and SiliconFlow are official brand names with mixed case
+                    // eslint-disable-next-line obsidianmd/ui/sentence-case
                     .addOption('openrouter', 'OpenRouter')
                     .addOption('anthropic', 'Anthropic Claude')
                     .addOption('gemini', 'Google Gemini')
                     .addOption('openai', 'OpenAI')
+                    // eslint-disable-next-line obsidianmd/ui/sentence-case
                     .addOption('siliconflow', 'SiliconFlow')
                     .addOption('custom', 'Custom (OpenAI compatible)')
                     .setValue(this.plugin.settings.activeProvider)
@@ -166,6 +169,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             urlSetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-wide');
                 text
+                    // eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder is an example URL
                     .setPlaceholder('https://api.deepseek.com/v1')
                     .setValue(config.baseUrl || '')
                     .onChange((value) => {
@@ -244,7 +248,7 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         if (hasPresets) {
             modelSetting.addDropdown((dropdown) => {
-                dropdown.addOption('', '— Manual —');
+                dropdown.addOption('', '— manual —');
                 for (const [value, name] of Object.entries(models)) {
                     dropdown.addOption(value, name);
                 }
@@ -290,13 +294,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                                 if (success) {
                                     new Notice(t('settings.testSuccess'));
                                     button.setButtonText(t('settings.testSuccessBtn'));
-                                    setTimeout(() => {
+                                    activeWindow.setTimeout(() => {
                                         button.setButtonText(t('settings.testBtn'));
                                     }, 2000);
                                 } else {
                                     new Notice(t('settings.testFail'));
                                     button.setButtonText(t('settings.testFailBtn'));
-                                    setTimeout(() => {
+                                    activeWindow.setTimeout(() => {
                                         button.setButtonText(t('settings.testBtn'));
                                     }, 2000);
                                 }
@@ -308,7 +312,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                                 const code = codeMatch ? codeMatch[1] : '';
                                 new Notice(`❌ ${t('settings.testError')} ${code}`, 8000);
                                 button.setButtonText(code ? `❌ ${code}` : t('settings.testErrorBtn'));
-                                setTimeout(() => {
+                                activeWindow.setTimeout(() => {
                                     button.setButtonText(t('settings.testBtn'));
                                 }, 4000);
                             }
@@ -418,21 +422,21 @@ export class TideLogSettingTab extends PluginSettingTab {
             row.dataset.index = String(index);
 
             // --- Drag handle ---
-            const handle = row.createEl('span', { cls: 'tl-q-drag-handle', text: '\u2847' });
+            const handle = row.createSpan({ cls: 'tl-q-drag-handle', text: '\u2847' });
             handle.setAttribute('title', t('settings.dragToReorder'));
 
             // --- Expand triangle ---
-            const triangle = row.createEl('span', { cls: 'tl-q-triangle' });
+            const triangle = row.createSpan({ cls: 'tl-q-triangle' });
             triangle.textContent = '\u25b6';
 
             // --- Name (static text, replaced by input when expanded) ---
-            const nameEl = row.createEl('span', { cls: 'tl-q-name', text: question.sectionName || t('settings.unnamed') });
+            const nameEl = row.createSpan({ cls: 'tl-q-name', text: question.sectionName || t('settings.unnamed') });
 
             // --- Spacer ---
-            row.createEl('span', { cls: 'tl-q-spacer' });
+            row.createSpan({ cls: 'tl-q-spacer' });
 
             // --- Delete button ---
-            const deleteBtn = row.createEl('span', { cls: 'tl-q-icon-btn tl-q-icon-delete' });
+            const deleteBtn = row.createSpan({ cls: 'tl-q-icon-btn tl-q-icon-delete' });
             deleteBtn.textContent = '\u2715';
             deleteBtn.setAttribute('title', t('settings.delete'));
             deleteBtn.addEventListener('click', (e) => {
@@ -456,7 +460,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     // Replace input with span
                     const currentInput = row.querySelector('.tl-q-name-input') as HTMLInputElement;
                     if (currentInput) {
-                        const newSpan = document.createElement('span');
+                        const newSpan = activeDocument.createSpan();
                         newSpan.className = 'tl-q-name';
                         newSpan.textContent = currentInput.value || t('settings.unnamed');
                         currentInput.replaceWith(newSpan);
@@ -467,7 +471,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     triangle.addClass('tl-q-triangle-open');
                     const nameSpan = row.querySelector('.tl-q-name');
                     if (nameSpan) {
-                        const input = document.createElement('input');
+                        const input = activeDocument.createEl('input');
                         input.type = 'text';
                         input.className = 'tl-q-name-input';
                         input.value = question.sectionName;
@@ -518,7 +522,7 @@ export class TideLogSettingTab extends PluginSettingTab {
 
                 void (async () => {
                     const items = this.plugin.settings.eveningQuestions;
-                    const [moved] = items.splice(dragIdx!, 1);
+                    const [moved] = items.splice(dragIdx, 1);
                     items.splice(index, 0, moved);
                     await this.plugin.saveSettings();
                     this.display();
@@ -544,13 +548,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                         touchClone = row.cloneNode(true) as HTMLElement;
                         touchClone.addClass('tl-touch-drag-clone');
                         touchClone.setCssProps({ '--tl-drag-left': `${row.getBoundingClientRect().left}px`, '--tl-drag-width': `${row.getBoundingClientRect().width}px` });
-                        document.body.appendChild(touchClone);
+                        activeDocument.body.appendChild(touchClone);
                     }
                     if (touchDragging) {
                         e.preventDefault();
                         if (touchClone) touchClone.setCssProps({ '--tl-drag-top': `${touch.clientY - 22}px` });
                         listEl.querySelectorAll('.tl-q-row').forEach(r => r.removeClass('tl-q-dragover'));
-                        const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
+                        const target = activeDocument.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
                         if (target && target !== row && listEl.contains(target)) {
                             target.addClass('tl-q-dragover');
                         }
@@ -563,13 +567,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                     if (!touchDragging) { dragIdx = null; return; }
                     touchDragging = false;
                     const touch = e.changedTouches[0];
-                    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
+                    const target = activeDocument.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tl-q-row') as HTMLElement | null;
                     if (!target || target === row || !listEl.contains(target)) { dragIdx = null; return; }
                     const targetIdx = parseInt(target.dataset.index || '-1', 10);
                     if (dragIdx === null || dragIdx === targetIdx || targetIdx < 0) { dragIdx = null; return; }
                     void (async () => {
                         const items = this.plugin.settings.eveningQuestions;
-                        const [moved] = items.splice(dragIdx!, 1);
+                        const [moved] = items.splice(dragIdx, 1);
                         items.splice(targetIdx, 0, moved);
                         dragIdx = null;
                         await this.plugin.saveSettings();
@@ -580,7 +584,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         // --- Add question link ---
-        const addLink = listEl.createEl('span', { cls: 'tl-q-add-link', text: t('settings.addQuestion') });
+        const addLink = listEl.createSpan({ cls: 'tl-q-add-link', text: t('settings.addQuestion') });
         addLink.addEventListener('click', () => {
             const newQ: EveningQuestionConfig = {
                 type: 'free_writing',
@@ -598,7 +602,7 @@ export class TideLogSettingTab extends PluginSettingTab {
      * Render detail panel — only the textarea for question content
      */
     private renderQuestionDetail(afterEl: HTMLElement, question: EveningQuestionConfig, index: number): void {
-        const detailEl = document.createElement('div');
+        const detailEl = activeDocument.createDiv();
         detailEl.addClass('tl-q-detail');
         afterEl.after(detailEl);
 
@@ -641,6 +645,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             keySetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-key');
                 text
+                    // eslint-disable-next-line obsidianmd/ui/sentence-case -- license-key format placeholder
                     .setPlaceholder('TL-XXXX-XXXX-XXXX')
                     .onChange((value) => { keyValue = value; });
             });

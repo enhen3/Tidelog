@@ -12,7 +12,7 @@ import {
 
 import { TideLogSettings } from './types';
 import { DEFAULT_SETTINGS } from './constants';
-import { setLanguage, t } from './i18n';
+import { setLanguage } from './i18n';
 import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
 import { KanbanView, KANBAN_VIEW_TYPE } from './views/kanban-view';
@@ -90,8 +90,10 @@ export default class TideLogPlugin extends Plugin {
         // Insights: eclipsed sun — plan meets review, synthesis
         addIcon('tidelog-insights', `<circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="5"/><path d="M50 28 A22 22 0 0 1 50 72 A14 14 0 0 0 50 28Z" fill="currentColor"/><line x1="50" y1="18" x2="50" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="92" x2="50" y2="82" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="18" y1="50" x2="8" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="92" y1="50" x2="82" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
 
-        // Add ribbon icons
-        this.addRibbonIcon('tidelog-wave', 'TideLog', () => {
+        // Add ribbon icon
+        // TideLog is the plugin's brand name; not a sentence-case violation.
+        // eslint-disable-next-line obsidianmd/ui/sentence-case
+        this.addRibbonIcon('tidelog-wave', 'Open TideLog chat', () => {
             void this.activateChatView();
         });
 
@@ -200,21 +202,23 @@ export default class TideLogPlugin extends Plugin {
         // Note: On normal quit Obsidian saves workspace state BEFORE
         // calling onunload, so detaching here does NOT affect the saved
         // layout — views are still restored on next cold start.
-        this.app.workspace.detachLeavesOfType(CHAT_VIEW_TYPE);
-        this.app.workspace.detachLeavesOfType(KANBAN_VIEW_TYPE);
-        this.app.workspace.detachLeavesOfType(CALENDAR_VIEW_TYPE);
-        this.app.workspace.detachLeavesOfType(DASHBOARD_VIEW_TYPE);
+        
+        
+        
+        
     }
 
     async loadSettings(): Promise<void> {
-        const saved = (await this.loadData()) || {};
+        const saved: Partial<TideLogSettings> = (await this.loadData() as Partial<TideLogSettings> | null) ?? {};
         // Deep merge: providers need per-key merge so new providers get defaults
         const mergedProviders = { ...DEFAULT_SETTINGS.providers };
-        if (saved.providers) {
-            for (const key of Object.keys(saved.providers)) {
-                mergedProviders[key as keyof typeof mergedProviders] = {
-                    ...DEFAULT_SETTINGS.providers[key as keyof typeof DEFAULT_SETTINGS.providers],
-                    ...saved.providers[key],
+        const savedProviders = saved.providers;
+        if (savedProviders) {
+            type ProviderKey = keyof typeof mergedProviders;
+            for (const key of Object.keys(savedProviders) as ProviderKey[]) {
+                mergedProviders[key] = {
+                    ...DEFAULT_SETTINGS.providers[key],
+                    ...savedProviders[key],
                 };
             }
         }

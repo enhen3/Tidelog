@@ -99,7 +99,7 @@ export class ReviewRenderer {
         // Header with nav only (no mode toggle — always month view)
         const header = layer.createDiv('tl-pyramid-layer-header tl-cal-header');
         const prevBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '‹' });
-        const titleEl = header.createEl('span', { cls: 'tl-cal-title' });
+        const titleEl = header.createSpan({ cls: 'tl-cal-title' });
         const nextBtn = header.createEl('button', { cls: 'tl-cal-nav-btn', text: '›' });
 
         titleEl.setText(getLanguage() === 'en' ? h.calendarMonth.format('MMMM YYYY') : h.calendarMonth.format('YYYY年 M月'));
@@ -118,7 +118,7 @@ export class ReviewRenderer {
         const weekdays = t('cal.weekdays').split(',');
         const grid = body.createDiv('tl-cal-grid');
         for (const wd of weekdays) {
-            grid.createEl('div', { cls: 'tl-cal-weekday', text: wd });
+            grid.createDiv({ cls: 'tl-cal-weekday', text: wd });
         }
 
         // Pad
@@ -142,7 +142,7 @@ export class ReviewRenderer {
             const hasData = !!data;
 
             const svgNS = 'http://www.w3.org/2000/svg';
-            const svg = document.createElementNS(svgNS, 'svg');
+            const svg = activeDocument.createElementNS(svgNS, 'svg');
             svg.setAttribute('width', '36');
             svg.setAttribute('height', '36');
             svg.setAttribute('viewBox', '0 0 36 36');
@@ -153,16 +153,16 @@ export class ReviewRenderer {
             const uid = `cr${d}`;
 
             // Define gradient definitions
-            const defs = document.createElementNS(svgNS, 'defs');
+            const defs = activeDocument.createElementNS(svgNS, 'defs');
 
             // Plan arc gradient: pure teal depth (light → deep)
-            const pg = document.createElementNS(svgNS, 'linearGradient');
+            const pg = activeDocument.createElementNS(svgNS, 'linearGradient');
             pg.setAttribute('id', `${uid}pg`);
             pg.setAttribute('gradientUnits', 'userSpaceOnUse');
             pg.setAttribute('x1', '4'); pg.setAttribute('y1', '18');
             pg.setAttribute('x2', '32'); pg.setAttribute('y2', '18');
             for (const [offset, color] of [['0%', '#5ABECC'], ['50%', '#3B8EA5'], ['100%', '#2D7088']] as const) {
-                const stop = document.createElementNS(svgNS, 'stop');
+                const stop = activeDocument.createElementNS(svgNS, 'stop');
                 stop.setAttribute('offset', offset);
                 stop.setAttribute('stop-color', color);
                 pg.appendChild(stop);
@@ -170,13 +170,13 @@ export class ReviewRenderer {
             defs.appendChild(pg);
 
             // Review arc gradient: pure warm gold depth (light → deep)
-            const rg = document.createElementNS(svgNS, 'linearGradient');
+            const rg = activeDocument.createElementNS(svgNS, 'linearGradient');
             rg.setAttribute('id', `${uid}rg`);
             rg.setAttribute('gradientUnits', 'userSpaceOnUse');
             rg.setAttribute('x1', '32'); rg.setAttribute('y1', '18');
             rg.setAttribute('x2', '4'); rg.setAttribute('y2', '18');
             for (const [offset, color] of [['0%', '#E8D5A0'], ['50%', '#D4B978'], ['100%', '#B89A58']] as const) {
-                const stop = document.createElementNS(svgNS, 'stop');
+                const stop = activeDocument.createElementNS(svgNS, 'stop');
                 stop.setAttribute('offset', offset);
                 stop.setAttribute('stop-color', color);
                 rg.appendChild(stop);
@@ -184,17 +184,17 @@ export class ReviewRenderer {
             defs.appendChild(rg);
 
             // Soft glow filter for active arcs
-            const gf = document.createElementNS(svgNS, 'filter');
+            const gf = activeDocument.createElementNS(svgNS, 'filter');
             gf.setAttribute('id', `${uid}gl`);
             gf.setAttribute('x', '-40%'); gf.setAttribute('y', '-40%');
             gf.setAttribute('width', '180%'); gf.setAttribute('height', '180%');
-            const gb = document.createElementNS(svgNS, 'feGaussianBlur');
+            const gb = activeDocument.createElementNS(svgNS, 'feGaussianBlur');
             gb.setAttribute('stdDeviation', '1.8'); gb.setAttribute('result', 'g');
             gf.appendChild(gb);
-            const gm = document.createElementNS(svgNS, 'feMerge');
-            const gm1 = document.createElementNS(svgNS, 'feMergeNode');
+            const gm = activeDocument.createElementNS(svgNS, 'feMerge');
+            const gm1 = activeDocument.createElementNS(svgNS, 'feMergeNode');
             gm1.setAttribute('in', 'g');
-            const gm2 = document.createElementNS(svgNS, 'feMergeNode');
+            const gm2 = activeDocument.createElementNS(svgNS, 'feMergeNode');
             gm2.setAttribute('in', 'SourceGraphic');
             gm.appendChild(gm1); gm.appendChild(gm2);
             gf.appendChild(gm); defs.appendChild(gf);
@@ -204,7 +204,7 @@ export class ReviewRenderer {
             // Mood fill (center radial glow)
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
-                const moodCircle = document.createElementNS(svgNS, 'circle');
+                const moodCircle = activeDocument.createElementNS(svgNS, 'circle');
                 moodCircle.setAttribute('cx', `${cx}`);
                 moodCircle.setAttribute('cy', `${cy}`);
                 moodCircle.setAttribute('r', '9');
@@ -214,7 +214,7 @@ export class ReviewRenderer {
 
             if (hasData) {
                 // Background track
-                const track = document.createElementNS(svgNS, 'circle');
+                const track = activeDocument.createElementNS(svgNS, 'circle');
                 track.setAttribute('cx', `${cx}`);
                 track.setAttribute('cy', `${cy}`);
                 track.setAttribute('r', `${r}`);
@@ -231,7 +231,7 @@ export class ReviewRenderer {
                 const halfGapLen = fullC - halfArcLen;
 
                 const makeArc = (rotateDeg: number, stroke: string, active: boolean) => {
-                    const arc = document.createElementNS(svgNS, 'circle');
+                    const arc = activeDocument.createElementNS(svgNS, 'circle');
                     arc.setAttribute('cx', `${cx}`);
                     arc.setAttribute('cy', `${cy}`);
                     arc.setAttribute('r', `${r}`);
@@ -263,7 +263,7 @@ export class ReviewRenderer {
             }
 
             // Date number
-            const text = document.createElementNS(svgNS, 'text');
+            const text = activeDocument.createElementNS(svgNS, 'text');
             text.setAttribute('x', `${cx}`);
             text.setAttribute('y', `${cy}`);
             text.setAttribute('text-anchor', 'middle');
@@ -290,27 +290,27 @@ export class ReviewRenderer {
                             return;
                         }
                         // Remove any other popovers
-                        document.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
+                        activeDocument.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
                         e.stopPropagation();
                         this.showTaskPopover(cell, data, dateStr);
                     });
                     // Dismiss popover on outside tap
-                    document.addEventListener('click', (ev) => {
+                    activeDocument.addEventListener('click', (ev) => {
                         if (!cell.contains(ev.target as Node)) {
                             cell.querySelector('.tl-cal-popover')?.remove();
                         }
                     });
                 } else {
                     // Desktop: hover to show popover
-                    let popoverTimeout: ReturnType<typeof setTimeout> | null = null;
+                    let popoverTimeout: number | null = null;
                     cell.addEventListener('mouseenter', () => {
-                        popoverTimeout = setTimeout(() => {
+                        popoverTimeout = activeWindow.setTimeout(() => {
                             this.showTaskPopover(cell, data, dateStr);
                         }, 200);
                     });
                     cell.addEventListener('mouseleave', () => {
-                        if (popoverTimeout) clearTimeout(popoverTimeout);
-                        setTimeout(() => {
+                        if (popoverTimeout) activeWindow.clearTimeout(popoverTimeout);
+                        activeWindow.setTimeout(() => {
                             const popover = cell.querySelector('.tl-cal-popover') as HTMLElement;
                             if (popover && !popover.matches(':hover')) {
                                 popover.remove();
@@ -348,13 +348,13 @@ export class ReviewRenderer {
 
             // Day header
             const dayHeader = col.createDiv('tl-week-day-header');
-            dayHeader.createEl('span', { cls: 'tl-week-day-name', text: weekdays[i] });
-            dayHeader.createEl('span', { cls: `tl-week-day-num ${isToday ? 'tl-week-day-num-today' : ''}`, text: `${d.date()}` });
+            dayHeader.createSpan({ cls: 'tl-week-day-name', text: weekdays[i] });
+            dayHeader.createSpan({ cls: `tl-week-day-num ${isToday ? 'tl-week-day-num-today' : ''}`, text: `${d.date()}` });
 
             // Emotion badge
             if (data?.emotionScore) {
                 const hue = Math.round(((data.emotionScore - 1) / 9) * 120);
-                const badge = dayHeader.createEl('span', { cls: 'tl-week-emotion-badge tl-dynamic-bg', text: `${data.emotionScore}` });
+                const badge = dayHeader.createSpan({ cls: 'tl-week-emotion-badge tl-dynamic-bg', text: `${data.emotionScore}` });
                 badge.style.setProperty('--tl-bg', `hsl(${hue}, 55%, 60%)`);
             }
 
@@ -383,9 +383,9 @@ export class ReviewRenderer {
 
     private showTaskPopover(anchor: HTMLElement, data: CalData, dateStr: string): void {
         // Remove existing popover
-        document.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
+        activeDocument.querySelectorAll('.tl-cal-popover').forEach(el => el.remove());
 
-        const popover = document.createElement('div');
+        const popover = activeDocument.createDiv();
         popover.className = 'tl-cal-popover';
 
         // Header (no close button)
@@ -393,21 +393,21 @@ export class ReviewRenderer {
         const dateLabel = dateStr.substring(5);
         const hasPlan = data.hasPlan;
         const hasReview = data.hasReview;
-        popHeader.createEl('span', { text: dateLabel });
-        if (hasPlan) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-plan', text: t('review.plan') });
-        if (hasReview) popHeader.createEl('span', { cls: 'tl-cal-popover-badge tl-cal-popover-badge-review', text: t('review.review') });
-        if (data.emotionScore) popHeader.createEl('span', { cls: 'tl-cal-popover-badge', text: `❤ ${data.emotionScore}` });
+        popHeader.createSpan({ text: dateLabel });
+        if (hasPlan) popHeader.createSpan({ cls: 'tl-cal-popover-badge tl-cal-popover-badge-plan', text: t('review.plan') });
+        if (hasReview) popHeader.createSpan({ cls: 'tl-cal-popover-badge tl-cal-popover-badge-review', text: t('review.review') });
+        if (data.emotionScore) popHeader.createSpan({ cls: 'tl-cal-popover-badge', text: `❤ ${data.emotionScore}` });
 
         // Tasks
         if (data.tasks.length > 0) {
             const popBody = popover.createDiv('tl-cal-popover-body');
             for (const task of data.tasks.slice(0, 4)) {
                 const row = popBody.createDiv(`tl-cal-popover-task ${task.done ? 'tl-cal-popover-task-done' : ''}`);
-                row.createEl('span', { text: task.done ? '✓' : '○', cls: 'tl-cal-popover-check' });
-                row.createEl('span', { text: task.text });
+                row.createSpan({ text: task.done ? '✓' : '○', cls: 'tl-cal-popover-check' });
+                row.createSpan({ text: task.text });
             }
             if (data.tasks.length > 4) {
-                popBody.createEl('span', { cls: 'tl-cal-popover-more', text: t('review.more', String(data.tasks.length - 4)) });
+                popBody.createSpan({ cls: 'tl-cal-popover-more', text: t('review.more', String(data.tasks.length - 4)) });
             }
         } else {
             popover.createDiv({ cls: 'tl-cal-popover-empty', text: t('kanban.noTasks') });
@@ -467,8 +467,8 @@ export class ReviewRenderer {
 
         const monthCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
         const mHeader = monthCard.createDiv('tl-pyramid-layer-header');
-        mHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '📅' });
-        mHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: t('review.monthlyInsight', monthKey) });
+        mHeader.createSpan({ cls: 'tl-pyramid-layer-icon', text: '📅' });
+        mHeader.createSpan({ cls: 'tl-pyramid-layer-title', text: t('review.monthlyInsight', monthKey) });
         const mBody = monthCard.createDiv('tl-dash-card-body');
 
         if (mFile && mFile instanceof TFile) {
@@ -495,7 +495,7 @@ export class ReviewRenderer {
                         mBody.createEl('p', { cls: 'tl-dash-insight-line', text: line });
                     }
                 }
-                const link = mBody.createEl('div', { cls: 'tl-dash-insight-link', text: t('review.viewFullReport') });
+                const link = mBody.createDiv({ cls: 'tl-dash-insight-link', text: t('review.viewFullReport') });
                 link.addEventListener('click', () => {
                     if (mFile instanceof TFile) void h.app.workspace.getLeaf().openFile(mFile);
                 });
@@ -524,7 +524,7 @@ export class ReviewRenderer {
                 // Animated dots
                 const baseText = t('review.generating').replace(/\.+$/, '');
                 let dotCount = 0;
-                const dotsInterval = setInterval(() => {
+                const dotsInterval = activeWindow.setInterval(() => {
                     dotCount = (dotCount + 1) % 4;
                     genBtn.setText(baseText + '.'.repeat(dotCount));
                 }, 500);
@@ -532,14 +532,14 @@ export class ReviewRenderer {
                     await h.plugin.insightService.generateMonthlyInsight(
                         () => {},
                         () => {
-                            clearInterval(dotsInterval);
+                            activeWindow.clearInterval(dotsInterval);
                             h.invalidateTabCache('review');
                             h.switchTab('review');
                         },
                         moment(calMonth),
                     );
                 } catch {
-                    clearInterval(dotsInterval);
+                    activeWindow.clearInterval(dotsInterval);
                     genBtn.setText(t('review.generateFailed'));
                     genBtn.disabled = false;
                     genBtn.removeClass('tl-dash-generate-btn-loading');
@@ -575,8 +575,8 @@ export class ReviewRenderer {
         if (principle || pattern) {
             const ppCard = panel.createDiv('tl-pyramid-layer tl-dash-card');
             const ppHeader = ppCard.createDiv('tl-pyramid-layer-header');
-            ppHeader.createEl('span', { cls: 'tl-pyramid-layer-icon', text: '💡' });
-            ppHeader.createEl('span', { cls: 'tl-pyramid-layer-title', text: t('review.principlesAndPatterns') });
+            ppHeader.createSpan({ cls: 'tl-pyramid-layer-icon', text: '💡' });
+            ppHeader.createSpan({ cls: 'tl-pyramid-layer-title', text: t('review.principlesAndPatterns') });
             const ppBody = ppCard.createDiv('tl-dash-card-body');
             if (principle) ppBody.createEl('blockquote', { cls: 'tl-dash-quote', text: principle });
             if (pattern) ppBody.createEl('p', { cls: 'tl-dash-pattern', text: `🔄 ${pattern}` });

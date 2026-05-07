@@ -56,7 +56,7 @@ export class DashboardView extends ItemView {
      */
     private renderProLocked(container: HTMLElement, featureName: string): void {
         const locked = container.createDiv('tl-pro-locked-view');
-        locked.createEl('div', { cls: 'tl-pro-locked-icon', text: '🔒' });
+        locked.createDiv({ cls: 'tl-pro-locked-icon', text: '🔒' });
         locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `🔒 ${featureName}` });
         locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('settings.purchaseDesc') });
 
@@ -124,9 +124,9 @@ export class DashboardView extends ItemView {
         if (todayTasks.length > 0) {
             const doneCount = todayTasks.filter(t => t.done).length;
             const focusStats = focusBody.createDiv('tl-dash-focus-stats');
-            focusStats.createEl('span', { text: t('dash.taskCount', String(doneCount), String(todayTasks.length)) });
+            focusStats.createSpan({ text: t('dash.taskCount', String(doneCount), String(todayTasks.length)) });
             if (todayData?.emotionScore) {
-                focusStats.createEl('span', { text: `  ${t('dash.emotionScore', String(todayData.emotionScore))}` });
+                focusStats.createSpan({ text: `  ${t('dash.emotionScore', String(todayData.emotionScore))}` });
             }
 
             // Carry-forward count
@@ -135,7 +135,7 @@ export class DashboardView extends ItemView {
                 const todayTexts = new Set(todayTasks.map(t => t.text));
                 const carryCount = unfinished.filter(u => !todayTexts.has(u.text)).length;
                 if (carryCount > 0) {
-                    focusStats.createEl('span', { cls: 'tl-dash-focus-carry', text: `  ${t('dash.carryForward', String(carryCount))}` });
+                    focusStats.createSpan({ cls: 'tl-dash-focus-carry', text: `  ${t('dash.carryForward', String(carryCount))}` });
                 }
             } catch { /* skip */ }
 
@@ -143,11 +143,11 @@ export class DashboardView extends ItemView {
             const taskList = focusBody.createDiv('tl-dash-focus-tasks');
             for (const task of todayTasks.slice(0, 5)) {
                 const row = taskList.createDiv(`tl-dash-focus-task ${task.done ? 'tl-dash-focus-task-done' : ''}`);
-                row.createEl('span', { text: task.done ? '✓' : '○', cls: 'tl-dash-focus-check' });
-                row.createEl('span', { text: task.text });
+                row.createSpan({ text: task.done ? '✓' : '○', cls: 'tl-dash-focus-check' });
+                row.createSpan({ text: task.text });
             }
             if (todayTasks.length > 5) {
-                taskList.createEl('span', { cls: 'tl-dash-focus-more', text: t('dash.moreItems', String(todayTasks.length - 5)) });
+                taskList.createSpan({ cls: 'tl-dash-focus-more', text: t('dash.moreItems', String(todayTasks.length - 5)) });
             }
         } else {
             focusBody.createEl('p', { cls: 'tl-dash-focus-empty', text: t('dash.noPlan') });
@@ -162,11 +162,11 @@ export class DashboardView extends ItemView {
             : 0;
 
         const progressInfo = progressCard.createDiv('tl-dash-progress-info');
-        progressInfo.createEl('span', {
+        progressInfo.createSpan({
             cls: 'tl-dash-progress-number',
             text: `${weekProgress.completedTasks}/${weekProgress.totalTasks}`,
         });
-        progressInfo.createEl('span', {
+        progressInfo.createSpan({
             cls: 'tl-dash-progress-pct',
             text: `${pct}%`,
         });
@@ -199,10 +199,10 @@ export class DashboardView extends ItemView {
                 const hue = Math.round(((score - 1) / 9) * 120);
                 bar.style.setProperty('--tl-bg', `hsl(${hue}, 55%, 60%)`);
 
-                barWrap.createEl('span', { cls: 'tl-dash-chart-score', text: `${score}` });
+                barWrap.createSpan({ cls: 'tl-dash-chart-score', text: `${score}` });
             }
 
-            barCol.createEl('span', {
+            barCol.createSpan({
                 cls: `tl-dash-chart-label ${dayStart.isSame(today, 'day') ? 'tl-dash-chart-label-today' : ''}`,
                 text: dayLabels[i],
             });
@@ -277,8 +277,8 @@ export class DashboardView extends ItemView {
 
     private createQuickLink(container: HTMLElement, icon: string, label: string, onClick: () => void): void {
         const link = container.createDiv('tl-dash-link');
-        link.createEl('span', { cls: 'tl-dash-link-icon', text: icon });
-        link.createEl('span', { cls: 'tl-dash-link-label', text: label });
+        link.createSpan({ cls: 'tl-dash-link-icon', text: icon });
+        link.createSpan({ cls: 'tl-dash-link-label', text: label });
         link.addEventListener('click', onClick);
     }
 

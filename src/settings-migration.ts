@@ -46,7 +46,7 @@ export function migrateSettings(settings: TideLogSettings): boolean {
 
     for (const m of MIGRATIONS) {
         if (m.version > from) {
-            console.log(`[TideLog] Running migration v${m.version}: ${m.description}`);
+            console.debug(`[TideLog] Running migration v${m.version}: ${m.description}`);
             m.migrate(settings);
         }
     }
