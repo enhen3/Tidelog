@@ -10,8 +10,8 @@ import {
     addIcon,
 } from 'obsidian';
 
-import { TideLogSettings } from './types';
-import { DEFAULT_SETTINGS } from './constants';
+import { TideLogSettings, EveningQuestionConfig } from './types';
+import { DEFAULT_SETTINGS, getDefaultEveningQuestions } from './constants';
 import { setLanguage } from './i18n';
 import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
@@ -210,6 +210,14 @@ export default class TideLogPlugin extends Plugin {
 
     async loadSettings(): Promise<void> {
         const saved: Partial<TideLogSettings> = (await this.loadData() as Partial<TideLogSettings> | null) ?? {};
+
+        // Apply the user's saved language BEFORE generating any defaults
+        // that pass through t(), so default question text resolves in the
+        // user's language rather than the i18n module's startup default.
+        if (saved.language) {
+            setLanguage(saved.language);
+        }
+
         // Deep merge: providers need per-key merge so new providers get defaults
         const mergedProviders = { ...DEFAULT_SETTINGS.providers };
         const savedProviders = saved.providers;
@@ -222,7 +230,24 @@ export default class TideLogPlugin extends Plugin {
                 };
             }
         }
-        this.settings = { ...DEFAULT_SETTINGS, ...saved, providers: mergedProviders };
+
+        // Evening questions need a fresh, owned array so:
+        //   1. UI edits don't alias-mutate DEFAULT_SETTINGS.eveningQuestions
+        //   2. Defaults regenerate in the user's currently-set language
+        //      (DEFAULT_SETTINGS.eveningQuestions is frozen at module load
+        //      under the i18n default language, 'zh')
+        const savedQuestions = saved.eveningQuestions;
+        const eveningQuestions: EveningQuestionConfig[] =
+            (Array.isArray(savedQuestions) && savedQuestions.length > 0)
+                ? savedQuestions.map((q) => ({ ...q }))
+                : getDefaultEveningQuestions();
+
+        this.settings = {
+            ...DEFAULT_SETTINGS,
+            ...saved,
+            providers: mergedProviders,
+            eveningQuestions,
+        };
 
         // Run any pending settings migrations (e.g. deprecated model replacement)
         if (migrateSettings(this.settings)) {
