@@ -404,7 +404,18 @@ export class TideLogSettingTab extends PluginSettingTab {
         }
     }
     /**
-     * Render the evening question editor — drag-and-drop, toggle, expand
+     * Render the evening question editor — drag-and-drop, expand to edit.
+     *
+     * Layout per question:
+     *   [drag handle (draggable)] [▶ triangle] [name span] [spacer] [×]
+     * Expanding the row inserts a `tl-q-detail` sibling block below, which
+     * contains labeled inputs for the question name and content. Editing
+     * happens in that panel — the name span in the row is static and only
+     * mirrors the latest name for at-a-glance scanning.
+     *
+     * `draggable=true` lives on the handle, not the row, so that inputs
+     * inside the row/detail panel don't sit inside a draggable parent
+     * (which interferes with focus and text selection in Electron/Chromium).
      */
     private renderEveningQuestions(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.eveningQuestions')).setHeading();
@@ -418,18 +429,21 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         questions.forEach((question, index) => {
             const row = listEl.createDiv('tl-q-row');
-            row.setAttribute('draggable', 'true');
             row.dataset.index = String(index);
 
-            // --- Drag handle ---
-            const handle = row.createSpan({ cls: 'tl-q-drag-handle', text: '\u2847' });
+            // --- Drag handle (the only draggable element in the row, so that
+            // text inputs in the detail panel aren't inside a draggable parent
+            // — Chromium/Electron interferes with focus and text selection
+            // inside `draggable=true` elements). ---
+            const handle = row.createSpan({ cls: 'tl-q-drag-handle', text: '⡇' });
             handle.setAttribute('title', t('settings.dragToReorder'));
+            handle.setAttribute('draggable', 'true');
 
             // --- Expand triangle ---
             const triangle = row.createSpan({ cls: 'tl-q-triangle' });
-            triangle.textContent = '\u25b6';
+            triangle.textContent = '▶';
 
-            // --- Name (static text, replaced by input when expanded) ---
+            // --- Name (static label; editing happens in the detail panel) ---
             const nameEl = row.createSpan({ cls: 'tl-q-name', text: question.sectionName || t('settings.unnamed') });
 
             // --- Spacer ---
@@ -437,7 +451,7 @@ export class TideLogSettingTab extends PluginSettingTab {
 
             // --- Delete button ---
             const deleteBtn = row.createSpan({ cls: 'tl-q-icon-btn tl-q-icon-delete' });
-            deleteBtn.textContent = '\u2715';
+            deleteBtn.textContent = '✕';
             deleteBtn.setAttribute('title', t('settings.delete'));
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -448,43 +462,18 @@ export class TideLogSettingTab extends PluginSettingTab {
                 })();
             });
 
-            // --- Expand/collapse ---
+            // --- Expand/collapse: open or close the detail panel below ---
             const toggleExpand = (e: Event) => {
                 e.stopPropagation();
                 const existing = row.nextElementSibling;
                 if (existing && existing.hasClass('tl-q-detail')) {
-                    // Collapse: sync name back and restore static text
                     existing.remove();
-                    triangle.textContent = '\u25b6';
+                    triangle.textContent = '▶';
                     triangle.removeClass('tl-q-triangle-open');
-                    // Replace input with span
-                    const currentInput = row.querySelector('.tl-q-name-input') as HTMLInputElement;
-                    if (currentInput) {
-                        const newSpan = activeDocument.createSpan();
-                        newSpan.className = 'tl-q-name';
-                        newSpan.textContent = currentInput.value || t('settings.unnamed');
-                        currentInput.replaceWith(newSpan);
-                    }
                 } else {
-                    // Expand: replace name span with editable input
-                    triangle.textContent = '\u25bc';
+                    triangle.textContent = '▼';
                     triangle.addClass('tl-q-triangle-open');
-                    const nameSpan = row.querySelector('.tl-q-name');
-                    if (nameSpan) {
-                        const input = activeDocument.createEl('input');
-                        input.type = 'text';
-                        input.className = 'tl-q-name-input';
-                        input.value = question.sectionName;
-                        input.placeholder = t('settings.sectionNamePlaceholder');
-                        input.addEventListener('input', () => {
-                            this.plugin.settings.eveningQuestions[index].sectionName = input.value;
-                            void this.plugin.saveSettings();
-                        });
-                        // Prevent drag when clicking input
-                        input.addEventListener('mousedown', (ev) => ev.stopPropagation());
-                        nameSpan.replaceWith(input);
-                    }
-                    this.renderQuestionDetail(row, question, index);
+                    this.renderQuestionDetail(row, question, index, nameEl);
                 }
             };
 
@@ -492,13 +481,15 @@ export class TideLogSettingTab extends PluginSettingTab {
             nameEl.addEventListener('click', toggleExpand);
 
             // --- Drag events ---
-            row.addEventListener('dragstart', (e) => {
+            // dragstart fires on the handle (the only draggable child); the
+            // row stays the drop target via dragover/drop below.
+            handle.addEventListener('dragstart', (e) => {
                 dragIdx = index;
                 row.addClass('tl-q-dragging');
                 e.dataTransfer?.setData('text/plain', String(index));
             });
 
-            row.addEventListener('dragend', () => {
+            handle.addEventListener('dragend', () => {
                 dragIdx = null;
                 row.removeClass('tl-q-dragging');
                 listEl.querySelectorAll('.tl-q-dragover').forEach(el => el.removeClass('tl-q-dragover'));
@@ -599,15 +590,38 @@ export class TideLogSettingTab extends PluginSettingTab {
     }
 
     /**
-     * Render detail panel — only the textarea for question content
+     * Detail panel inserted as a sibling below an expanded row. Contains a
+     * labeled name input and a labeled content textarea. Edits are written
+     * through to the settings array in place; the row's name span is
+     * mirrored live so the static label stays in sync as the user types.
      */
-    private renderQuestionDetail(afterEl: HTMLElement, question: EveningQuestionConfig, index: number): void {
+    private renderQuestionDetail(
+        afterEl: HTMLElement,
+        question: EveningQuestionConfig,
+        index: number,
+        nameEl: HTMLElement,
+    ): void {
         const detailEl = activeDocument.createDiv();
         detailEl.addClass('tl-q-detail');
         afterEl.after(detailEl);
 
-        // Only the question textarea
-        const textareaEl = detailEl.createEl('textarea', { cls: 'tl-q-detail-textarea' });
+        // --- Name input (labeled) ---
+        const nameRow = detailEl.createDiv('tl-q-detail-row');
+        nameRow.createDiv({ cls: 'tl-q-detail-label', text: t('settings.questionName') });
+        const nameInput = nameRow.createEl('input', { cls: 'tl-q-detail-input' });
+        nameInput.type = 'text';
+        nameInput.value = question.sectionName;
+        nameInput.placeholder = t('settings.sectionNamePlaceholder');
+        nameInput.addEventListener('input', () => {
+            this.plugin.settings.eveningQuestions[index].sectionName = nameInput.value;
+            nameEl.setText(nameInput.value || t('settings.unnamed'));
+            void this.plugin.saveSettings();
+        });
+
+        // --- Content textarea (labeled) ---
+        const contentRow = detailEl.createDiv('tl-q-detail-row');
+        contentRow.createDiv({ cls: 'tl-q-detail-label', text: t('settings.questionText') });
+        const textareaEl = contentRow.createEl('textarea', { cls: 'tl-q-detail-textarea' });
         textareaEl.value = question.initialMessage;
         textareaEl.placeholder = t('settings.questionPlaceholder');
         textareaEl.rows = 3;
