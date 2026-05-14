@@ -617,6 +617,8 @@ export const zh: Record<string, string> = {
     'pro.purchase': '🛒 购买 Pro',
     'pro.hasCode': '已有兑换码？',
     'pro.goToSettings': '去设置中输入 →',
+    'pro.lostCode': '找不到激活码？',
+    'pro.lookupLicense': '查询我的 License →',
 
     // constants.ts evening questions
     'evening.q1': '今天过得怎么样？计划里的事情推进得顺利吗？',

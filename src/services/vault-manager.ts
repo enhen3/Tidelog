@@ -16,21 +16,31 @@ export class VaultManager {
     }
 
     /**
-     * Ensure the required directory structure exists
+     * Ensure the required directory structure exists.
+     * Kept for backwards-compat; prefer the focused helpers below.
      */
     async ensureDirectoryStructure(): Promise<void> {
-        const folders = [
-            this.settings.dailyFolder,
-            this.settings.planFolder,
-            `${this.settings.planFolder}/Weekly`,
-            `${this.settings.planFolder}/Monthly`,
-            this.settings.archiveFolder,
-            `${this.settings.archiveFolder}/Insights`,
-        ];
+        await this.ensureDailyFolder();
+        await this.ensurePlanFolder();
+        await this.ensureArchiveFolder();
+    }
 
-        for (const folder of folders) {
-            await this.ensureFolder(folder);
-        }
+    /** Create the daily notes folder on demand (idempotent). */
+    async ensureDailyFolder(): Promise<void> {
+        await this.ensureFolder(this.settings.dailyFolder);
+    }
+
+    /** Create the plan folder and its Weekly/Monthly sub-folders on demand (idempotent). */
+    async ensurePlanFolder(): Promise<void> {
+        await this.ensureFolder(this.settings.planFolder);
+        await this.ensureFolder(`${this.settings.planFolder}/Weekly`);
+        await this.ensureFolder(`${this.settings.planFolder}/Monthly`);
+    }
+
+    /** Create the archive folder and its Insights sub-folder on demand (idempotent). */
+    async ensureArchiveFolder(): Promise<void> {
+        await this.ensureFolder(this.settings.archiveFolder);
+        await this.ensureFolder(`${this.settings.archiveFolder}/Insights`);
     }
 
     /**
@@ -74,6 +84,9 @@ export class VaultManager {
      * Falls back to TideLog's built-in template only when no user template is configured.
      */
     async getOrCreateDailyNote(date?: Date): Promise<TFile> {
+        // Ensure the daily folder exists before any write attempt
+        await this.ensureDailyFolder();
+
         const path = this.getDailyNotePath(date);
         let file = this.app.vault.getAbstractFileByPath(path);
 

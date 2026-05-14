@@ -76,6 +76,15 @@ export class ProModal extends Modal {
             setting?.open?.();
             setting?.openTabById?.('tidelog');
         });
+
+        // Portal link — self-serve license lookup
+        const portalLink = contentEl.createDiv('tl-pro-modal-settings-link');
+        portalLink.createSpan({ text: t('pro.lostCode') });
+        const portalAnchor = portalLink.createEl('a', {
+            text: t('pro.lookupLicense'),
+            href: 'https://tidelog-api.mydreamchronicle.com/portal',
+        });
+        portalAnchor.setAttr('target', '_blank');
     }
 
     onClose(): void {

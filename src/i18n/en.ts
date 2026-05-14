@@ -325,6 +325,8 @@ export const en: Record<string, string> = {
     'pro.purchase': '🛒 Purchase Pro',
     'pro.hasCode': 'Already have a code?',
     'pro.goToSettings': 'Go to settings to enter →',
+    'pro.lostCode': 'Can\'t find your code?',
+    'pro.lookupLicense': 'Look up my License →',
 
     // ─── calendar-view.ts ─────────────────────────
     'cal.displayText': 'Calendar',

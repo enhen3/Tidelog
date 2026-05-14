@@ -75,9 +75,6 @@ export default class TideLogPlugin extends Plugin {
         // Background license verification (non-blocking)
         void this.licenseManager.verifyOnStartup();
 
-        // Ensure vault structure exists
-        await this.initializeVaultStructure();
-
         // Register custom tide icon for ribbon
         addIcon('tidelog-wave', `<path d="M8 50 Q20 30 32 50 Q44 70 56 50 Q68 30 80 50 Q92 70 96 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 70 Q16 50 28 70 Q40 90 52 70 Q64 50 76 70 Q88 90 96 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="22" r="8" fill="currentColor"/><path d="M42 22 Q50 8 58 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
 
@@ -279,9 +276,14 @@ export default class TideLogPlugin extends Plugin {
     }
 
     /**
-     * Activate the chat view in the right sidebar
+     * Activate the chat view in the right sidebar.
+     * Lazily initialises the vault structure and template files on first SOP/insight use.
      */
     async activateChatView(sopType?: 'morning' | 'evening'): Promise<void> {
+        // Folders and template files are created on demand — never on bare plugin load.
+        if (sopType) {
+            await this.initializeVaultStructure();
+        }
         const { workspace } = this.app;
 
         let leaf: WorkspaceLeaf | null = null;
@@ -349,6 +351,9 @@ export default class TideLogPlugin extends Plugin {
      * Generate weekly or monthly insight report
      */
     async generateInsight(type: 'weekly' | 'monthly'): Promise<void> {
+        // Ensure vault structure exists before writing insight files
+        await this.initializeVaultStructure();
+
         // Open chat view first
         await this.activateChatView();
 
