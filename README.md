@@ -165,6 +165,18 @@ your-vault/
 
 ---
 
+## 🌐 Network Usage
+
+TideLog makes outbound HTTPS requests in two scenarios:
+
+1. **AI API calls** — When you use any AI-powered feature (morning plan, evening review, insight generation), TideLog sends your journal content to the AI provider you configure in Settings (OpenRouter, Anthropic, Gemini, OpenAI, SiliconFlow, or a custom endpoint). Your API key and the data sent are governed by that provider's privacy policy. No AI requests are made until you enter an API key and trigger a feature.
+
+2. **License verification** — If you activate a Pro license, TideLog contacts `https://tidelog-api.mydreamchronicle.com` to validate the license key and enforce the device limit. This request contains only a device identifier and license key — no vault content is transmitted. Verification is skipped when offline (a 7-day grace period applies).
+
+No data is collected or transmitted by TideLog in any other circumstance.
+
+---
+
 ## License
 
 MIT — see [LICENSE](./LICENSE)
@@ -197,5 +209,15 @@ TideLog 是一个 Obsidian 插件，通过 AI 引导的 **计划 → 日记 → 
 2. 在你的 Vault 中创建 `.obsidian/plugins/tidelog/`
 3. 将文件复制到该目录
 4. 重启 Obsidian → 设置 → 社区插件 → 启用 **TideLog**
+
+### 网络通信说明
+
+TideLog 在以下两种情况下会发起 HTTPS 请求：
+
+1. **AI 功能调用** — 使用晨间计划、晚间复盘、洞察生成等功能时，TideLog 会将日记内容发送至你在设置中配置的 AI 供应商（OpenRouter、Anthropic、Gemini、OpenAI、硅基流动或自定义端点）。未填写 API Key 或未触发功能时不会发起任何请求。
+
+2. **Pro 授权验证** — 激活 Pro 授权后，TideLog 会向 `https://tidelog-api.mydreamchronicle.com` 发送请求以验证许可证并管理设备数量。请求仅包含设备标识符和许可证密钥，不涉及任何 Vault 内容。离线时有 7 天宽限期，不影响正常使用。
+
+除上述两种情况外，TideLog 不收集或传输任何数据。
 
 </details>

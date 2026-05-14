@@ -9,6 +9,7 @@ import {
     Setting,
     Notice,
     Platform,
+    normalizePath,
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
@@ -97,7 +98,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .setPlaceholder('01-daily')
                     .setValue(this.plugin.settings.dailyFolder)
                     .onChange((value) => {
-                        this.plugin.settings.dailyFolder = value;
+                        this.plugin.settings.dailyFolder = normalizePath(value);
                         void this.plugin.saveSettings();
                     })
             );
@@ -110,7 +111,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .setPlaceholder('02-plan')
                     .setValue(this.plugin.settings.planFolder)
                     .onChange((value) => {
-                        this.plugin.settings.planFolder = value;
+                        this.plugin.settings.planFolder = normalizePath(value);
                         void this.plugin.saveSettings();
                     })
             );
@@ -123,7 +124,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                     .setPlaceholder('03-archive')
                     .setValue(this.plugin.settings.archiveFolder)
                     .onChange((value) => {
-                        this.plugin.settings.archiveFolder = value;
+                        this.plugin.settings.archiveFolder = normalizePath(value);
                         void this.plugin.saveSettings();
                     })
             );
