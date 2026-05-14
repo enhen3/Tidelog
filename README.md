@@ -1,4 +1,4 @@
-# 🌊 TideLog — Obsidian Plugin
+# 🌊 TideLog
 
 > AI-guided daily planning and reflection with morning SOP, evening review, insights, and metacognition coaching.
 
