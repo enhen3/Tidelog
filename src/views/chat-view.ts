@@ -809,6 +809,7 @@ Tap a button above, or just chat anytime ✨`
      * Start morning SOP
      */
     async startMorningSOP(): Promise<void> {
+        this.plugin.telemetry?.track('sop_morning_started');
         // Check if today's plan already exists
         try {
             const dailyNotePath = this.plugin.vaultManager.getDailyNotePath();
@@ -834,6 +835,7 @@ Tap a button above, or just chat anytime ✨`
      * Start evening SOP
      */
     async startEveningSOP(): Promise<void> {
+        this.plugin.telemetry?.track('sop_evening_started');
         this.addAIMessage(t('chat.startEvening'));
         await this.eveningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
@@ -909,7 +911,7 @@ You can also use the buttons below to generate insight reports:`
         });
         weeklyBtn.addEventListener('click', () => {
             if (!isPro) {
-                new ProModal(this.app, t('chat.weeklyInsight'), this.plugin.licenseManager).open();
+                new ProModal(this.app, t('chat.weeklyInsight'), this.plugin.licenseManager, this.plugin.telemetry).open();
                 return;
             }
             this.triggerInsight('weekly');
@@ -921,7 +923,7 @@ You can also use the buttons below to generate insight reports:`
         });
         monthlyBtn.addEventListener('click', () => {
             if (!isPro) {
-                new ProModal(this.app, t('chat.monthlyInsight'), this.plugin.licenseManager).open();
+                new ProModal(this.app, t('chat.monthlyInsight'), this.plugin.licenseManager, this.plugin.telemetry).open();
                 return;
             }
             this.triggerInsight('monthly');
@@ -933,12 +935,57 @@ You can also use the buttons below to generate insight reports:`
         });
         profileBtn.addEventListener('click', () => {
             if (!isPro) {
-                new ProModal(this.app, t('chat.profileSuggestion'), this.plugin.licenseManager).open();
+                new ProModal(this.app, t('chat.profileSuggestion'), this.plugin.licenseManager, this.plugin.telemetry).open();
                 return;
             }
             this.triggerProfileSuggestion();
         });
 
+        // "Chat with past" — Pro feature differentiated from Copilot.
+        // Uses recent daily notes + insights + principles as a system message
+        // so the user can ask retrospective questions about their own data.
+        const pastBtn = btnGroup.createEl('button', {
+            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
+            text: `${t('chat.pastBtn')}${!isPro ? ' 🔒' : ''}`,
+        });
+        pastBtn.addEventListener('click', () => {
+            if (!isPro) {
+                new ProModal(this.app, t('chat.pastTitle'), this.plugin.licenseManager, this.plugin.telemetry).open();
+                return;
+            }
+            void this.startChatWithPast();
+        });
+
+        this.scrollToBottom();
+    }
+
+    /**
+     * "Chat with past" — load the user's recent journal data into a
+     * system message and switch the chat into a free-conversation mode
+     * grounded in that context.
+     */
+    public async startChatWithPast(): Promise<void> {
+        this.plugin.telemetry?.track('chat_with_past_started');
+        const ctx = await this.plugin.insightService.buildPastContext(30);
+        if (!ctx) {
+            this.addAIMessage(t('chat.pastEmpty'));
+            return;
+        }
+
+        this.sopContext = { type: 'none', currentStep: 0, responses: {} };
+        this.messages = [];
+        this.messagesContainer.empty();
+        this.hideProgressBar();
+
+        // Inject system-role context so the AI grounds replies in past data
+        // without leaking the bulk content into the visible message log.
+        this.messages.push({
+            role: 'system',
+            content: ctx.system,
+            timestamp: Date.now(),
+        });
+
+        this.addAIMessage(t('chat.pastWelcome', ctx.noteCount));
         this.scrollToBottom();
     }
 

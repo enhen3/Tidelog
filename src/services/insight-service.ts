@@ -93,6 +93,7 @@ ${t('insight.generateWeeklyReport')}`;
             await this.extractAndSavePatterns(fullResponse);
             await this.extractAndSavePrinciples(fullResponse);
 
+            this.plugin.telemetry?.track('insight_generated', { type: 'weekly', noteCount: dailyNotes.length });
             onComplete(fullResponse);
         } catch (error) {
             onChunk(`\n\n${formatAPIError(error, this.plugin.settings.activeProvider)}`);
@@ -173,6 +174,7 @@ ${t('insight.generateMonthlyReport')}`;
             await this.extractAndSavePatterns(fullResponse);
             await this.extractAndSavePrinciples(fullResponse);
 
+            this.plugin.telemetry?.track('insight_generated', { type: 'monthly', noteCount: dailyNotes.length });
             onComplete(fullResponse);
         } catch (error) {
             onChunk(`\n\n${formatAPIError(error, this.plugin.settings.activeProvider)}`);
@@ -240,6 +242,48 @@ ${t('insight.generateMonthlyReport')}`;
             onChunk(`\n\n${formatAPIError(error, this.plugin.settings.activeProvider)}`);
             onComplete?.('');
         }
+    }
+
+    /**
+     * Build a "chat with past" context string from recent daily notes,
+     * insights, principles, and patterns. Returns null if there isn't
+     * enough data (< 1 daily note in the window) so the caller can show
+     * an empty-state message instead of opening a useless chat.
+     *
+     * The returned string is meant to be injected as a system-role message
+     * before any user input, so the AI can reference past content directly.
+     */
+    async buildPastContext(days = 30): Promise<{ system: string; noteCount: number } | null> {
+        const end = moment();
+        const start = end.clone().subtract(days, 'days');
+        const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(start, end);
+
+        if (dailyNotes.length === 0) return null;
+
+        const journalEntries: string[] = [];
+        for (const note of dailyNotes) {
+            const preamble = this.buildCompactDaySummary(note);
+            const content = await this.plugin.app.vault.cachedRead(note);
+            const keySections = this.extractKeySections(content);
+            journalEntries.push(`--- ${note.basename} ---\n${preamble}\n${keySections}`);
+        }
+
+        const userProfile = await this.plugin.vaultManager.getUserProfileContent();
+        const patterns = await this.plugin.vaultManager.getPatternsContent();
+        const principles = await this.plugin.vaultManager.getPrinciplesContent();
+
+        const lang = getLanguage();
+        const intro = lang === 'en'
+            ? `The following is the user's recent journal data (last ${dailyNotes.length} daily notes covering ${start.format('YYYY-MM-DD')} to ${end.format('YYYY-MM-DD')}). Answer questions about their past patterns, emotions, and growth using ONLY this data. Quote specific dates and entries when relevant. If the user asks something the data does not cover, say so honestly.`
+            : `以下是用户最近的日记数据（共 ${dailyNotes.length} 篇日记，覆盖 ${start.format('YYYY-MM-DD')} 至 ${end.format('YYYY-MM-DD')}）。请仅根据这些数据，回答用户关于过去的模式、情绪、成长的提问。在相关时引用具体日期和原文片段。如果问题超出数据范围，请诚实说明。`;
+
+        const sections: string[] = [intro];
+        if (userProfile) sections.push(`<user_profile>\n${userProfile}\n</user_profile>`);
+        if (patterns) sections.push(`<patterns>\n${patterns}\n</patterns>`);
+        if (principles) sections.push(`<principles>\n${principles}\n</principles>`);
+        sections.push(`<journals>\n${journalEntries.join('\n\n')}\n</journals>`);
+
+        return { system: sections.join('\n\n'), noteCount: dailyNotes.length };
     }
 
     /**

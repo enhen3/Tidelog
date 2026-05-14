@@ -112,6 +112,7 @@ class Setting {
     addButton() { return this; }
     addSlider() { return this; }
     addExtraButton() { return this; }
+    addToggle() { return this; }
 }
 class PluginSettingTab { constructor(app, plugin) { this.app = app; this.plugin = plugin; this.containerEl = activeDocument.createElement('div'); } display() {} }
 module.exports = {

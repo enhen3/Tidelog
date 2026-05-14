@@ -15,11 +15,26 @@ export class AnthropicProvider extends BaseAIProvider {
         systemPrompt: string,
         onChunk: StreamCallback
     ): Promise<string> {
-        // Anthropic uses a different format - system is separate
-        const anthropicMessages = messages.map((m) => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content,
-        }));
+        // Anthropic puts the system prompt in a separate `system` field, not
+        // in the messages array. Any role='system' messages mid-stream (used
+        // for in-band context injection like dashboard chat or chat-with-past)
+        // must be merged into the system field; otherwise they'd become a
+        // second consecutive user message and the API would reject the request.
+        const inbandSystem = messages
+            .filter((m) => m.role === 'system')
+            .map((m) => m.content)
+            .join('\n\n');
+
+        const combinedSystem = [systemPrompt, inbandSystem]
+            .filter(Boolean)
+            .join('\n\n');
+
+        const anthropicMessages = messages
+            .filter((m) => m.role !== 'system')
+            .map((m) => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content,
+            }));
 
         const response = await this.makeRequest(`${this.baseUrl}/messages`, {
             method: 'POST',
@@ -31,7 +46,7 @@ export class AnthropicProvider extends BaseAIProvider {
             body: JSON.stringify({
                 model: this.model,
                 max_tokens: 4096,
-                system: systemPrompt,
+                system: combinedSystem,
                 messages: anthropicMessages,
             }),
         });

@@ -635,6 +635,67 @@ export const en: Record<string, string> = {
     'kanban.inProgress': '⏳ In progress ({0})',
     'kanban.noTasks': 'No tasks',
 
+    // ─── pricing (single source of truth) ───────────────────
+    'pricing.compareTitle': 'Pick a plan that fits you',
+    'pricing.annualLabel': 'Annual',
+    'pricing.annualUnit': '/ year',
+    'pricing.annualDesc': 'Flexible — renew or upgrade anytime',
+    'pricing.lifetimeLabel': 'Lifetime',
+    'pricing.lifetimeUnit': 'One-time',
+    'pricing.lifetimeDesc': 'Pay once, use forever',
+    'pricing.lifetimeBadge': '🔥 Best value',
+    'pricing.devices': 'Up to 3 devices per license',
+    'pricing.refund': '7-day no-questions refund',
+
+    // ─── pro modal (additional keys) ───────────────────────
+    'pro.compareTitle': 'Pick a plan that fits you',
+    'pro.feature7': '🕰️ Chat with your past self',
+    'pro.upgradeIntro': 'Unlock TideLog Pro for the full metacognition coaching experience:',
+    'pro.purchaseAnnual': '🛒 Buy annual',
+    'pro.purchaseLifetime': '🛒 Buy lifetime',
+    'pro.alreadyHave': 'Already purchased?',
+    'pro.activateHere': 'Activate here →',
+
+    // ─── onboarding wizard ─────────────────────────────────
+    'onboard.skip': 'Skip',
+    'onboard.next': 'Next',
+    'onboard.back': 'Back',
+    'onboard.done': 'Done',
+    'onboard.progress': '{0} / {1}',
+    'onboard.step1Title': '👋 Welcome to TideLog',
+    'onboard.step1Body': 'TideLog is an AI-guided daily growth companion.\n\nThrough the Plan → Journal → Review → Insight loop, it helps you build metacognitive awareness and see patterns you would miss on your own.\n\nLet\'s spend 1 minute getting you set up.',
+    'onboard.step2Title': '🤖 Pick an AI provider',
+    'onboard.step2Body': 'We recommend OpenRouter — one key gives you Claude, GPT, Gemini, and dozens more, with transparent pay-per-token pricing.',
+    'onboard.step2RecommendBadge': '⭐ Recommended',
+    'onboard.step2OpenRouterTitle': 'OpenRouter',
+    'onboard.step2OpenRouterWhy': 'One key, many models. Transparent pricing. Free credits for new users.',
+    'onboard.step2OpenRouterCta': 'Sign up at openrouter.ai →',
+    'onboard.step2OtherTitle': 'Have another API key?',
+    'onboard.step2OtherDesc': 'We also support Anthropic, Gemini, OpenAI, SiliconFlow, and any OpenAI-compatible API.',
+    'onboard.step3Title': '🔑 Paste your API key',
+    'onboard.step3Body': 'Paste your {0} API key below. We will test it immediately.',
+    'onboard.step3Placeholder': 'Paste your API key here…',
+    'onboard.step3Test': '🔗 Test connection',
+    'onboard.step3Testing': '⏳ Testing…',
+    'onboard.step3Success': '✅ Connected successfully!',
+    'onboard.step3Fail': '❌ Connection failed: {0}',
+    'onboard.step3SkipForNow': 'I\'ll configure later →',
+    'onboard.step4Title': '🌅 You\'re all set',
+    'onboard.step4Body': 'Everything is ready. Want to start a morning plan right now to experience the full flow?',
+    'onboard.step4StartMorning': '☀️ Start morning plan',
+    'onboard.step4CloseLater': 'Maybe later',
+
+    // ─── telemetry ─────────────────────────────────────────
+    'telemetry.sectionTitle': 'Privacy',
+    'telemetry.toggleName': 'Anonymous usage data',
+    'telemetry.toggleDesc': 'We collect only anonymous feature-usage counts (e.g. SOP completed, insight generated) to improve the product. We never collect your journal content, API keys, or any identifying information. You can turn this off anytime.',
+
+    // ─── chat with past (Pro) ──────────────────────────────
+    'chat.pastBtn': '🕰️ Chat with past',
+    'chat.pastTitle': 'Chat with your past self',
+    'chat.pastWelcome': '🕰️ **Chat with past mode**\n\nI\'ve read through your last {0} days of journals and growth notes. Try asking:\n\n- "When have I felt anxious about freedom?"\n- "What progress have I made this month?"\n- "What recurring emotions show up lately?"\n\nWhat do you want to ask?',
+    'chat.pastEmpty': '⚠️ You don\'t have recent journal entries yet. Try evening reviews for a few days first.',
+
     // ─── quick-capture ──────────────────────────────────────
     'capture.title': '💡 Quick capture',
     'capture.placeholder': 'Capture an idea...',
