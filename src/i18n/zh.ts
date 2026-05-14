@@ -619,6 +619,12 @@ export const zh: Record<string, string> = {
     'pro.goToSettings': '去设置中输入 →',
     'pro.lostCode': '找不到激活码？',
     'pro.lookupLicense': '查询我的 License →',
+    'settings.manageDevices': '管理设备绑定',
+    'settings.manageDevicesDesc': '查看已绑定设备，或解绑旧设备以便在新设备上激活',
+    'settings.manageDevicesBtn': '🔗 打开设备管理',
+    'settings.lostCode': '找不到激活码？',
+    'settings.lostCodeDesc': '用购买时的邮箱和订单号查询你的 License',
+    'settings.lostCodeBtn': '🔍 查询我的 License',
 
     // constants.ts evening questions
     'evening.q1': '今天过得怎么样？计划里的事情推进得顺利吗？',

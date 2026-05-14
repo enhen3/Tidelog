@@ -327,6 +327,12 @@ export const en: Record<string, string> = {
     'pro.goToSettings': 'Go to settings to enter →',
     'pro.lostCode': 'Can\'t find your code?',
     'pro.lookupLicense': 'Look up my License →',
+    'settings.manageDevices': 'Manage device bindings',
+    'settings.manageDevicesDesc': 'View bound devices or unbind old ones to activate on a new device',
+    'settings.manageDevicesBtn': '🔗 Open device manager',
+    'settings.lostCode': 'Can\'t find your license code?',
+    'settings.lostCodeDesc': 'Look up your License using the email and order ID from your purchase',
+    'settings.lostCodeBtn': '🔍 Look up my License',
 
     // ─── calendar-view.ts ─────────────────────────
     'cal.displayText': 'Calendar',

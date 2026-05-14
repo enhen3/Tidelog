@@ -650,6 +650,16 @@ export class TideLogSettingTab extends PluginSettingTab {
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
             statusSetting.setDesc(`✅ ${label} ${t('settings.proActivated')}${expiryText}`);
+
+            // Portal link for Pro users — manage device bindings
+            const portalSetting = new Setting(containerEl)
+                .setName(t('settings.manageDevices'))
+                .setDesc(t('settings.manageDevicesDesc'));
+            portalSetting.addButton((button) =>
+                button
+                    .setButtonText(t('settings.manageDevicesBtn'))
+                    .onClick(() => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); })
+            );
         } else {
             // Key input + activate
             const keySetting = new Setting(containerEl)
@@ -685,6 +695,16 @@ export class TideLogSettingTab extends PluginSettingTab {
                         })();
                     })
             );
+
+            // Portal link for free users — look up lost license key
+            new Setting(containerEl)
+                .setName(t('settings.lostCode'))
+                .setDesc(t('settings.lostCodeDesc'))
+                .addButton((button) =>
+                    button
+                        .setButtonText(t('settings.lostCodeBtn'))
+                        .onClick(() => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); })
+                );
 
             // Purchase link
             const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
