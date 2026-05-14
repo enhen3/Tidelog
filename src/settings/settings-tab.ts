@@ -151,6 +151,23 @@ export class TideLogSettingTab extends PluginSettingTab {
         // Evening Question Editor
         // =================================================================
         this.renderEveningQuestions(containerEl);
+
+        // =================================================================
+        // Privacy (telemetry opt-out)
+        // =================================================================
+        new Setting(containerEl).setName(t('telemetry.sectionTitle')).setHeading();
+
+        new Setting(containerEl)
+            .setName(t('telemetry.toggleName'))
+            .setDesc(t('telemetry.toggleDesc'))
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.telemetryEnabled !== false)
+                    .onChange((value) => {
+                        this.plugin.settings.telemetryEnabled = value;
+                        void this.plugin.saveSettings();
+                    })
+            );
     }
 
     /**

@@ -1,13 +1,15 @@
 /**
  * TideLog License API — Cloudflare Worker + D1
- * v2: License types (annual/lifetime) + multi-device (3 devices per key)
+ * v3: License + anonymous telemetry events
  *
  * Endpoints:
  *   POST /license/activate    — Activate a key + bind device
  *   POST /license/verify      — Check if a key is valid
  *   POST /license/deactivate  — Unbind a device from key
+ *   POST /events              — Anonymous telemetry event ingestion
  *   POST /admin/generate      — Batch-generate keys (Admin Token)
  *   GET  /admin/list          — List all keys (Admin Token)
+ *   GET  /admin/events        — Recent events for funnel analysis (Admin Token)
  */
 
 export interface Env {
@@ -233,6 +235,83 @@ async function handleDeactivate(request: Request, env: Env): Promise<Response> {
 	return json({ success: true, message: 'Device deactivated', remainingDevices: remaining.length });
 }
 
+/**
+ * Anonymous telemetry ingestion.
+ * Validates basic shape and stores. No auth — the endpoint is intentionally
+ * write-only and rate-limited by event-size + per-IP at the Cloudflare edge.
+ *
+ * We deliberately do NOT log IP addresses — Cloudflare's edge sees them
+ * but D1 inserts only the anonymous_id supplied by the client. If you ever
+ * want stricter abuse protection, add Cloudflare Turnstile or KV rate limit.
+ */
+async function handleEvents(request: Request, env: Env): Promise<Response> {
+	let body: { anonymousId?: string; event?: string; properties?: Record<string, unknown>; timestamp?: number };
+	try {
+		body = await request.json();
+	} catch {
+		return error('Invalid JSON');
+	}
+
+	const { anonymousId, event, properties, timestamp } = body;
+
+	if (!anonymousId || !event) {
+		return error('Missing anonymousId or event');
+	}
+	if (typeof anonymousId !== 'string' || anonymousId.length > 64) {
+		return error('Invalid anonymousId');
+	}
+	if (typeof event !== 'string' || event.length > 64) {
+		return error('Invalid event');
+	}
+
+	// Cap properties size at 4KB so a single bad client can't blow up the DB.
+	const propsJson = properties ? JSON.stringify(properties).slice(0, 4096) : null;
+	const clientTs = typeof timestamp === 'number' ? Math.floor(timestamp) : null;
+
+	try {
+		await env.DB.prepare(
+			'INSERT INTO events (anonymous_id, event, properties, client_ts) VALUES (?, ?, ?, ?)'
+		).bind(anonymousId, event, propsJson, clientTs).run();
+	} catch (err) {
+		// The events table is created via migration-v3.sql. If the migration
+		// has not been applied yet, we silently 200 so the plugin doesn't
+		// log errors in users' consoles.
+		console.warn('events insert failed:', err);
+	}
+
+	return json({ success: true });
+}
+
+async function handleAdminEvents(request: Request, env: Env): Promise<Response> {
+	const url = new URL(request.url);
+	const event = url.searchParams.get('event');
+	const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 1000);
+
+	let query: D1PreparedStatement;
+	if (event) {
+		query = env.DB.prepare(
+			'SELECT id, anonymous_id, event, properties, client_ts, received_at FROM events WHERE event = ? ORDER BY id DESC LIMIT ?'
+		).bind(event, limit);
+	} else {
+		query = env.DB.prepare(
+			'SELECT id, anonymous_id, event, properties, client_ts, received_at FROM events ORDER BY id DESC LIMIT ?'
+		).bind(limit);
+	}
+
+	const { results } = await query.all();
+
+	// Aggregate event counts for the "what's popular" dashboard view.
+	const aggregateResult = await env.DB.prepare(
+		`SELECT event, COUNT(*) as n, COUNT(DISTINCT anonymous_id) as users
+		 FROM events
+		 WHERE received_at >= unixepoch() - 7 * 24 * 60 * 60
+		 GROUP BY event
+		 ORDER BY n DESC`
+	).all();
+
+	return json({ success: true, recent: results, aggregate7d: aggregateResult.results });
+}
+
 async function handleAdminGenerate(request: Request, env: Env): Promise<Response> {
 	const body = await request.json<{
 		count?: number;
@@ -330,6 +409,9 @@ export default {
 			if (path === '/license/deactivate' && request.method === 'POST') {
 				return await handleDeactivate(request, env);
 			}
+			if (path === '/events' && request.method === 'POST') {
+				return await handleEvents(request, env);
+			}
 
 			if (path.startsWith('/admin/')) {
 				const authError = checkAdmin(request, env);
@@ -341,10 +423,13 @@ export default {
 				if (path === '/admin/list' && request.method === 'GET') {
 					return await handleAdminList(env);
 				}
+				if (path === '/admin/events' && request.method === 'GET') {
+					return await handleAdminEvents(request, env);
+				}
 			}
 
 			if (path === '/' || path === '/health') {
-				return json({ status: 'ok', service: 'tidelog-license-api', version: '2.0' });
+				return json({ status: 'ok', service: 'tidelog-license-api', version: '3.0' });
 			}
 
 			return error('Not found', 404);

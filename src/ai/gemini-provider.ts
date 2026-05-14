@@ -49,6 +49,12 @@ export class GeminiProvider extends BaseAIProvider {
 
     /**
      * Format messages for Gemini API
+     *
+     * Gemini's `contents` array requires strictly-alternating user/model
+     * turns. Any in-band role='system' messages (used for context injection
+     * like dashboard chat or chat-with-past) are merged into the system
+     * prompt rather than added as separate user turns, which would otherwise
+     * produce two consecutive user entries and confuse the model.
      */
     private formatGeminiMessages(
         messages: ChatMessage[],
@@ -56,11 +62,20 @@ export class GeminiProvider extends BaseAIProvider {
     ): Array<{ role: string; parts: Array<{ text: string }> }> {
         const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
-        // Gemini handles system prompt as first user message
-        if (systemPrompt) {
+        const inbandSystem = messages
+            .filter((m) => m.role === 'system')
+            .map((m) => m.content)
+            .join('\n\n');
+
+        const combinedSystem = [systemPrompt, inbandSystem]
+            .filter(Boolean)
+            .join('\n\n');
+
+        // Gemini handles system prompt as a primed user/model exchange
+        if (combinedSystem) {
             contents.push({
                 role: 'user',
-                parts: [{ text: `System instruction: ${systemPrompt}` }],
+                parts: [{ text: `System instruction: ${combinedSystem}` }],
             });
             contents.push({
                 role: 'model',
@@ -69,6 +84,7 @@ export class GeminiProvider extends BaseAIProvider {
         }
 
         for (const message of messages) {
+            if (message.role === 'system') continue;
             contents.push({
                 role: message.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: message.content }],

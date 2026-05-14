@@ -65,6 +65,13 @@ export interface TideLogSettings {
     // Evening SOP Questions (user-configurable)
     eveningQuestions: EveningQuestionConfig[];
 
+    // First-run onboarding wizard
+    hasCompletedOnboarding?: boolean;
+
+    // Anonymous telemetry (opt-out, default on)
+    telemetryEnabled?: boolean;
+    telemetryAnonymousId?: string;
+
     // Settings schema version (for migrations)
     settingsVersion?: number;
 }

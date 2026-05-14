@@ -28,6 +28,18 @@ const MIGRATIONS: Migration[] = [
             }
         },
     },
+    {
+        version: 2,
+        description: 'Existing users skip onboarding; default telemetry to enabled',
+        migrate(settings) {
+            // Anyone migrating already configured the plugin — don't disrupt them
+            // with a first-run wizard.
+            settings.hasCompletedOnboarding = true;
+            if (settings.telemetryEnabled === undefined) {
+                settings.telemetryEnabled = true;
+            }
+        },
+    },
 ];
 
 /** Current schema version — always equals the last migration's version */

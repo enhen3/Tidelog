@@ -27,6 +27,8 @@ import { KanbanService } from './services/kanban-service';
 import { FileLinkService } from './services/file-linker';
 import { DashboardService } from './services/dashboard-service';
 import { LicenseManager } from './services/license-manager';
+import { Telemetry } from './services/telemetry';
+import { OnboardingModal } from './views/onboarding-modal';
 
 import { migrateSettings } from './settings-migration';
 
@@ -40,6 +42,7 @@ export default class TideLogPlugin extends Plugin {
     fileLinkService!: FileLinkService;
     dashboardService!: DashboardService;
     licenseManager!: LicenseManager;
+    telemetry!: Telemetry;
 
     constructor(app: App, manifest: PluginManifest) {
         super(app, manifest);
@@ -71,9 +74,14 @@ export default class TideLogPlugin extends Plugin {
         this.fileLinkService = new FileLinkService(this.app, this.settings, this.kanbanService);
         this.dashboardService = new DashboardService(this.app, this.settings);
         this.licenseManager = new LicenseManager(this);
+        this.telemetry = new Telemetry(this);
 
         // Background license verification (non-blocking)
         void this.licenseManager.verifyOnStartup();
+
+        // Anonymous "plugin loaded" beacon — also serves as a daily-active proxy.
+        // Respects settings.telemetryEnabled (opt-out in settings → Privacy).
+        this.telemetry.track('plugin_loaded');
 
         // Ensure vault structure exists
         await this.initializeVaultStructure();
@@ -188,6 +196,14 @@ export default class TideLogPlugin extends Plugin {
             });
             // Start file linker
             this.fileLinkService.startListening();
+
+            // First-run onboarding — show after layout is ready so the modal
+            // overlays the fully-rendered workspace, not a half-loaded window.
+            // The migration in settings-migration.ts marks existing users as
+            // already-onboarded, so this only fires for genuinely new installs.
+            if (!this.settings.hasCompletedOnboarding) {
+                new OnboardingModal(this.app, this).open();
+            }
         });
 
 

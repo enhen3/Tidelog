@@ -112,16 +112,18 @@ export class LicenseManager {
             const data = await apiPost(`${API_BASE}/license/activate`, { key: trimmed, deviceId });
 
             if (data.success) {
+                const licenseType = (data.licenseType as 'annual' | 'lifetime') || 'lifetime';
                 this.plugin.settings.proLicense = {
                     key: trimmed,
                     activated: true,
                     activatedAt: Date.now(),
                     deviceId,
                     lastVerified: Date.now(),
-                    licenseType: (data.licenseType as 'annual' | 'lifetime') || 'lifetime',
+                    licenseType,
                     expiresAt: data.expiresAt ? (data.expiresAt as number) * 1000 : undefined,
                 };
                 await this.plugin.saveSettings();
+                this.plugin.telemetry?.track('license_activated', { licenseType });
                 return { success: true, message: (data.message as string) || '激活成功' };
             } else {
                 return { success: false, message: (data.error as string) || '激活失败' };

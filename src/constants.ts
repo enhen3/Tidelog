@@ -10,6 +10,24 @@ import {
 import { t } from './i18n';
 
 // =============================================================================
+// Pricing — single source of truth for ProModal, settings tab, and README copy
+// =============================================================================
+
+/** Pricing (CNY). Edit here and prices propagate to the whole UI. */
+export const PRICING = {
+    annual: {
+        amount: 49,
+        currency: '¥',
+        unit: '/ 年',
+    },
+    lifetime: {
+        amount: 99,
+        currency: '¥',
+        unit: '一次付清',
+    },
+} as const;
+
+// =============================================================================
 // Default Evening Questions
 // =============================================================================
 
@@ -131,4 +149,6 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
     enableEveningSOP: true,
     includeOptionalQuestions: true,
     eveningQuestions: [...getDefaultEveningQuestions()],
+    hasCompletedOnboarding: false,
+    telemetryEnabled: true,
 };

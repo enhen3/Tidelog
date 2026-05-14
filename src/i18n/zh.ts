@@ -637,6 +637,67 @@ export const zh: Record<string, string> = {
     'kanban.inProgress': '⏳ 进行中 ({0})',
     'kanban.noTasks': '暂无任务',
 
+    // ─── pricing (单一来源) ─────────────────────────────────
+    'pricing.compareTitle': '选择适合你的版本',
+    'pricing.annualLabel': '年度版',
+    'pricing.annualUnit': '/ 年',
+    'pricing.annualDesc': '随时升级 / 续费灵活',
+    'pricing.lifetimeLabel': '终身版',
+    'pricing.lifetimeUnit': '一次付清',
+    'pricing.lifetimeDesc': '一次付费，永久使用',
+    'pricing.lifetimeBadge': '🔥 最划算',
+    'pricing.devices': '最多 3 台设备同时使用',
+    'pricing.refund': '7 天无理由退款',
+
+    // ─── pro modal (additional keys) ───────────────────────
+    'pro.compareTitle': '选择适合你的版本',
+    'pro.feature7': '🕰️ 和过去的自己对话',
+    'pro.upgradeIntro': '解锁 TideLog Pro，获得完整的元认知教练体验：',
+    'pro.purchaseAnnual': '🛒 购买年度版',
+    'pro.purchaseLifetime': '🛒 购买终身版',
+    'pro.alreadyHave': '已购买？',
+    'pro.activateHere': '点击这里激活 →',
+
+    // ─── onboarding wizard ─────────────────────────────────
+    'onboard.skip': '跳过',
+    'onboard.next': '下一步',
+    'onboard.back': '上一步',
+    'onboard.done': '完成',
+    'onboard.progress': '{0} / {1}',
+    'onboard.step1Title': '👋 欢迎使用 TideLog',
+    'onboard.step1Body': 'TideLog 是一个 AI 引导的每日成长伙伴。\n\n通过「计划 → 日记 → 复盘 → 洞察」的正循环，帮你建立元认知能力，看见自己平时看不到的模式。\n\n我们花 1 分钟把它配置好。',
+    'onboard.step2Title': '🤖 选一个 AI 提供商',
+    'onboard.step2Body': '我们推荐 OpenRouter — 一个 key 就能用 Claude、GPT、Gemini 等几十种模型，按 token 计费，对个人用户最划算。',
+    'onboard.step2RecommendBadge': '⭐ 推荐',
+    'onboard.step2OpenRouterTitle': 'OpenRouter',
+    'onboard.step2OpenRouterWhy': '一个 key 接入多模型；价格透明；新用户有免费额度。',
+    'onboard.step2OpenRouterCta': '前往 openrouter.ai 注册 →',
+    'onboard.step2OtherTitle': '已有其他 API key？',
+    'onboard.step2OtherDesc': '我们也支持 Anthropic / Gemini / OpenAI / SiliconFlow / 任意 OpenAI 兼容 API。',
+    'onboard.step3Title': '🔑 粘贴你的 API Key',
+    'onboard.step3Body': '把你的 {0} API Key 粘贴到下面。我们会立刻测试它能不能用。',
+    'onboard.step3Placeholder': '在此粘贴 API Key…',
+    'onboard.step3Test': '🔗 测试连接',
+    'onboard.step3Testing': '⏳ 测试中…',
+    'onboard.step3Success': '✅ 连接成功！',
+    'onboard.step3Fail': '❌ 连接失败：{0}',
+    'onboard.step3SkipForNow': '稍后在设置里配置 →',
+    'onboard.step4Title': '🌅 准备就绪',
+    'onboard.step4Body': '一切就绪。要不要现在就做一次晨间计划，体验完整的 TideLog 流程？',
+    'onboard.step4StartMorning': '☀️ 开始晨间计划',
+    'onboard.step4CloseLater': '稍后再说',
+
+    // ─── telemetry ─────────────────────────────────────────
+    'telemetry.sectionTitle': '隐私',
+    'telemetry.toggleName': '匿名使用数据',
+    'telemetry.toggleDesc': '我们仅收集匿名的功能使用次数（如 SOP 完成、洞察生成），用于改进产品。不收集你的日记内容、API key 或任何可识别身份的信息。你可以随时关闭。',
+
+    // ─── chat with past (Pro) ──────────────────────────────
+    'chat.pastBtn': '🕰️ 和过去对话',
+    'chat.pastTitle': '和过去的自己对话',
+    'chat.pastWelcome': '🕰️ **和过去对话模式**\n\n我已经读过你最近 {0} 天的日记和成长记录。问问我吧：\n\n- 「我什么时候焦虑过自由？」\n- 「这个月我有什么进步？」\n- 「最近有什么重复出现的情绪？」\n\n你想问什么？',
+    'chat.pastEmpty': '⚠️ 你最近没有日记记录，无法进入「和过去对话」模式。请先用一周的复盘累积一些数据。',
+
     // ─── quick-capture (灵感收集) ──────────────────────────
     'capture.title': '💡 灵感收集',
     'capture.placeholder': '记录灵感...',
