@@ -197,6 +197,9 @@ function fireInput(el, value) {
 function click(el) {
     el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
 }
+function clickTextNode(el) {
+    el.firstChild.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+}
 function changeCheckbox(el, checked) {
     el.checked = checked;
     el.dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -251,8 +254,8 @@ console.log('\nTest 2: clicking a row reveals name input + content textarea');
     check(textarea?.value === questions[0].initialMessage, 'textarea prefilled with initialMessage');
 }
 
-// Test 2b: clicking the triangle still works and toggle clicks do NOT expand/collapse
-console.log('\nTest 2b: triangle opens, enable toggle does not open details');
+// Test 2b: real Chromium clicks can target text nodes inside the triangle/name spans
+console.log('\nTest 2b: triangle/name text-node clicks open details');
 {
     const questions = getDefaultEveningQuestions();
     const plugin = makePlugin(questions);
@@ -260,8 +263,21 @@ console.log('\nTest 2b: triangle opens, enable toggle does not open details');
     tab.display();
 
     const firstRow = tab.containerEl.querySelector('.tl-q-row');
-    click(firstRow.querySelector('.tl-q-triangle'));
-    check(firstRow.nextElementSibling?.classList.contains('tl-q-detail') === true, 'triangle click opens detail panel');
+    clickTextNode(firstRow.querySelector('.tl-q-triangle'));
+    check(firstRow.nextElementSibling?.classList.contains('tl-q-detail') === true, 'triangle text-node click opens detail panel');
+
+    const secondRow = tab.containerEl.querySelectorAll('.tl-q-row')[1];
+    clickTextNode(secondRow.querySelector('.tl-q-name'));
+    check(secondRow.nextElementSibling?.classList.contains('tl-q-detail') === true, 'name text-node click opens detail panel');
+}
+
+// Test 2c: clicking the enable toggle does NOT expand/collapse
+console.log('\nTest 2c: enable toggle does not open details');
+{
+    const questions = getDefaultEveningQuestions();
+    const plugin = makePlugin(questions);
+    const tab = new TideLogSettingTab({}, plugin);
+    tab.display();
 
     const secondRow = tab.containerEl.querySelectorAll('.tl-q-row')[1];
     click(secondRow.querySelector('.tl-q-toggle-input'));

@@ -500,8 +500,20 @@ export class TideLogSettingTab extends PluginSettingTab {
                 }
             };
 
+            const toggleExpandFromControl = (e: Event) => {
+                e.stopPropagation();
+                toggleExpand();
+            };
+
+            triangle.addEventListener('click', toggleExpandFromControl);
+            nameEl.addEventListener('click', toggleExpandFromControl);
+
             row.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement | null;
+                const target = e.target instanceof Element
+                    ? e.target
+                    : e.target instanceof Node
+                        ? e.target.parentElement
+                        : null;
                 if (target?.closest('.tl-q-drag-handle, .tl-q-toggle-input, .tl-q-icon-btn, button, input, textarea, select')) {
                     return;
                 }
