@@ -18,6 +18,7 @@ import {
     getFreeWritingPrompt,
 } from './prompts';
 import { formatAPIError } from '../utils/error-formatter';
+import { replaceFile } from '../utils/vault-write';
 import { t, getLanguage } from '../i18n';
 
 interface QuestionConfig {
@@ -581,7 +582,7 @@ Strict rules:
                 const content = `---\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
                 if (file) {
                     if (file instanceof TFile) {
-                        await this.plugin.app.vault.modify(file, content);
+                        await replaceFile(this.plugin.app, file, content);
                     }
                 } else {
                     await this.plugin.app.vault.create(path, content);

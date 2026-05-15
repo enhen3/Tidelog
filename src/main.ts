@@ -176,14 +176,11 @@ export default class TideLogPlugin extends Plugin {
         // Add settings tab
         this.addSettingTab(new TideLogSettingTab(this.app, this));
 
-        // Auto-open chat view in sidebar when layout is ready
+        // Start passive file linking after Obsidian has restored the workspace.
+        // Do not open views or create vault files on bare plugin load; TideLog
+        // writes to the vault only after an explicit user action or a daily note
+        // edit that belongs to the configured TideLog folder.
         this.app.workspace.onLayoutReady(() => {
-            void this.activateChatView();
-            // Ensure weekly kanban board exists
-            void this.kanbanService.ensureWeeklyBoard().catch((e) => {
-                console.error('[TideLog] Failed to ensure kanban board:', e);
-            });
-            // Start file linker
             this.fileLinkService.startListening();
         });
 
@@ -192,17 +189,6 @@ export default class TideLogPlugin extends Plugin {
 
     onunload(): void {
         this.fileLinkService.stopListening();
-
-        // Detach all custom view leaves to prevent orphaned
-        // "plugin is no longer active" panes when the plugin is
-        // disabled mid-session (e.g. via BRAT update or manual toggle).
-        // Note: On normal quit Obsidian saves workspace state BEFORE
-        // calling onunload, so detaching here does NOT affect the saved
-        // layout — views are still restored on next cold start.
-        
-        
-        
-        
     }
 
     async loadSettings(): Promise<void> {

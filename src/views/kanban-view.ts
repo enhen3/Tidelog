@@ -12,6 +12,7 @@ import {
 
 import TideLogPlugin from '../main';
 import { t, getLanguage } from '../i18n';
+import { replaceFile } from '../utils/vault-write';
 
 export const KANBAN_VIEW_TYPE = 'tl-kanban-view';
 
@@ -216,6 +217,6 @@ export class KanbanView extends ItemView {
         const pattern = new RegExp(`^- \\[${oldCheck === '[ ]' ? ' ' : 'x'}\\] ${escaped}$`, 'm');
 
         content = content.replace(pattern, `- ${newCheck} ${taskText}`);
-        await this.app.vault.modify(file, content);
+        await replaceFile(this.app, file, content);
     }
 }

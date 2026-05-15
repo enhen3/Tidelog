@@ -37,6 +37,11 @@ interface DeviceRow {
 	activated_at: number;
 }
 
+interface RateLimitRow {
+	count: number;
+	reset_at: number;
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -55,6 +60,62 @@ function json(data: unknown, status = 200): Response {
 
 function error(message: string, status = 400): Response {
 	return json({ success: false, error: message }, status);
+}
+
+function getClientIp(request: Request): string {
+	return request.headers.get('CF-Connecting-IP')
+		|| request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+		|| 'unknown';
+}
+
+async function sha256Hex(input: string): Promise<string> {
+	const bytes = new TextEncoder().encode(input);
+	const digest = await crypto.subtle.digest('SHA-256', bytes);
+	return [...new Uint8Array(digest)]
+		.map((byte) => byte.toString(16).padStart(2, '0'))
+		.join('');
+}
+
+async function checkRateLimit(
+	request: Request,
+	env: Env,
+	scope: string,
+	limit: number,
+	windowSeconds: number,
+): Promise<Response | null> {
+	const now = Math.floor(Date.now() / 1000);
+	const resetAt = Math.floor(now / windowSeconds) * windowSeconds + windowSeconds;
+	const clientHash = await sha256Hex(`${scope}:${getClientIp(request)}:${resetAt}`);
+
+	const row = await env.DB.prepare('SELECT count, reset_at FROM rate_limits WHERE key = ?')
+		.bind(clientHash)
+		.first<RateLimitRow>();
+
+	if (!row) {
+		await env.DB.prepare('INSERT INTO rate_limits (key, count, reset_at) VALUES (?, ?, ?)')
+			.bind(clientHash, 1, resetAt)
+			.run();
+		return null;
+	}
+
+	if (row.count >= limit) {
+		return json(
+			{ success: false, error: 'Too many requests. Please try again later.', retryAfter: Math.max(1, row.reset_at - now) },
+			429,
+		);
+	}
+
+	await env.DB.prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?')
+		.bind(clientHash)
+		.run();
+
+	if (Math.random() < 0.01) {
+		await env.DB.prepare('DELETE FROM rate_limits WHERE reset_at < ?')
+			.bind(now - 3600)
+			.run();
+	}
+
+	return null;
 }
 
 /** Generate a license key: TL-XXXX-XXXX-XXXX */
@@ -899,12 +960,18 @@ export default {
 
 		try {
 			if (path === '/license/activate' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'license-activate', 20, 60);
+				if (limited) return limited;
 				return await handleActivate(request, env);
 			}
 			if (path === '/license/verify' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'license-verify', 60, 60);
+				if (limited) return limited;
 				return await handleVerify(request, env);
 			}
 			if (path === '/license/deactivate' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'license-deactivate', 20, 60);
+				if (limited) return limited;
 				return await handleDeactivate(request, env);
 			}
 
@@ -925,9 +992,13 @@ export default {
 				return handlePortalPage(request);
 			}
 			if (path === '/portal/lookup' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'portal-lookup', 15, 60);
+				if (limited) return limited;
 				return await handlePortalLookup(request, env);
 			}
 			if (path === '/portal/unbind' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'portal-unbind', 15, 60);
+				if (limited) return limited;
 				return await handlePortalUnbind(request, env);
 			}
 

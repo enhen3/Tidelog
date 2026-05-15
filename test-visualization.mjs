@@ -40,6 +40,12 @@ class MockVault {
         }
     }
 
+    async process(file, updater) {
+        const next = updater(file._content || '');
+        await this.modify(file, next);
+        return next;
+    }
+
     async create(path, content) {
         const file = new MockTFile(path, content);
         this.files.set(path, file);

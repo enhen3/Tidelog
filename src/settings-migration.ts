@@ -9,7 +9,6 @@ import { TideLogSettings } from './types';
 
 interface Migration {
     version: number;
-    description: string;
     migrate: (settings: TideLogSettings) => void;
 }
 
@@ -20,7 +19,6 @@ interface Migration {
 const MIGRATIONS: Migration[] = [
     {
         version: 1,
-        description: 'Replace deprecated deepseek-ai/DeepSeek-V3 with DeepSeek-V3.2 on SiliconFlow',
         migrate(settings) {
             const sf = settings.providers.siliconflow;
             if (sf && sf.model === 'deepseek-ai/DeepSeek-V3') {
@@ -46,7 +44,6 @@ export function migrateSettings(settings: TideLogSettings): boolean {
 
     for (const m of MIGRATIONS) {
         if (m.version > from) {
-            console.debug(`[TideLog] Running migration v${m.version}: ${m.description}`);
             m.migrate(settings);
         }
     }

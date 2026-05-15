@@ -5,6 +5,7 @@
 import { App, CachedMetadata, TFile, TFolder, moment, Plugin } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
+import { replaceFile, updateFile } from '../utils/vault-write';
 
 export class VaultManager {
     private app: App;
@@ -246,7 +247,7 @@ export class VaultManager {
             if (!hasReview) {
                 appendContent += `\n${reviewHeader}\n\n${t('vault.reviewComment')}\n`;
             }
-            await this.app.vault.modify(file, content + appendContent);
+            await updateFile(this.app, file, (current) => current + appendContent);
         }
     }
 
@@ -448,8 +449,7 @@ ${t('vault.reviewComment')}
             // Create the file if it doesn't exist
             file = await this.app.vault.create(filePath, content);
         } else if (file instanceof TFile) {
-            const existingContent = await this.app.vault.read(file);
-            await this.app.vault.modify(file, existingContent + content);
+            await updateFile(this.app, file, (existingContent) => existingContent + content);
         }
     }
 
@@ -478,10 +478,7 @@ ${t('vault.reviewComment')}
 
             if (sectionIndex === -1) {
                 // Section not found, append at end with header
-                await this.app.vault.modify(
-                    file,
-                    existingContent + `\n## ${sectionHeader}\n\n${content}\n`
-                );
+                await updateFile(this.app, file, (current) => current + `\n## ${sectionHeader}\n\n${content}\n`);
             } else {
                 // Find the next section or end of file
                 let insertIndex = sectionIndex + 1;
@@ -494,7 +491,7 @@ ${t('vault.reviewComment')}
 
                 // Insert content before next section
                 lines.splice(insertIndex, 0, content);
-                await this.app.vault.modify(file, lines.join('\n'));
+                await replaceFile(this.app, file, lines.join('\n'));
             }
         }
     }
@@ -524,10 +521,7 @@ ${t('vault.reviewComment')}
 
             if (sectionIndex === -1) {
                 // Section not found, append at end with header
-                await this.app.vault.modify(
-                    file,
-                    existingContent + `\n## ${sectionHeader}\n\n${newContent}\n`
-                );
+                await updateFile(this.app, file, (current) => current + `\n## ${sectionHeader}\n\n${newContent}\n`);
             } else {
                 // Find the next section or end of file
                 let nextSectionIndex = sectionIndex + 1;
@@ -542,7 +536,7 @@ ${t('vault.reviewComment')}
                 const before = lines.slice(0, sectionIndex + 1);
                 const after = lines.slice(nextSectionIndex);
                 const result = [...before, '', newContent, '', ...after];
-                await this.app.vault.modify(file, result.join('\n'));
+                await replaceFile(this.app, file, result.join('\n'));
             }
         }
     }
@@ -725,7 +719,7 @@ ${t('vault.reviewComment')}
             lines.push(taskLine);
         }
 
-        await this.app.vault.modify(file, lines.join('\n'));
+        await replaceFile(this.app, file, lines.join('\n'));
     }
 
     // ──────────────────────────────────────────────────────
@@ -772,9 +766,8 @@ ${t('vault.reviewComment')}
             await this.ensureFolder(this.settings.archiveFolder);
             await this.app.vault.create(path, line + '\n');
         } else if (file instanceof TFile) {
-            const content = await this.app.vault.read(file);
             // Prepend new item so latest appears first
-            await this.app.vault.modify(file, line + '\n' + content);
+            await updateFile(this.app, file, (content) => line + '\n' + content);
         }
     }
 
@@ -792,7 +785,7 @@ ${t('vault.reviewComment')}
         const idx = lines.findIndex(l => l.trim() === target.trim());
         if (idx >= 0) {
             lines.splice(idx, 1);
-            await this.app.vault.modify(file, lines.join('\n'));
+            await replaceFile(this.app, file, lines.join('\n'));
         }
     }
 
@@ -809,7 +802,7 @@ ${t('vault.reviewComment')}
         const newLine = `- ${newText}`;
         const updated = content.replace(oldLine, newLine);
         if (updated !== content) {
-            await this.app.vault.modify(file, updated);
+            await replaceFile(this.app, file, updated);
         }
     }
 }

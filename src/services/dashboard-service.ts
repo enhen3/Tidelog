@@ -5,6 +5,7 @@
 import { App, TFile } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
+import { replaceFile } from '../utils/vault-write';
 
 export class DashboardService {
     private app: App;
@@ -29,7 +30,7 @@ export class DashboardService {
 
         let file = this.app.vault.getAbstractFileByPath(path);
         if (file && file instanceof TFile) {
-            await this.app.vault.modify(file, content);
+            await replaceFile(this.app, file, content);
         } else {
             file = await this.app.vault.create(path, content);
         }
@@ -54,7 +55,7 @@ export class DashboardService {
         const principle = await this.getRandomPrinciple();
         const pattern = await this.getLatestPattern();
         const content = this.buildDashboardContent(principle, pattern);
-        await this.app.vault.modify(file, content);
+        await replaceFile(this.app, file, content);
     }
 
     /**

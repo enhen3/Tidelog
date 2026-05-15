@@ -8,6 +8,7 @@ import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 import type { ChatMessage } from '../types';
 import { t, getLanguage } from '../i18n';
+import { replaceFile } from '../utils/vault-write';
 
 export type PeriodicMode = 'day' | 'week' | 'month';
 
@@ -353,7 +354,7 @@ export class PeriodicRenderer {
                     // Save to cache
                     const cacheContent = `---\ndate: ${cacheKey}\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
                     if (cacheFile && cacheFile instanceof TFile) {
-                        await h.app.vault.modify(cacheFile, cacheContent);
+                        await replaceFile(h.app, cacheFile, cacheContent);
                     } else {
                         const folder = cachePath.substring(0, cachePath.lastIndexOf('/'));
                         if (!h.app.vault.getAbstractFileByPath(folder)) {

@@ -18,3 +18,4 @@ CREATE TABLE IF NOT EXISTS license_devices (
 );
 
 CREATE INDEX IF NOT EXISTS idx_license_devices_key ON license_devices(license_key);
+CREATE INDEX IF NOT EXISTS idx_licenses_email_order ON licenses(email, order_id);

@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 main.js
+src/**/*.js
 *.js.map
 
 # OS files
@@ -17,6 +18,14 @@ Thumbs.db
 
 # ESLint cache
 .eslintcache
+
+# Local test artifacts
+.test-*.ts
+obsidian-mock*.cjs
+
+# Cloudflare local state
+api/.wrangler/
+api/bun.lock
 
 # Obsidian test vault (local only)
 # Don't commit the vault itself

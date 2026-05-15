@@ -6,7 +6,7 @@ TideLog is an Obsidian plugin that helps you build metacognitive awareness throu
 
 ---
 
-## ✨ Core Philosophy
+## Core Philosophy
 
 ```
   Plan → Daily Log → AI Analysis → Insight Dialogue → Metacognitive Growth → Better Actions
@@ -18,52 +18,56 @@ Like having a coaching conversation — discover patterns you wouldn't see on yo
 
 ---
 
-## 🚀 Features
+## Features
 
-### 🌅 Morning Plan SOP
+### Morning Plan SOP
 
 - Energy level self-assessment (1–10)
 - Multi-task input with subtask nesting
 - Auto-writes to daily note under `## Morning Plan`
 - Unfinished task carry-forward from the past 3 days
 
-### 🌙 Evening Review SOP (5+4 question flow)
+### Evening Review SOP
 
-**Required (5 questions):**
+- Free users can complete the first 2 review questions.
+- Pro users unlock the full 5 required + 4 optional question flow.
+- Questions can be reordered and customized in settings.
 
-1. 🎯 Goal alignment — review task completion
-2. ✨ Success journal — record today's achievements
-3. 😊 Emotion logging — happiness moments + emotion score
-4. 💭 Anxiety awareness — identify and analyze negative emotions
-5. 📋 Tomorrow's plan — plan the most important task for tomorrow
+**Required questions:**
 
-**Optional (4 questions):**
+1. Goal alignment — review task completion
+2. Success journal — record today's achievements
+3. Emotion logging — happiness moments + emotion score
+4. Anxiety awareness — identify and analyze negative emotions
+5. Tomorrow's plan — plan the most important task for tomorrow
 
-6. 🔍 Deep analysis — 5 Whys root-cause exploration
-7. 🪞 Reflection — Stoic triple question
-8. 💎 Principle extraction — distill reusable life principles
-9. ✍️ Free writing — open expression
+**Optional questions:**
 
-### 📊 Insight System
+6. Deep analysis — 5 Whys root-cause exploration
+7. Reflection — Stoic triple question
+8. Principle extraction — distill reusable life principles
+9. Free writing — open expression
 
-- **Weekly insight** — task completion rate, emotion trends, success patterns, challenge analysis
-- **Monthly insight** — monthly trends, growth milestones, deep pattern analysis
-- **Profile suggestions** — AI suggests user profile updates based on journal data
+### Insight System
 
-### 📅 Calendar & Kanban
+- Weekly insight — task completion rate, emotion trends, success patterns, challenge analysis
+- Monthly insight — monthly trends, growth milestones, deep pattern analysis
+- Profile suggestions — AI suggests user profile updates based on journal data
 
-- **Review calendar** — emotion heatmap + hover tooltips + click to open daily note
-- **Kanban board** — month/week/day three-level pyramid view
-- **Task carry-forward** — unfinished tasks appear automatically, one-click inherit
+### Calendar & Kanban
 
-### 📈 Dashboard
+- Review calendar — emotion heatmap + hover tooltips + click to open daily note
+- Kanban board — month/week/day three-level pyramid view
+- Task carry-forward — unfinished tasks appear automatically, one-click inherit
 
-- **🎯 Today's focus** — today's task list + energy state + carry-forward count
-- **📋 Weekly progress** — task completion progress bar
-- **💭 Emotion trend** — 7-day emotion bar chart
-- **💡 Insights** — random principle + active pattern display
+### Dashboard
 
-### 💬 Free Chat
+- Today's focus — today's task list + energy state + carry-forward count
+- Weekly progress — task completion progress bar
+- Emotion trend — 7-day emotion bar chart
+- Insights — random principle + active pattern display
+
+### Free Chat
 
 - Chat with AI anytime about thoughts and ideas
 - Smart intent detection for plan updates
@@ -71,28 +75,61 @@ Like having a coaching conversation — discover patterns you wouldn't see on yo
 
 ---
 
-## 🔌 AI Providers
+## Free vs Pro
+
+TideLog can be installed and used for free. Full access requires a TideLog Pro license.
+
+| Feature | Free | Pro |
+|---|---:|---:|
+| Morning plan SOP | Yes | Yes |
+| Free chat with your configured AI provider | Yes | Yes |
+| Basic task capture and daily note writing | Yes | Yes |
+| Evening review questions | First 2 | Full 5+4 flow |
+| Weekly insight report | No | Yes |
+| Monthly insight report | No | Yes |
+| Profile suggestions | No | Yes |
+| Dashboard view | No | Yes |
+| Calendar heatmap | No | Yes |
+| Device activations | Not applicable | 3 devices per license |
+| Offline license grace period | Not applicable | 7 days |
+
+Pricing is currently handled through Afdian:
+
+- Annual license: ¥49/year.
+- Lifetime license: ¥99 one-time payment.
+- Purchase page: <https://afdian.com/item/463307362c2f11f1b39d52540025c377>.
+
+After purchase, Afdian provides a TideLog License key. Enter that key in Obsidian Settings → TideLog → Pro. If you lose the key, use the License portal linked from settings and provide the purchase email plus Afdian order ID.
+
+Refunds and support are handled by the developer through the support channels below. If you cannot activate a valid purchase, contact support with your order ID and the error message shown in TideLog.
+
+---
+
+## AI Providers
 
 | Provider | Status | Notes |
 |----------|--------|-------|
-| OpenRouter | ✅ Recommended | Multi-model access, cost-effective |
-| Anthropic Claude | ✅ | Direct Claude API |
-| Google Gemini | ✅ | Gemini 2.0 Flash |
-| OpenAI | ✅ | GPT-4o |
-| Custom API | ✅ | Any OpenAI-compatible endpoint |
+| OpenRouter | Recommended | Multi-model access, cost-effective |
+| Anthropic Claude | Supported | Direct Claude API |
+| Google Gemini | Supported | Gemini API |
+| OpenAI | Supported | OpenAI API |
+| SiliconFlow | Supported | OpenAI-compatible endpoint |
+| Custom API | Supported | Any OpenAI-compatible endpoint |
+
+AI features require your own API key or account with the provider you choose. TideLog does not include AI credits.
 
 Custom model names + connection test button supported.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Manual Install
 
-1. Download `main.js`, `manifest.json`, `styles.css` from the latest [Release](https://github.com/enhen3/Tidelog/releases)
-2. Create `.obsidian/plugins/tidelog/` in your vault
-3. Copy the files into that directory
-4. Restart Obsidian → Settings → Community Plugins → Enable **TideLog**
+1. Download `main.js`, `manifest.json`, `styles.css` from the latest [Release](https://github.com/enhen3/Tidelog/releases).
+2. Create `.obsidian/plugins/tidelog/` in your vault.
+3. Copy the files into that directory.
+4. Restart Obsidian → Settings → Community Plugins → Enable **TideLog**.
 
 ### Development
 
@@ -100,124 +137,159 @@ Custom model names + connection test button supported.
 git clone https://github.com/enhen3/Tidelog.git
 cd Tidelog
 npm install
-npm run dev    # Development mode (watch)
-npm run build  # Production build
+npm run dev           # Development mode (watch)
+npm run build         # Production build only
+npm run deploy        # Copy built assets to your local vault
+npm run check         # Typecheck, lint, tests, build, release asset checks
 ```
+
+`npm run deploy` requires `OBSIDIAN_VAULT` to point at your test vault path.
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 In Obsidian Settings → TideLog:
 
-1. **AI Provider** — choose provider, configure API key, custom model name
-2. **Connection Test** — one-click API connectivity check
-3. **Day Boundary** — set when a "day" starts (default: 6:00 AM)
-4. **Folder Paths** — customize daily, plan, and archive directories
-5. **Review Questions** — enable/disable each question, customize order
+1. AI provider — choose provider, configure API key, custom model name.
+2. Connection test — one-click API connectivity check.
+3. Day boundary — set when a "day" starts.
+4. Folder paths — customize daily, plan, and archive directories.
+5. Review questions — customize order and content.
+6. Pro license — activate, deactivate, or open the self-service License portal.
 
 ---
 
-## 📂 Vault Structure
+## Vault Structure
 
-The plugin automatically creates and manages:
+TideLog creates folders and files only when a feature needs them, such as starting a plan/review flow or generating an insight.
 
 ```
 your-vault/
-├── 01-Daily/              # Daily notes
+├── 01-Daily/
 │   ├── 2026-03-06.md
 │   └── ...
-├── 02-Plan/               # Plans
+├── 02-Plan/
 │   ├── Weekly/
 │   │   └── 2026-W10.md
 │   └── Monthly/
 │       └── 2026-03.md
-└── 03-Archive/            # Archive
-    ├── user_profile.md    # User profile
-    ├── principles.md      # Principles library
-    ├── patterns.md        # Patterns library
-    └── Insights/          # Insight reports
+└── 03-Archive/
+    ├── user_profile.md
+    ├── principles.md
+    ├── patterns.md
+    ├── quick_capture.md
+    └── Insights/
         ├── 2026-W10-weekly.md
         └── 2026-03-monthly.md
 ```
 
 ---
 
-## 📋 Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `TideLog: Open Chat` | Open the chat sidebar |
-| `TideLog: Morning Plan` | Start morning planning SOP |
-| `TideLog: Evening Review` | Start evening review SOP |
-| `TideLog: Open Dashboard` | Open dashboard view |
-| `TideLog: Open Kanban` | Open kanban board |
-| `TideLog: Open Calendar` | Open calendar view |
+| `TideLog: Open chat` | Open the chat sidebar |
+| `TideLog: Start morning review` | Start morning planning SOP |
+| `TideLog: Start evening review` | Start evening review SOP |
+| `TideLog: Generate weekly insight` | Generate a weekly insight report |
+| `TideLog: Generate monthly insight` | Generate a monthly insight report |
+| `TideLog: Open dashboard` | Open dashboard view |
+| `TideLog: Open kanban board` | Open kanban board |
+| `TideLog: Open calendar heatmap` | Open calendar view |
 
 ---
 
-## 🛠 Tech Stack
+## Network Usage
+
+TideLog makes outbound HTTPS requests only when you configure or trigger features that need them:
+
+1. **AI API calls** — When you use AI-powered features, TideLog sends the relevant prompt and selected journal content to the AI provider configured in settings: OpenRouter, Anthropic, Google Gemini, OpenAI, SiliconFlow, or your custom endpoint. API keys and submitted content are governed by that provider's terms and privacy policy.
+2. **Connection tests** — When you click the connection test button, TideLog contacts the selected AI provider to verify your API key and model configuration.
+3. **License activation and verification** — If you activate TideLog Pro, TideLog contacts `https://tidelog-api.mydreamchronicle.com` to validate the License key and enforce the 3-device limit. The request contains the License key and a generated device identifier; no vault content is sent.
+4. **Purchase and License portal links** — Buttons in settings open Afdian or `https://tidelog-api.mydreamchronicle.com/portal` in your browser. Opening those pages is user-initiated.
+
+TideLog does not include client-side telemetry, analytics SDKs, dynamic ads, or any self-update mechanism.
+
+See [PRIVACY.md](./PRIVACY.md) for the full privacy policy.
+
+---
+
+## Support
+
+- GitHub issues: <https://github.com/enhen3/Tidelog/issues>
+- License activation support: include your Afdian order ID, License key prefix, device error message, and TideLog version.
+- Do not post full API keys, full License keys, or private journal content in public issues.
+
+---
+
+## Tech Stack
 
 - TypeScript + esbuild
-- Obsidian API (zero external dependencies)
-- SSE streaming (AI streaming responses)
-- Deep settings merge (providers deep merge)
-
----
-
-## 🌐 Network Usage
-
-TideLog makes outbound HTTPS requests in two scenarios:
-
-1. **AI API calls** — When you use any AI-powered feature (morning plan, evening review, insight generation), TideLog sends your journal content to the AI provider you configure in Settings (OpenRouter, Anthropic, Gemini, OpenAI, SiliconFlow, or a custom endpoint). Your API key and the data sent are governed by that provider's privacy policy. No AI requests are made until you enter an API key and trigger a feature.
-
-2. **License verification** — If you activate a Pro license, TideLog contacts `https://tidelog-api.mydreamchronicle.com` to validate the license key and enforce the device limit. This request contains only a device identifier and license key — no vault content is transmitted. Verification is skipped when offline (a 7-day grace period applies).
-
-No data is collected or transmitted by TideLog in any other circumstance.
+- Obsidian API
+- Obsidian `requestUrl` for mobile-compatible network calls
+- Cloudflare Worker + D1 for License verification
 
 ---
 
 ## License
 
-MIT — see [LICENSE](./LICENSE)
+TideLog is source-available, not open source. See [LICENSE](./LICENSE).
 
 ---
 
 <details>
-<summary>🇨🇳 中文说明</summary>
+<summary>中文说明</summary>
 
-# 🌊 TideLog
-
-> AI 引导的每日潮流 — 计划、记录、反思
+# TideLog
 
 TideLog 是一个 Obsidian 插件，通过 AI 引导的 **计划 → 日记 → 复盘 → 洞察** 正循环，帮助你建立元认知能力，更深刻地了解自己的思维和行动模式。
 
-像和心理咨询师聊天一样，发现平时看不到的自己。
-
 ### 主要功能
 
-- **🌅 晨间计划 SOP** — 精力评估 + 多任务输入 + 子任务 + 任务继承
-- **🌙 晚间复盘 SOP** — 5+4 问题流（目标对标、成功日记、情绪记录、焦虑觉察、明日计划 + 深度分析、反思、原则提炼、自由随笔）
-- **📊 洞察系统** — 周报、月报、画像建议
-- **📅 日历与看板** — 情绪热力图 + 金字塔视图 + 任务继承
-- **📈 仪表盘** — 今日聚焦 + 周进度 + 情绪趋势
-- **💬 自由对话** — 随时与 AI 聊天，智能意图检测
+- 晨间计划 SOP：精力评估、多任务输入、子任务、任务继承。
+- 晚间复盘 SOP：免费版可完成前 2 个问题，Pro 解锁完整 5+4 问题流。
+- 洞察系统：周报、月报、用户画像建议。
+- 日历与看板：情绪热力图、金字塔视图、任务继承。
+- 仪表盘：今日聚焦、周进度、情绪趋势。
+- 自由对话：随时与 AI 聊天，智能意图检测。
 
-### 安装
+### 免费版与 Pro
 
-1. 下载最新 Release 中的 `main.js`、`manifest.json`、`styles.css`
-2. 在你的 Vault 中创建 `.obsidian/plugins/tidelog/`
-3. 将文件复制到该目录
-4. 重启 Obsidian → 设置 → 社区插件 → 启用 **TideLog**
+TideLog 可以免费安装使用。完整功能需要 TideLog Pro License。
+
+| 功能 | 免费版 | Pro |
+|---|---:|---:|
+| 晨间计划 SOP | 支持 | 支持 |
+| 使用自带 API Key 自由对话 | 支持 | 支持 |
+| 基础任务记录与日记写入 | 支持 | 支持 |
+| 晚间复盘问题 | 前 2 个 | 完整 5+4 流程 |
+| 周报洞察 | 不支持 | 支持 |
+| 月报洞察 | 不支持 | 支持 |
+| 用户画像建议 | 不支持 | 支持 |
+| 仪表盘 | 不支持 | 支持 |
+| 日历热力图 | 不支持 | 支持 |
+| 设备数 | 不适用 | 每个 License 3 台设备 |
+| 离线宽限期 | 不适用 | 7 天 |
+
+当前通过爱发电购买：
+
+- 年度版：¥49/年。
+- 终身版：¥99 一次性买断。
+- 购买地址：<https://afdian.com/item/463307362c2f11f1b39d52540025c377>。
+
+购买后，爱发电会提供 TideLog License。请在 Obsidian 设置 → TideLog → Pro 中输入激活。如果找不到 License，可以用设置页中的 License portal，凭购买邮箱和爱发电订单号查询。
 
 ### 网络通信说明
 
-TideLog 在以下两种情况下会发起 HTTPS 请求：
+TideLog 只在以下场景发起 HTTPS 请求：
 
-1. **AI 功能调用** — 使用晨间计划、晚间复盘、洞察生成等功能时，TideLog 会将日记内容发送至你在设置中配置的 AI 供应商（OpenRouter、Anthropic、Gemini、OpenAI、硅基流动或自定义端点）。未填写 API Key 或未触发功能时不会发起任何请求。
+1. AI 功能调用：使用晨间计划、晚间复盘、洞察生成等功能时，会将相关提示词和必要日记内容发送到你在设置中配置的 AI 服务商。
+2. 连接测试：点击测试按钮时，会向所选 AI 服务商验证 API Key 和模型配置。
+3. Pro 授权验证：激活 Pro 后，会向 `https://tidelog-api.mydreamchronicle.com` 发送 License 和设备标识符，用于验证授权和管理 3 台设备限制，不发送 Vault 内容。
+4. 购买和 License portal：设置页按钮会在浏览器中打开爱发电或 License portal，此操作由用户主动触发。
 
-2. **Pro 授权验证** — 激活 Pro 授权后，TideLog 会向 `https://tidelog-api.mydreamchronicle.com` 发送请求以验证许可证并管理设备数量。请求仅包含设备标识符和许可证密钥，不涉及任何 Vault 内容。离线时有 7 天宽限期，不影响正常使用。
-
-除上述两种情况外，TideLog 不收集或传输任何数据。
+TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。完整隐私说明见 [PRIVACY.md](./PRIVACY.md)。
 
 </details>

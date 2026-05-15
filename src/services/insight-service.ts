@@ -7,6 +7,7 @@ import { moment, TFile } from 'obsidian';
 import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import { formatAPIError } from '../utils/error-formatter';
+import { replaceFile } from '../utils/vault-write';
 import { t, getLanguage } from '../i18n';
 import {
     getBaseContextPrompt,
@@ -264,7 +265,7 @@ ${t('insight.generateMonthlyReport')}`;
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {
-                await this.plugin.app.vault.modify(existingFile, header + analysisOnly);
+                await replaceFile(this.plugin.app, existingFile, header + analysisOnly);
             } else {
                 await this.plugin.app.vault.create(filePath, header + analysisOnly);
             }
@@ -287,7 +288,7 @@ ${t('insight.generateMonthlyReport')}`;
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(profilePath);
 
             if (existingFile instanceof TFile) {
-                await this.plugin.app.vault.modify(existingFile, newProfileContent);
+                await replaceFile(this.plugin.app, existingFile, newProfileContent);
             } else {
                 await this.plugin.app.vault.create(profilePath, newProfileContent);
             }
@@ -321,7 +322,7 @@ ${t('insight.generateMonthlyReport')}`;
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {
                 // Overwrite existing report
-                await this.plugin.app.vault.modify(existingFile, header + content);
+                await replaceFile(this.plugin.app, existingFile, header + content);
             } else {
                 await this.plugin.app.vault.create(filePath, header + content);
             }

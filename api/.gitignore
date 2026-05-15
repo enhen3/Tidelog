@@ -1,1 +1,3 @@
 keys*.txt
+.wrangler/
+bun.lock

@@ -55,7 +55,12 @@ function initLocalDb() {
 		'--local', '--file=migration-v2.sql',
 	], opts);
 
-	if (schema.status !== 0 && migration.status !== 0) {
+	const migrationV3 = spawnSync('npx', [
+		'wrangler', 'd1', 'execute', 'tidelog-license-db',
+		'--local', '--file=migration-v3.sql',
+	], opts);
+
+	if (schema.status !== 0 && migration.status !== 0 && migrationV3.status !== 0) {
 		// Schema might already exist — that's OK.
 		// Just warn and continue.
 		console.log(`  ${YELLOW}⚠ DB init returned non-zero — schema may already exist, continuing.${RESET}`);
@@ -123,6 +128,9 @@ async function main() {
 	}
 
 	const ADMIN_HEADERS = { Authorization: 'Bearer test-token-portal-123' };
+	const testRunId = Date.now().toString(36);
+	const testEmail = `portal-test-${testRunId}@example.com`;
+	const testOrderId = `ORDER-TEST-${testRunId}`;
 
 	try {
 		// ── Seed: generate a license with email + orderId ─────────────────────
@@ -130,8 +138,8 @@ async function main() {
 		const seedRes = await post(worker, '/admin/generate', {
 			count: 1,
 			licenseType: 'lifetime',
-			email: 'portal-test@example.com',
-			orderId: 'ORDER-TEST-9999',
+			email: testEmail,
+			orderId: testOrderId,
 		}, ADMIN_HEADERS);
 
 		assert('Admin generate succeeded', seedRes.success === true, JSON.stringify(seedRes));
@@ -147,8 +155,8 @@ async function main() {
 		// ── Test 1: correct email + orderId returns license ───────────────────
 		console.log(`\n${YELLOW}▶ Test: lookup with correct credentials${RESET}`);
 		const lookupOk = await post(worker, '/portal/lookup', {
-			email: 'portal-test@example.com',
-			orderId: 'ORDER-TEST-9999',
+			email: testEmail,
+			orderId: testOrderId,
 		});
 		assert('Returns success: true', lookupOk.success === true, JSON.stringify(lookupOk));
 		assert('Returns at least 1 license', Array.isArray(lookupOk.licenses) && lookupOk.licenses.length >= 1);
@@ -160,7 +168,7 @@ async function main() {
 		console.log(`\n${YELLOW}▶ Test: lookup with wrong email${RESET}`);
 		const lookupBadEmail = await post(worker, '/portal/lookup', {
 			email: 'wrong@example.com',
-			orderId: 'ORDER-TEST-9999',
+			orderId: testOrderId,
 		});
 		assert('Wrong email → success: false', lookupBadEmail.success === false);
 		assert('No licenses array on failure', !lookupBadEmail.licenses || lookupBadEmail.licenses.length === 0);
@@ -168,7 +176,7 @@ async function main() {
 		// ── Test 3: wrong orderId returns empty ───────────────────────────────
 		console.log(`\n${YELLOW}▶ Test: lookup with wrong orderId${RESET}`);
 		const lookupBadOrder = await post(worker, '/portal/lookup', {
-			email: 'portal-test@example.com',
+			email: testEmail,
 			orderId: 'ORDER-WRONG-0000',
 		});
 		assert('Wrong orderId → success: false', lookupBadOrder.success === false);
@@ -176,16 +184,16 @@ async function main() {
 		// ── Test 4: email normalisation (mixed-case) ──────────────────────────
 		console.log(`\n${YELLOW}▶ Test: email case normalisation${RESET}`);
 		const lookupCase = await post(worker, '/portal/lookup', {
-			email: 'Portal-Test@EXAMPLE.COM',
-			orderId: 'ORDER-TEST-9999',
+			email: testEmail.toUpperCase(),
+			orderId: testOrderId,
 		});
 		assert('Mixed-case email still finds license', lookupCase.success === true && lookupCase.licenses?.length >= 1);
 
 		// ── Test 5: unbind a device ───────────────────────────────────────────
 		console.log(`\n${YELLOW}▶ Test: unbind a device${RESET}`);
 		const unbindOk = await post(worker, '/portal/unbind', {
-			email: 'portal-test@example.com',
-			orderId: 'ORDER-TEST-9999',
+			email: testEmail,
+			orderId: testOrderId,
 			deviceId: 'dev-alpha-001',
 		});
 		assert('Unbind returns success: true', unbindOk.success === true, JSON.stringify(unbindOk));
@@ -193,8 +201,8 @@ async function main() {
 
 		// Verify device list shrank
 		const lookupAfterUnbind = await post(worker, '/portal/lookup', {
-			email: 'portal-test@example.com',
-			orderId: 'ORDER-TEST-9999',
+			email: testEmail,
+			orderId: testOrderId,
 		});
 		const devs = lookupAfterUnbind.licenses?.[0]?.devices ?? [];
 		assert('Device list now has 1 entry', devs.length === 1, `got ${devs.length}`);
@@ -203,8 +211,8 @@ async function main() {
 		// ── Test 6: unbind device not on license ──────────────────────────────
 		console.log(`\n${YELLOW}▶ Test: unbind device not belonging to this license${RESET}`);
 		const unbindWrong = await post(worker, '/portal/unbind', {
-			email: 'portal-test@example.com',
-			orderId: 'ORDER-TEST-9999',
+			email: testEmail,
+			orderId: testOrderId,
 			deviceId: 'dev-alpha-001', // already unbound
 		});
 		assert('Unbind unknown device → success: false', unbindWrong.success === false);
@@ -212,7 +220,7 @@ async function main() {
 		// ── Test 7: unbind with wrong credentials ─────────────────────────────
 		console.log(`\n${YELLOW}▶ Test: unbind with wrong orderId${RESET}`);
 		const unbindBadAuth = await post(worker, '/portal/unbind', {
-			email: 'portal-test@example.com',
+			email: testEmail,
 			orderId: 'ORDER-WRONG',
 			deviceId: 'dev-beta-002',
 		});

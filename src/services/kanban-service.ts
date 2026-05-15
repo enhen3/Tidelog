@@ -18,6 +18,7 @@ import { TideLogSettings } from '../types';
 import { TaskRegistryService, TaskItem } from './task-registry';
 import { VaultManager } from './vault-manager';
 import { getLanguage } from '../i18n';
+import { replaceFile, updateFile } from '../utils/vault-write';
 
 const DAY_COLUMNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 function getDayLabels(): Record<string, string> {
@@ -74,7 +75,11 @@ export class KanbanService {
             if (!content.includes('## Backlog') && !content.includes('## ✅ Completed')) {
                 // Append kanban columns to the existing weekly plan
                 const kanbanSections = this.generateKanbanColumns(date);
-                await this.app.vault.modify(file, content.trimEnd() + '\n\n' + kanbanSections);
+                await updateFile(this.app, file, (current) =>
+                    current.includes('## Backlog') || current.includes('## ✅ Completed')
+                        ? current
+                        : current.trimEnd() + '\n\n' + kanbanSections
+                );
             }
         }
 
@@ -165,7 +170,7 @@ export class KanbanService {
             taskLine +
             content.substring(afterHeader + 1);
 
-        await this.app.vault.modify(boardFile, newContent);
+        await replaceFile(this.app, boardFile, newContent);
     }
 
     /**
@@ -196,7 +201,7 @@ export class KanbanService {
             completedLine +
             newContent.substring(afterCompleted + 1);
 
-        await this.app.vault.modify(boardFile, newContent);
+        await replaceFile(this.app, boardFile, newContent);
     }
 
     /**
@@ -276,7 +281,7 @@ export class KanbanService {
             );
         }
 
-        await this.app.vault.modify(boardFile, newContent);
+        await replaceFile(this.app, boardFile, newContent);
     }
 
     /**

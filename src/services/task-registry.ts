@@ -5,6 +5,7 @@
 import { App, TFile } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
+import { updateFile } from '../utils/vault-write';
 
 // =============================================================================
 // Types
@@ -109,7 +110,6 @@ export class TaskRegistryService {
         const file = this.app.vault.getAbstractFileByPath(filePath);
         if (!file || !(file instanceof TFile)) return false;
 
-        const content = await this.app.vault.read(file);
         const fromCheckbox = done ? '[ ]' : '[x]';
         const toCheckbox = done ? '[x]' : '[ ]';
 
@@ -120,16 +120,18 @@ export class TaskRegistryService {
             'm'
         );
 
-        const match = content.match(pattern);
-        if (!match) return false;
+        let changed = false;
+        await updateFile(this.app, file, (content) => {
+            const match = content.match(pattern);
+            if (!match) return content;
 
-        const updated = content.replace(
-            pattern,
-            `$1${toCheckbox}$2`
-        );
-
-        await this.app.vault.modify(file, updated);
-        return true;
+            changed = true;
+            return content.replace(
+                pattern,
+                `$1${toCheckbox}$2`
+            );
+        });
+        return changed;
     }
 
     /**

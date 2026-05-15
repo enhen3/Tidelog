@@ -22,6 +22,7 @@ import { ReviewRenderer } from './review-renderer';
 
 import { ChatController } from './chat-controller';
 import { ProModal } from './pro-modal';
+import { replaceFile } from '../utils/vault-write';
 
 type SidebarTab = 'chat' | 'kanban' | 'review';
 
@@ -375,7 +376,7 @@ export class ChatView extends ItemView {
                     }
                 }
             }
-            await this.app.vault.modify(file, content);
+            await replaceFile(this.app, file, content);
         } finally {
             // Delay clearing the flag so the vault 'modify' event (async) is suppressed
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
@@ -457,7 +458,7 @@ export class ChatView extends ItemView {
                 }
             }
 
-            await this.app.vault.modify(file, lines.join('\n'));
+            await replaceFile(this.app, file, lines.join('\n'));
         } finally {
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -477,7 +478,7 @@ export class ChatView extends ItemView {
             }
             if (parentIdx >= 0) {
                 lines.splice(parentIdx + 1, 0, `  - [ ] ${subTaskText}`);
-                await this.app.vault.modify(file, lines.join('\n'));
+                await replaceFile(this.app, file, lines.join('\n'));
             }
         } finally {
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
@@ -492,7 +493,7 @@ export class ChatView extends ItemView {
             const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const pat = new RegExp(`^(\\s*- \\[[ x]\\] )${escaped}$`, 'm');
             content = content.replace(pat, `$1${newText}`);
-            await this.app.vault.modify(file, content);
+            await replaceFile(this.app, file, content);
         } finally {
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -506,7 +507,7 @@ export class ChatView extends ItemView {
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
-            await this.app.vault.modify(file, content);
+            await replaceFile(this.app, file, content);
         } finally {
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -527,7 +528,7 @@ export class ChatView extends ItemView {
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
-            await this.app.vault.modify(sourceFile, content);
+            await replaceFile(this.app, sourceFile, content);
 
             // Refresh the view
             this.invalidateTabCache('kanban');
@@ -553,7 +554,7 @@ export class ChatView extends ItemView {
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
-            await this.app.vault.modify(sourceFile, content);
+            await replaceFile(this.app, sourceFile, content);
 
             this.invalidateTabCache('kanban');
             this.switchTab('kanban');
@@ -592,7 +593,7 @@ export class ChatView extends ItemView {
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
-            await this.app.vault.modify(sourceFile, content);
+            await replaceFile(this.app, sourceFile, content);
 
             this.invalidateTabCache('kanban');
             this.switchTab('kanban');
@@ -620,7 +621,7 @@ export class ChatView extends ItemView {
                     }
                 }
             }
-            await this.app.vault.modify(file, lines.join('\n'));
+            await replaceFile(this.app, file, lines.join('\n'));
         } finally {
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -657,7 +658,7 @@ export class ChatView extends ItemView {
                 lines[taskEntries[i].idx] = reordered[i];
             }
 
-            await this.app.vault.modify(file, lines.join('\n'));
+            await replaceFile(this.app, file, lines.join('\n'));
         } finally {
             activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
