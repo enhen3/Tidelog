@@ -2,10 +2,11 @@
  * jsdom test for the evening questions settings UI.
  *
  * Reproduces the user-reported bug and verifies the fix:
- *   - clicking the triangle expands a detail panel with editable name input
- *     and editable content textarea
+ *   - clicking the row or triangle expands a detail panel with editable name
+ *     input and editable content textarea
  *   - typing in either field updates plugin.settings.eveningQuestions[i]
  *   - typing in the name field also live-updates the row's name span
+ *   - the enable checkbox controls which questions appear in Review Daily
  *   - this works for both pre-existing default questions AND for newly
  *     added (empty) questions
  *   - the row itself is no longer draggable; only the handle is, so inputs
@@ -196,6 +197,10 @@ function fireInput(el, value) {
 function click(el) {
     el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
 }
+function changeCheckbox(el, checked) {
+    el.checked = checked;
+    el.dispatchEvent(new window.Event('change', { bubbles: true }));
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -216,10 +221,15 @@ console.log('Test 1: row structure (handle is draggable, row is not)');
     check(firstRow.getAttribute('draggable') !== 'true', 'row is NOT draggable (so inputs aren\'t blocked)');
     const handle = firstRow.querySelector('.tl-q-drag-handle');
     check(handle?.getAttribute('draggable') === 'true', 'handle IS draggable');
+    const toggles = tab.containerEl.querySelectorAll('.tl-q-toggle-input');
+    check(toggles.length === questions.length, 'each question has an enable toggle');
+    check(toggles[0]?.checked === true, 'required default question starts enabled');
+    check(toggles[5]?.checked === false, 'optional default question starts disabled');
+    check(rows[5]?.classList.contains('tl-q-disabled') === true, 'disabled optional question is visually dimmed');
 }
 
-// Test 2: expanding a default question shows BOTH name input AND content textarea
-console.log('\nTest 2: expanding a default question reveals name input + content textarea');
+// Test 2: expanding a default question by clicking the row shows BOTH name input AND content textarea
+console.log('\nTest 2: clicking a row reveals name input + content textarea');
 {
     const questions = getDefaultEveningQuestions();
     const plugin = makePlugin(questions);
@@ -227,8 +237,7 @@ console.log('\nTest 2: expanding a default question reveals name input + content
     tab.display();
 
     const firstRow = tab.containerEl.querySelector('.tl-q-row');
-    const triangle = firstRow.querySelector('.tl-q-triangle');
-    click(triangle);
+    click(firstRow);
 
     const detail = firstRow.nextElementSibling;
     check(detail?.classList.contains('tl-q-detail'), 'detail panel inserted after row');
@@ -242,6 +251,23 @@ console.log('\nTest 2: expanding a default question reveals name input + content
     check(textarea?.value === questions[0].initialMessage, 'textarea prefilled with initialMessage');
 }
 
+// Test 2b: clicking the triangle still works and toggle clicks do NOT expand/collapse
+console.log('\nTest 2b: triangle opens, enable toggle does not open details');
+{
+    const questions = getDefaultEveningQuestions();
+    const plugin = makePlugin(questions);
+    const tab = new TideLogSettingTab({}, plugin);
+    tab.display();
+
+    const firstRow = tab.containerEl.querySelector('.tl-q-row');
+    click(firstRow.querySelector('.tl-q-triangle'));
+    check(firstRow.nextElementSibling?.classList.contains('tl-q-detail') === true, 'triangle click opens detail panel');
+
+    const secondRow = tab.containerEl.querySelectorAll('.tl-q-row')[1];
+    click(secondRow.querySelector('.tl-q-toggle-input'));
+    check(secondRow.nextElementSibling?.classList.contains('tl-q-detail') !== true, 'toggle click does not open detail panel');
+}
+
 // Test 3: typing in name input updates settings AND row name span
 console.log('\nTest 3: typing in name input updates data and row label');
 {
@@ -251,7 +277,7 @@ console.log('\nTest 3: typing in name input updates data and row label');
     tab.display();
 
     const firstRow = tab.containerEl.querySelector('.tl-q-row');
-    click(firstRow.querySelector('.tl-q-triangle'));
+    click(firstRow);
 
     const detail = firstRow.nextElementSibling;
     const nameInput = detail.querySelector('input.tl-q-detail-input');
@@ -271,7 +297,7 @@ console.log('\nTest 4: typing in content textarea updates data');
     tab.display();
 
     const firstRow = tab.containerEl.querySelector('.tl-q-row');
-    click(firstRow.querySelector('.tl-q-triangle'));
+    click(firstRow);
 
     const textarea = firstRow.nextElementSibling.querySelector('textarea.tl-q-detail-textarea');
     fireInput(textarea, 'CUSTOM_CONTENT_77');
@@ -288,16 +314,15 @@ console.log('\nTest 5: collapse → re-expand preserves the user\'s edits');
     tab.display();
 
     const firstRow = tab.containerEl.querySelector('.tl-q-row');
-    const triangle = firstRow.querySelector('.tl-q-triangle');
-    click(triangle);
+    click(firstRow);
     let detail = firstRow.nextElementSibling;
     fireInput(detail.querySelector('input.tl-q-detail-input'), 'KEEP_ME');
     fireInput(detail.querySelector('textarea.tl-q-detail-textarea'), 'KEEP_ME_2');
 
-    click(triangle);  // collapse
+    click(firstRow);  // collapse
     check(firstRow.nextElementSibling?.classList.contains('tl-q-detail') !== true, 'after collapse, detail panel is gone');
 
-    click(triangle);  // re-expand
+    click(firstRow);  // re-expand
     detail = firstRow.nextElementSibling;
     const nameInput = detail.querySelector('input.tl-q-detail-input');
     const textarea = detail.querySelector('textarea.tl-q-detail-textarea');
@@ -305,8 +330,30 @@ console.log('\nTest 5: collapse → re-expand preserves the user\'s edits');
     check(textarea.value === 'KEEP_ME_2', 'content persists across collapse/expand');
 }
 
-// Test 6: NEW QUESTION (the bug the user reported) — add, expand, edit name and content
-console.log('\nTest 6: newly added question can have its name AND content edited');
+// Test 6: enable toggle updates settings and row visual state
+console.log('\nTest 6: enable toggle updates settings and visual state');
+{
+    const questions = getDefaultEveningQuestions();
+    const plugin = makePlugin(questions);
+    const tab = new TideLogSettingTab({}, plugin);
+    tab.display();
+
+    const rows = tab.containerEl.querySelectorAll('.tl-q-row');
+    const firstRow = rows[0];
+    const firstToggle = firstRow.querySelector('.tl-q-toggle-input');
+    changeCheckbox(firstToggle, false);
+    await new Promise(r => setTimeout(r, 0));
+    check(plugin.settings.eveningQuestions[0].enabled === false, 'toggle off saves enabled=false');
+    check(firstRow.classList.contains('tl-q-disabled') === true, 'toggle off dims the row');
+
+    changeCheckbox(firstToggle, true);
+    await new Promise(r => setTimeout(r, 0));
+    check(plugin.settings.eveningQuestions[0].enabled === true, 'toggle on saves enabled=true');
+    check(firstRow.classList.contains('tl-q-disabled') === false, 'toggle on restores the row');
+}
+
+// Test 7: NEW QUESTION (the bug the user reported) — add, expand, edit name and content
+console.log('\nTest 7: newly added question can have its name AND content edited');
 {
     const questions = getDefaultEveningQuestions();
     const initialCount = questions.length;
@@ -327,7 +374,7 @@ console.log('\nTest 6: newly added question can have its name AND content edited
     const newIndex = rows.length - 1;
 
     // Expand the new (empty) question
-    click(newRow.querySelector('.tl-q-triangle'));
+    click(newRow);
 
     const detail = newRow.nextElementSibling;
     check(detail?.classList.contains('tl-q-detail'), 'new row expands into a detail panel');
@@ -351,8 +398,8 @@ console.log('\nTest 6: newly added question can have its name AND content edited
     check(newNameSpan?.textContent === 'My new question', 'new row name span mirrors the edit');
 }
 
-// Test 7: deleting a question still works (regression guard)
-console.log('\nTest 7: delete still works');
+// Test 8: deleting a question still works (regression guard)
+console.log('\nTest 8: delete still works');
 {
     const questions = getDefaultEveningQuestions();
     const initialCount = questions.length;

@@ -607,6 +607,7 @@ export const en: Record<string, string> = {
     'settings.reasoning': '{0} (Reasoning)',
     'settings.dragToReorder': 'Drag to reorder',
     'settings.unnamed': 'Unnamed',
+    'settings.enableQuestion': 'Enable this question',
     'settings.delete': 'Delete',
     'settings.sectionNamePlaceholder': 'Enter section name…',
     'settings.addQuestion': '+ add',

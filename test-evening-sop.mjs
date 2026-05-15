@@ -232,9 +232,10 @@ console.log('\nTest 3: moveToNextQuestion sends user\'s second customized questi
 console.log('\nTest 4: free user only sees first 2 — but they\'re the user-reordered ones');
 {
     const userQuestions = [
-        { type: 'tomorrow_plan', sectionName: 'Moved-to-top', initialMessage: 'MUST-SEE',   required: true, enabled: true },
-        { type: 'free_writing',  sectionName: 'Second',       initialMessage: 'ALSO-SEE',   required: true, enabled: true },
-        { type: 'goal_alignment',sectionName: 'Third',        initialMessage: 'SHOULDNT',   required: true, enabled: true },
+        { type: 'tomorrow_plan',  sectionName: 'Moved-to-top', initialMessage: 'MUST-SEE', required: true, enabled: true },
+        { type: 'free_writing',   sectionName: 'Second',       initialMessage: 'ALSO-SEE', required: true, enabled: true },
+        { type: 'goal_alignment', sectionName: 'Off',          initialMessage: 'OFF',      required: true, enabled: false },
+        { type: 'success_diary',  sectionName: 'Third',        initialMessage: 'SHOULDNT', required: true, enabled: true },
     ];
     const plugin = makePlugin(userQuestions, { pro: false });
     const sop = new EveningSOP(plugin);
@@ -244,6 +245,66 @@ console.log('\nTest 4: free user only sees first 2 — but they\'re the user-reo
     await sop.start(ctx, (m) => out.push(m));
     assertContains(out[0], 'MUST-SEE', 'free user gets user\'s first reordered question');
     assertEqual(sop.questionFlow.length, 2, 'free flow limited to 2');
+    assertEqual(sop.getProgressInfo().total, 3, 'free progress total counts enabled questions only');
+}
+
+console.log('\nTest 5: disabled questions are skipped in Review Daily');
+{
+    const userQuestions = [
+        { type: 'goal_alignment', sectionName: 'Disabled first', initialMessage: 'DO-NOT-ASK-1', required: true, enabled: false },
+        { type: 'tomorrow_plan',  sectionName: 'Enabled first',  initialMessage: 'ASK-ME-1',     required: true, enabled: true },
+        { type: 'success_diary',  sectionName: 'Disabled mid',   initialMessage: 'DO-NOT-ASK-2', required: true, enabled: false },
+        { type: 'free_writing',   sectionName: 'Enabled second', initialMessage: 'ASK-ME-2',     required: false, enabled: true },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true });
+    const sop = new EveningSOP(plugin);
+
+    const out = [];
+    const ctx = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx, (m) => out.push(m));
+
+    assertContains(out[0], 'ASK-ME-1', 'first enabled question is asked first');
+    assertEqual(sop.questionFlow.length, 2, 'disabled questions are removed from flow');
+    assertEqual(sop.questionFlow[0].sectionName, 'Enabled first', 'flow[0] skips disabled first question');
+    assertEqual(sop.questionFlow[1].sectionName, 'Enabled second', 'flow[1] skips disabled middle question');
+
+    const progress = sop.getProgressInfo();
+    assertEqual(progress.total, 2, 'progress total counts enabled questions only');
+    assertEqual(progress.currentLabel, 'Enabled first', 'progress label uses enabled flow');
+}
+
+console.log('\nTest 6: all-disabled configuration shows a setup message');
+{
+    const userQuestions = [
+        { type: 'goal_alignment', sectionName: 'Off 1', initialMessage: 'A', required: true, enabled: false },
+        { type: 'success_diary',  sectionName: 'Off 2', initialMessage: 'B', required: true, enabled: false },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true });
+    const sop = new EveningSOP(plugin);
+
+    const out = [];
+    const ctx = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx, (m) => out.push(m));
+
+    assertContains(out[0], '目前没有启用的复盘问题', 'all-disabled review warns user to enable questions');
+    assertEqual(sop.questionFlow.length, 0, 'all-disabled flow is empty');
+}
+
+console.log('\nTest 7: legacy questions without enabled flag remain enabled');
+{
+    const userQuestions = [
+        { type: 'goal_alignment', sectionName: 'Legacy 1', initialMessage: 'LEGACY-1', required: true },
+        { type: 'success_diary',  sectionName: 'Legacy 2', initialMessage: 'LEGACY-2', required: true },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true });
+    const sop = new EveningSOP(plugin);
+
+    const out = [];
+    const ctx = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx, (m) => out.push(m));
+
+    assertContains(out[0], 'LEGACY-1', 'legacy question without enabled=false is still asked');
+    assertEqual(sop.questionFlow.length, 2, 'legacy questions without enabled flag are included');
 }
 
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===\n`);

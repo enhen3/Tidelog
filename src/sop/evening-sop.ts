@@ -57,7 +57,8 @@ export class EveningSOP {
      */
     private buildQuestionFlow(): QuestionConfig[] {
         const userQuestions = this.plugin.settings.eveningQuestions;
-        const all = userQuestions
+        const enabledQuestions = userQuestions
+            .filter((q: EveningQuestionConfig) => q.enabled !== false)
             .map((q: EveningQuestionConfig) => ({
                 type: q.type,
                 prompt: getPromptMap()[q.type] || '',
@@ -65,11 +66,11 @@ export class EveningSOP {
                 initialMessage: q.initialMessage,
             }));
 
-        // Free users: limit to first 2 questions
+        // Free users: limit to the first 2 enabled questions in the user's configured order.
         if (!this.plugin.licenseManager.isPro()) {
-            return all.slice(0, 2);
+            return enabledQuestions.slice(0, 2);
         }
-        return all;
+        return enabledQuestions;
     }
 
     constructor(plugin: TideLogPlugin) {
@@ -82,12 +83,12 @@ export class EveningSOP {
      * so the progress bar matches what the user configured.
      */
     getProgressInfo(): { current: number; total: number; currentLabel: string } {
-        // Total = all questions from user settings (no enabled filter — UI has no toggle)
-        const allQuestions = this.plugin.settings.eveningQuestions;
-        const total = allQuestions.length;
+        const enabledQuestions = this.plugin.settings.eveningQuestions
+            .filter((q: EveningQuestionConfig) => q.enabled !== false);
+        const total = enabledQuestions.length;
 
         // Current step within the actual flow
-        const flow = this.questionFlow.length > 0 ? this.questionFlow : allQuestions;
+        const flow = this.questionFlow.length > 0 ? this.questionFlow : enabledQuestions;
         const current = this.currentQuestionIndex;
         const currentLabel = current < flow.length
             ? (flow[current].sectionName ?? flow[current].initialMessage ?? '')
@@ -504,7 +505,9 @@ ${emotionQ}`
 
         // Pro upsell for free users
         if (!this.plugin.licenseManager.isPro()) {
-            const totalEnabled = this.plugin.settings.eveningQuestions.length;
+            const totalEnabled = this.plugin.settings.eveningQuestions
+                .filter((q: EveningQuestionConfig) => q.enabled !== false)
+                .length;
             if (totalEnabled > 2) {
                 const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
                 summary += getLanguage() === 'en'

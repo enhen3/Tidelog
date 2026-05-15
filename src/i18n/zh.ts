@@ -586,6 +586,7 @@ export const zh: Record<string, string> = {
     'settings.reasoning': '{0} (推理)',
     'settings.dragToReorder': '拖拽调整顺序',
     'settings.unnamed': '未命名',
+    'settings.enableQuestion': '启用这个问题',
     'settings.delete': '删除',
     'settings.sectionNamePlaceholder': '输入章节名…',
     'settings.addQuestion': '+ 添加',

@@ -405,10 +405,10 @@ export class TideLogSettingTab extends PluginSettingTab {
         }
     }
     /**
-     * Render the evening question editor — drag-and-drop, expand to edit.
+     * Render the evening question editor — drag-and-drop, enable toggle, expand to edit.
      *
      * Layout per question:
-     *   [drag handle (draggable)] [▶ triangle] [name span] [spacer] [×]
+     *   [drag handle (draggable)] [▶ triangle] [name span] [spacer] [enabled] [×]
      * Expanding the row inserts a `tl-q-detail` sibling block below, which
      * contains labeled inputs for the question name and content. Editing
      * happens in that panel — the name span in the row is static and only
@@ -431,6 +431,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         questions.forEach((question, index) => {
             const row = listEl.createDiv('tl-q-row');
             row.dataset.index = String(index);
+            if (question.enabled === false) row.addClass('tl-q-disabled');
 
             // --- Drag handle (the only draggable element in the row, so that
             // text inputs in the detail panel aren't inside a draggable parent
@@ -450,6 +451,28 @@ export class TideLogSettingTab extends PluginSettingTab {
             // --- Spacer ---
             row.createSpan({ cls: 'tl-q-spacer' });
 
+            // --- Enabled toggle ---
+            const toggleWrap = row.createSpan({ cls: 'tl-q-toggle' });
+            const toggleInput = toggleWrap.createEl('input', { cls: 'tl-q-toggle-input' });
+            toggleInput.type = 'checkbox';
+            toggleInput.checked = question.enabled !== false;
+            toggleInput.setAttribute('title', t('settings.enableQuestion'));
+            toggleInput.setAttribute('aria-label', t('settings.enableQuestion'));
+            toggleInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            toggleInput.addEventListener('change', () => {
+                void (async () => {
+                    this.plugin.settings.eveningQuestions[index].enabled = toggleInput.checked;
+                    if (toggleInput.checked) {
+                        row.removeClass('tl-q-disabled');
+                    } else {
+                        row.addClass('tl-q-disabled');
+                    }
+                    await this.plugin.saveSettings();
+                })();
+            });
+
             // --- Delete button ---
             const deleteBtn = row.createSpan({ cls: 'tl-q-icon-btn tl-q-icon-delete' });
             deleteBtn.textContent = '✕';
@@ -464,8 +487,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             });
 
             // --- Expand/collapse: open or close the detail panel below ---
-            const toggleExpand = (e: Event) => {
-                e.stopPropagation();
+            const toggleExpand = () => {
                 const existing = row.nextElementSibling;
                 if (existing && existing.hasClass('tl-q-detail')) {
                     existing.remove();
@@ -478,8 +500,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                 }
             };
 
-            triangle.addEventListener('click', toggleExpand);
-            nameEl.addEventListener('click', toggleExpand);
+            row.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement | null;
+                if (target?.closest('.tl-q-drag-handle, .tl-q-toggle-input, .tl-q-icon-btn, button, input, textarea, select')) {
+                    return;
+                }
+                toggleExpand();
+            });
 
             // --- Drag events ---
             // dragstart fires on the handle (the only draggable child); the
