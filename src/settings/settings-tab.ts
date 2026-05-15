@@ -641,8 +641,8 @@ export class TideLogSettingTab extends PluginSettingTab {
         index: number,
         nameEl: HTMLElement,
     ): void {
-        const detailEl = activeDocument.createDiv();
-        detailEl.addClass('tl-q-detail');
+        const detailEl = afterEl.ownerDocument.createElement('div');
+        detailEl.classList.add('tl-q-detail');
         afterEl.after(detailEl);
 
         // --- Name input (labeled) ---

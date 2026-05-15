@@ -90,11 +90,9 @@ HTMLElement.prototype.setCssProps = function (props) {
     for (const [k, v] of Object.entries(props)) this.style.setProperty(k, String(v));
 };
 HTMLElement.prototype.empty = function () { while (this.firstChild) this.removeChild(this.firstChild); };
-// createSpan also needs to be available on document for activeDocument.createSpan() / createEl() calls
-document.createSpan = (o) => { const e = document.createElement('span'); applyOptions(e, o); return e; };
-document.createDiv = (o) => { const e = document.createElement('div'); applyOptions(e, o); return e; };
-const _origCreateEl = document.createEl;
-document.createEl = (tag, o) => { const e = document.createElement(tag); applyOptions(e, o); return e; };
+// Intentionally do NOT polyfill document.createDiv/createEl/createSpan here.
+// Obsidian's reliable helpers are on HTMLElement; the settings UI should not
+// require document-level helper methods to open the review question editor.
 
 // ---------------------------------------------------------------------------
 // Mock the 'obsidian' module
@@ -218,6 +216,7 @@ console.log('Test 1: row structure (handle is draggable, row is not)');
     const tab = new TideLogSettingTab({}, plugin);
     tab.display();
 
+    check(typeof document.createDiv === 'undefined', 'test environment does not polyfill document.createDiv');
     const rows = tab.containerEl.querySelectorAll('.tl-q-row');
     check(rows.length === questions.length, `${questions.length} rows rendered`);
     const firstRow = rows[0];
