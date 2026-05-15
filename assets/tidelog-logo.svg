@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TideLog logo</title>
+  <desc id="desc">A purple rounded app icon with a notebook, pen, and tide mark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B996FF"/>
+      <stop offset="0.48" stop-color="#7C4DFF"/>
+      <stop offset="1" stop-color="#5D8BFF"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="118" y1="83" x2="394" y2="441" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="34" y="34" width="444" height="452" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#321C70" flood-opacity="0.26"/>
+    </filter>
+  </defs>
+  <rect x="54" y="46" width="404" height="420" rx="104" fill="url(#bg)" filter="url(#shadow)"/>
+  <path d="M96 86C173 52 283 50 399 92C418 99 430 116 430 136V352C430 401 391 440 342 440H172C122 440 82 400 82 350V158C82 126 87 101 96 86Z" fill="url(#shine)"/>
+  <path d="M176 142H314C344 142 368 166 368 196V330C368 360 344 384 314 384H176C152 384 132 364 132 340V186C132 162 152 142 176 142Z" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M180 188H276M180 238H304M180 288H272" stroke="white" stroke-width="18" stroke-linecap="round"/>
+  <path d="M127 198H92M127 250H92M127 302H92" stroke="white" stroke-width="20" stroke-linecap="round"/>
+  <path d="M330 110L391 171" stroke="white" stroke-width="26" stroke-linecap="round"/>
+  <path d="M309 194L389 114C407 96 437 96 455 114C472 132 472 161 454 179L374 259L312 273L326 211L309 194Z" fill="#FFF7D6" stroke="white" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M320 358C349 336 381 336 410 358" stroke="#E9DDFF" stroke-width="18" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,66 @@
+<svg width="1600" height="960" viewBox="0 0 1600 960" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TideLog feature preview</title>
+  <desc id="desc">A clean feature preview with review prompts, calendar heatmap, dashboard, and insight report cards.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4F0FF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7C4DFF"/>
+      <stop offset="1" stop-color="#5D8BFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#4B2CA0" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .h { font: 800 54px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #171827; }
+      .k { font: 760 31px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #171827; }
+      .p { font: 500 23px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #655D7B; }
+      .s { font: 650 20px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #8A82A3; }
+    </style>
+  </defs>
+  <rect width="1600" height="960" rx="48" fill="url(#bg)"/>
+  <text x="96" y="112" class="h">核心功能一眼看懂</text>
+  <text x="96" y="160" class="p">从每天的一次计划和一次复盘开始，逐步积累出你的个人模式库。</text>
+  <g transform="translate(96 230)" filter="url(#shadow)">
+    <rect width="650" height="280" rx="36" fill="white" stroke="#EAE5F6"/>
+    <rect x="34" y="34" width="92" height="42" rx="21" fill="#EFE8FF"/>
+    <text x="52" y="63" class="s" fill="#7C4DFF">Review</text>
+    <text x="34" y="122" class="k">可自定义的晚间复盘问题</text>
+    <text x="34" y="168" class="p">按你的方法论调整问题、顺序和启用状态。</text>
+    <rect x="34" y="205" width="582" height="34" rx="17" fill="#F4F1FB"/>
+    <rect x="34" y="205" width="410" height="34" rx="17" fill="url(#accent)"/>
+  </g>
+  <g transform="translate(854 230)" filter="url(#shadow)">
+    <rect width="650" height="280" rx="36" fill="white" stroke="#EAE5F6"/>
+    <rect x="34" y="34" width="104" height="42" rx="21" fill="#E9FFF6"/>
+    <text x="52" y="63" class="s" fill="#059669">Insight</text>
+    <text x="34" y="122" class="k">周报/月报自动看见模式</text>
+    <text x="34" y="168" class="p">把情绪趋势、成功模式和挑战整理成报告。</text>
+    <circle cx="74" cy="224" r="18" fill="#34D399"/>
+    <circle cx="128" cy="224" r="18" fill="#60A5FA"/>
+    <circle cx="182" cy="224" r="18" fill="#A78BFA"/>
+    <circle cx="236" cy="224" r="18" fill="#FBBF24"/>
+  </g>
+  <g transform="translate(96 574)" filter="url(#shadow)">
+    <rect width="650" height="280" rx="36" fill="white" stroke="#EAE5F6"/>
+    <rect x="34" y="34" width="116" height="42" rx="21" fill="#F1F5FF"/>
+    <text x="52" y="63" class="s" fill="#3B82F6">Calendar</text>
+    <text x="34" y="122" class="k">情绪热力图和任务继承</text>
+    <text x="34" y="168" class="p">快速定位高低波动日，未完成事项自动带入。</text>
+    <g transform="translate(34 204)">
+      <rect width="36" height="36" rx="10" fill="#DDD6FE"/><rect x="48" width="36" height="36" rx="10" fill="#C4B5FD"/><rect x="96" width="36" height="36" rx="10" fill="#8B5CF6"/><rect x="144" width="36" height="36" rx="10" fill="#A7F3D0"/><rect x="192" width="36" height="36" rx="10" fill="#BFDBFE"/><rect x="240" width="36" height="36" rx="10" fill="#FDE68A"/>
+    </g>
+  </g>
+  <g transform="translate(854 574)" filter="url(#shadow)">
+    <rect width="650" height="280" rx="36" fill="white" stroke="#EAE5F6"/>
+    <rect x="34" y="34" width="124" height="42" rx="21" fill="#FFF7ED"/>
+    <text x="52" y="63" class="s" fill="#EA580C">Dashboard</text>
+    <text x="34" y="122" class="k">今日聚焦和长期画像</text>
+    <text x="34" y="168" class="p">任务、精力、原则和活跃模式聚合到一个视图。</text>
+    <rect x="34" y="210" width="250" height="24" rx="12" fill="#7C4DFF"/>
+    <rect x="304" y="210" width="170" height="24" rx="12" fill="#34D399"/>
+    <rect x="494" y="210" width="88" height="24" rx="12" fill="#FBBF24"/>
+  </g>
+</svg>
