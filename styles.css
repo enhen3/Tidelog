@@ -488,10 +488,6 @@
 .tl-thinking-dots::before,
 .tl-thinking-dots::after {
 	content: '';
-}
-
-.tl-thinking-dots::before,
-.tl-thinking-dots::after {
 	display: block;
 	width: 6px;
 	height: 6px;
