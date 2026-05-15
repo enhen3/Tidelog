@@ -1,6 +1,6 @@
 {
   "name": "tidelog",
-  "version": "1.1.22",
+  "version": "1.1.23",
   "description": "TideLog — AI-guided daily planning and reflection for Obsidian",
   "main": "main.js",
   "type": "module",
@@ -8,12 +8,13 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "typecheck": "tsc --noEmit --skipLibCheck",
+    "typecheck:api": "tsc --noEmit -p api/tsconfig.json",
     "lint:obsidian": "eslint -c eslint.config.review.mjs src/**/*.ts",
     "test": "node test-bug-repro.mjs && node test-evening-sop.mjs && node test-save-load.mjs && node test-settings-ui.mjs",
     "build": "npm run typecheck && node esbuild.config.mjs production",
     "deploy": "cp main.js styles.css manifest.json \"${OBSIDIAN_VAULT:?Set OBSIDIAN_VAULT to your vault path}/.obsidian/plugins/tidelog/\" && echo '✅ Deployed to vault'",
     "release:check": "node scripts/check-release-assets.mjs",
-    "check": "npm run typecheck && npm run lint:obsidian && npm test && npm run build && npm run release:check",
+    "check": "npm run typecheck && npm run typecheck:api && npm run lint:obsidian && npm test && npm run build && npm run release:check",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [
@@ -25,6 +26,7 @@
   ],
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260515.1",
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.57.0",

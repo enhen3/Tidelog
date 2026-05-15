@@ -310,7 +310,10 @@
 /* --- SOP Progress Bar (Evening Review) --- */
 
 .tl-sop-progress {
-	padding: 0 var(--tl-sp-16) var(--tl-sp-8);
+	padding: 4px 12px 8px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	animation: tl-slideUp var(--tl-duration-normal) var(--tl-ease);
 }
 
@@ -320,16 +323,20 @@
 
 .tl-sop-progress-label {
 	font-size: var(--tl-fs-caption);
-	font-weight: var(--tl-fw-semibold);
-	color: var(--tl-review);
+	font-weight: var(--tl-fw-medium);
+	color: var(--tl-text-secondary, hsl(220, 10%, 55%));
 	margin-bottom: var(--tl-sp-6);
 	letter-spacing: 0.2px;
+	white-space: nowrap;
+	min-width: 80px;
 }
 
 .tl-sop-progress-track {
+	flex: 1;
 	display: flex;
 	gap: 3px;
 	height: 4px;
+	background: var(--tl-border, hsl(220, 14%, 20%));
 	border-radius: 2px;
 	overflow: hidden;
 }
@@ -471,11 +478,15 @@
 	align-items: center;
 	gap: 4px;
 	padding: 4px 0;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--tl-text-tertiary);
+	animation: tl-dot-bounce 1.2s ease-in-out 0.2s infinite;
 }
 
 .tl-thinking-dots::before,
-.tl-thinking-dots::after,
-.tl-thinking-dots {
+.tl-thinking-dots::after {
 	content: '';
 }
 
@@ -495,15 +506,6 @@
 
 .tl-thinking-dots::after {
 	animation-delay: 0.4s;
-}
-
-/* Middle dot via a child pseudo wouldn't work, so use box-shadow trick */
-.tl-thinking-dots {
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--tl-text-tertiary);
-	animation: tl-dot-bounce 1.2s ease-in-out 0.2s infinite;
 }
 
 @keyframes tl-dot-bounce {
@@ -1082,7 +1084,6 @@
 	font-family: var(--tl-font-display);
 	font-weight: var(--tl-fw-bold);
 	font-size: var(--tl-fs-body);
-	color: var(--tl-text-primary);
 	width: 28px;
 	height: 28px;
 	display: inline-flex;
@@ -1772,10 +1773,14 @@
 
 .tl-cal-cell-clickable {
 	cursor: pointer;
+	position: relative;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tl-cal-cell-clickable:hover {
-	transform: scale(1.1);
+	transform: scale(1.08);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	z-index: 2;
 }
 
 .tl-cal-cell-today {
@@ -2111,38 +2116,6 @@
 	color: var(--tl-text-primary);
 }
 
-/* ====================== SOP Progress Bar ====================== */
-.tl-sop-progress {
-	padding: 4px 12px 8px;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.tl-sop-progress-label {
-	font-size: var(--tl-fs-caption);
-	font-weight: var(--tl-fw-medium);
-	color: var(--tl-text-secondary, hsl(220, 10%, 55%));
-	white-space: nowrap;
-	min-width: 80px;
-}
-
-.tl-sop-progress-track {
-	flex: 1;
-	height: 4px;
-	background: var(--tl-border, hsl(220, 14%, 20%));
-	border-radius: 2px;
-	overflow: hidden;
-}
-
-.tl-sop-progress-bar {
-	height: 100%;
-	width: 0%;
-	background: linear-gradient(90deg, var(--tl-accent, hsl(220, 55%, 55%)), hsl(260, 45%, 50%));
-	border-radius: 2px;
-	transition: width 0.5s ease;
-}
-
 /* ===================== Typing Indicator ===================== */
 .tl-typing-indicator {
 	display: flex;
@@ -2452,19 +2425,6 @@
    Phase 6: Calendar Tooltip, Carry-Forward, Today Focus
    ============================================================================= */
 
-/* Calendar clickable cells */
-.tl-cal-cell-clickable {
-	cursor: pointer;
-	position: relative;
-	transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.tl-cal-cell-clickable:hover {
-	transform: scale(1.08);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	z-index: 2;
-}
-
 /* Tooltip via aria-label */
 .tl-cal-cell-clickable[aria-label] {
 	position: relative;
@@ -2702,7 +2662,7 @@
 	margin-left: auto;
 	font-size: var(--tl-fs-caption);
 	font-weight: var(--tl-fw-semibold);
-	color: #fff;
+	color: #ffffff;
 	padding: 1px 5px;
 	border-radius: 8px;
 }
@@ -3090,8 +3050,8 @@
 }
 
 .tl-periodic-cal-cell-selected {
-	background: var(--tl-accent) !important;
-	color: var(--text-on-accent) !important;
+	background: var(--tl-accent);
+	color: var(--text-on-accent);
 	font-weight: var(--tl-fw-bold);
 }
 
@@ -3121,7 +3081,7 @@
 	line-height: 14px;
 	font-size: 9px;
 	font-weight: 700;
-	color: #fff;
+	color: #ffffff;
 	background: #e0a243;
 	border-radius: 7px;
 	text-align: center;
@@ -3169,8 +3129,8 @@
 }
 
 .tl-periodic-month-cell-selected {
-	background: var(--tl-accent) !important;
-	color: var(--text-on-accent) !important;
+	background: var(--tl-accent);
+	color: var(--text-on-accent);
 	font-weight: var(--tl-fw-bold);
 }
 
@@ -3225,7 +3185,7 @@
 .tl-periodic-emotion-badge {
 	font-size: var(--tl-fs-caption);
 	font-weight: var(--tl-fw-semibold);
-	color: #fff;
+	color: #ffffff;
 	padding: 1px 6px;
 	border-radius: 8px;
 }
@@ -3384,22 +3344,6 @@
 	border-top: 0.5px solid var(--tl-border);
 }
 
-/* Drag-to-nest visual indicator */
-.tl-task-row-nest-hint {
-	border-left: 3px solid var(--tl-accent) !important;
-	padding-left: 20px !important;
-	background: var(--tl-accent-light) !important;
-	transition: all 0.2s ease;
-}
-
-/* Drag-left-to-promote visual indicator */
-.tl-task-row-promote-hint {
-	border-right: 3px solid #34c759 !important;
-	padding-left: 12px !important;
-	background: rgba(52, 199, 89, 0.08) !important;
-	transition: all 0.2s ease;
-}
-
 /* ── Action controls (hover-reveal) ── */
 .tl-task-drag-handle {
 	cursor: grab;
@@ -3418,8 +3362,8 @@
 	opacity: 0.5;
 }
 
-.tl-task-drag-handle:hover {
-	opacity: 1 !important;
+.tl-periodic-task-row:hover .tl-task-drag-handle:hover {
+	opacity: 1;
 	color: var(--tl-accent);
 }
 
@@ -3444,8 +3388,8 @@
 	opacity: 0.4;
 }
 
-.tl-task-delete-btn:hover {
-	opacity: 1 !important;
+.tl-periodic-task-row:hover .tl-task-delete-btn:hover {
+	opacity: 1;
 	color: #ff3b30;
 }
 
@@ -3477,12 +3421,14 @@
 	background: rgba(90, 190, 204, 0.12);
 	border-left: 3px solid var(--tl-accent);
 	padding-left: calc(var(--tl-sp-8, 8px) + 16px);
+	transition: all 0.2s ease;
 }
 
 .tl-task-row-promote-hint {
 	background: rgba(232, 213, 160, 0.12);
 	border-left: 3px solid #D4B978;
 	padding-left: var(--tl-sp-8, 8px);
+	transition: all 0.2s ease;
 }
 
 .tl-task-indent-indicator {
@@ -3510,8 +3456,8 @@
 	opacity: 0.4;
 }
 
-.tl-task-sub-btn:hover {
-	opacity: 1 !important;
+.tl-periodic-task-row:hover .tl-task-sub-btn:hover {
+	opacity: 1;
 	background: var(--tl-accent-light);
 }
 
@@ -3539,8 +3485,8 @@
 	opacity: 0.5;
 }
 
-.tl-task-defer-btn:hover {
-	opacity: 1 !important;
+.tl-periodic-task-row:hover .tl-task-defer-btn:hover {
+	opacity: 1;
 	background: var(--tl-accent-light);
 }
 
@@ -3637,7 +3583,7 @@
 .tl-subtask-input {
 	flex: 1;
 	font-size: 12.5px;
-	border-color: var(--tl-accent) !important;
+	border-color: var(--tl-accent);
 }
 
 .tl-periodic-task-input-row {
@@ -3851,8 +3797,8 @@
 	opacity: 0.4;
 }
 
-.tl-capture-del-btn:hover {
-	opacity: 1 !important;
+.tl-capture-item:hover .tl-capture-del-btn:hover {
+	opacity: 1;
 	color: #ff3b30;
 }
 
@@ -3879,8 +3825,8 @@
 	opacity: 0.5;
 }
 
-.tl-capture-schedule-btn:hover {
-	opacity: 1 !important;
+.tl-capture-item:hover .tl-capture-schedule-btn:hover {
+	opacity: 1;
 	color: var(--tl-accent);
 	background: var(--tl-accent-light);
 }
@@ -4096,7 +4042,7 @@ button.tl-periodic-open-btn {
 
 /* Hidden: replaces inline display:none toggling */
 .tl-hidden {
-	display: none !important;
+	display: none;
 }
 
 /* Dynamic width/height via CSS custom property: replaces inline style.width / style.height */
@@ -4297,7 +4243,7 @@ button.tl-periodic-open-btn {
 
 .tl-pro-cta-cn {
 	background: linear-gradient(135deg, #3B8EA5 0%, #5AABB8 100%);
-	color: white !important;
+	color: white;
 }
 
 .tl-pro-cta-cn:hover {
@@ -4308,7 +4254,7 @@ button.tl-periodic-open-btn {
 
 .tl-pro-cta-intl {
 	background: var(--background-modifier-hover);
-	color: var(--text-normal) !important;
+	color: var(--text-normal);
 	border: 1px solid var(--background-modifier-border);
 }
 

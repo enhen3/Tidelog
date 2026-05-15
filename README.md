@@ -234,6 +234,17 @@ TideLog does not include client-side telemetry, analytics SDKs, dynamic ads, or 
 
 See [PRIVACY.md](./PRIVACY.md) for the full privacy policy.
 
+## Permissions and Data Access
+
+TideLog runs inside your Obsidian vault and needs vault access to provide its core workflow:
+
+- **Vault enumeration**: TideLog scans configured daily-note, review, and insight folders to build the calendar heatmap, dashboard, Kanban views, carry-forward task lists, and weekly/monthly summaries.
+- **Vault read**: TideLog reads the notes you select or the notes in configured TideLog folders when rendering dashboards, carrying forward unfinished tasks, or generating AI prompts you explicitly trigger.
+- **Vault write**: TideLog creates and updates Markdown notes for morning plans, evening reviews, tasks, insight reports, templates, and cache files in the folders you configure.
+- **Network access**: TideLog only sends data to your configured AI provider when you use AI features, and to TideLog's license service when you activate or verify Pro. License requests do not include vault note content.
+
+TideLog does not access files outside your Obsidian vault.
+
 ---
 
 ## Support
@@ -319,5 +330,16 @@ TideLog 只在以下场景发起 HTTPS 请求：
 4. 购买和 License portal：设置页按钮会在浏览器中打开爱发电或 License portal，此操作由用户主动触发。
 
 TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。完整隐私说明见 [PRIVACY.md](./PRIVACY.md)。
+
+### 权限与数据访问
+
+TideLog 在你的 Obsidian Vault 内运行，需要以下权限来完成核心工作流：
+
+- Vault 枚举：扫描你配置的日记、复盘和洞察文件夹，用于日历热力图、仪表盘、看板、任务继承和周/月总结。
+- Vault 读取：读取你选择的笔记或 TideLog 配置文件夹中的笔记，用于渲染视图、继承未完成任务，或生成你主动触发的 AI 提示词。
+- Vault 写入：在你配置的文件夹中创建或更新晨间计划、晚间复盘、任务、洞察报告、模板和缓存文件。
+- 网络访问：仅在你使用 AI 功能时请求你配置的 AI 服务商；仅在激活或验证 Pro 时请求 TideLog 授权服务。授权请求不包含 Vault 笔记内容。
+
+TideLog 不访问 Obsidian Vault 之外的文件。
 
 </details>
