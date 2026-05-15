@@ -54,6 +54,14 @@ TideLog 不是一个更复杂的日记模板，也不是又一个任务清单。
 
 通过 Dashboard、日历热力图和 Kanban 视图，把任务、情绪、计划和长期模式放到更容易回看的位置。
 
+## 安装与使用 / Install and usage
+
+1. Install TideLog from **Obsidian Community plugins**: search for `TideLog`, then enable it.
+2. 打开 **Obsidian 设置 → TideLog**，配置你要使用的 AI 服务商和 API Key。
+3. 运行 `TideLog: Start morning review`，用晨间计划明确当天优先级。
+4. 运行 `TideLog: Start evening review`，用晚间复盘沉淀当天经验。
+5. 需要长期洞察时，使用 `TideLog: Generate weekly insight`、`TideLog: Generate monthly insight`、`TideLog: Open dashboard`、`TideLog: Open calendar heatmap` 等命令。
+
 ## 适合谁
 
 - 已经在 Obsidian 里写日记、Daily note、周/月复盘，但希望它们更有行动反馈。
