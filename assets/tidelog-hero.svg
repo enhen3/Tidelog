@@ -1,89 +1,95 @@
 <svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">TideLog product hero</title>
-  <desc id="desc">A polished dark hero graphic showing TideLog as a planning, review, and insight system.</desc>
+  <title id="title">TideLog hero</title>
+  <desc id="desc">A refined Apple-inspired product hero for TideLog, using tidal blue and warm gold.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="900" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#111827"/>
-      <stop offset="0.48" stop-color="#17122E"/>
-      <stop offset="1" stop-color="#2A174D"/>
+      <stop stop-color="#F7FBFC"/>
+      <stop offset="0.55" stop-color="#EEF7F8"/>
+      <stop offset="1" stop-color="#F8F3E6"/>
     </linearGradient>
-    <linearGradient id="purple" x1="135" y1="121" x2="323" y2="330" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#B996FF"/>
-      <stop offset="0.55" stop-color="#7C4DFF"/>
-      <stop offset="1" stop-color="#5D8BFF"/>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#5AABB8"/>
+      <stop offset="1" stop-color="#3B8EA5"/>
     </linearGradient>
-    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#26223D"/>
-      <stop offset="1" stop-color="#171827"/>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F1DEAA"/>
+      <stop offset="1" stop-color="#D4B978"/>
     </linearGradient>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.28"/>
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="30" stdDeviation="34" flood-color="#123844" flood-opacity="0.12"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#123844" flood-opacity="0.16"/>
     </filter>
     <style>
-      .title { font: 800 76px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #F8FAFC; }
-      .subtitle { font: 500 34px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #D6D3E8; }
-      .body { font: 500 25px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #D7D2EA; }
-      .small { font: 600 21px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #AFA8CC; }
-      .cardTitle { font: 750 28px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #FFFFFF; }
-      .metric { font: 800 44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #FFFFFF; }
+      .eyebrow { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 5px; fill: #3B8EA5; }
+      .title { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 78px; font-weight: 800; fill: #061113; letter-spacing: -3px; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 34px; font-weight: 540; fill: #344B51; }
+      .cardTitle { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 28px; font-weight: 760; fill: #061113; }
+      .body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 23px; font-weight: 520; fill: #557078; }
+      .small { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 18px; font-weight: 680; fill: #6E858C; }
+      .metric { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; font-size: 48px; font-weight: 820; fill: #061113; letter-spacing: -1px; }
+      .white { fill: #FFFFFF; }
     </style>
   </defs>
-  <rect width="1600" height="900" rx="54" fill="url(#bg)"/>
-  <circle cx="1325" cy="138" r="300" fill="#8B5CF6" opacity="0.18"/>
-  <circle cx="185" cy="804" r="350" fill="#60A5FA" opacity="0.13"/>
-  <g transform="translate(128 122)">
-    <rect width="154" height="154" rx="42" fill="url(#purple)" filter="url(#soft)"/>
-    <path d="M55 43H97C113 43 126 56 126 72V112C126 128 113 141 97 141H55C42 141 32 131 32 118V66C32 53 42 43 55 43Z" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M57 67H86M57 88H99M57 109H84" stroke="white" stroke-width="7" stroke-linecap="round"/>
-    <path d="M31 72H18M31 93H18M31 114H18" stroke="white" stroke-width="8" stroke-linecap="round"/>
-    <path d="M112 35L138 61" stroke="white" stroke-width="9" stroke-linecap="round"/>
+  <rect width="1600" height="900" rx="56" fill="url(#bg)"/>
+  <circle cx="1340" cy="110" r="320" fill="#3B8EA5" opacity="0.10"/>
+  <circle cx="116" cy="790" r="360" fill="#D4B978" opacity="0.14"/>
+  <path d="M1060 134C1192 70 1342 84 1458 166" stroke="#FFFFFF" stroke-width="2" opacity="0.72"/>
+  <g transform="translate(124 126)">
+    <text x="0" y="0" class="eyebrow">TIDELOG</text>
+    <text x="0" y="94" class="title">把复盘变成</text>
+    <text x="0" y="184" class="title">真正会改变行动的系统</text>
+    <text x="0" y="260" class="subtitle">每天两次轻量引导，把计划、记录、复盘和洞察</text>
+    <text x="0" y="306" class="subtitle">沉淀成可以长期回看的个人模式库。</text>
+    <g transform="translate(0 384)">
+      <rect width="166" height="54" rx="27" fill="#061113"/>
+      <text x="38" y="36" class="small white">晨间计划</text>
+      <rect x="184" width="166" height="54" rx="27" fill="#FFFFFF" stroke="#D8E8EC"/>
+      <text x="222" y="36" class="small">晚间复盘</text>
+      <rect x="368" width="166" height="54" rx="27" fill="#FFFFFF" stroke="#D8E8EC"/>
+      <text x="410" y="36" class="small">AI 洞察</text>
+    </g>
   </g>
-  <text x="320" y="178" class="title">TideLog</text>
-  <text x="320" y="234" class="subtitle">把每日复盘变成可执行的成长系统</text>
-  <text x="128" y="350" class="body">不是再多写一篇日记，而是让每天的记录反过来帮助你：</text>
-  <text x="128" y="396" class="body">看清优先级、识别情绪模式、沉淀原则，并决定下一步行动。</text>
-  <g transform="translate(128 466)">
-    <rect width="186" height="54" rx="27" fill="#7C4DFF"/>
-    <text x="31" y="36" class="small" fill="#FFFFFF">晨间计划</text>
-    <rect x="206" width="186" height="54" rx="27" fill="#2D2A45" stroke="#5D5778"/>
-    <text x="238" y="36" class="small">晚间复盘</text>
-    <rect x="412" width="186" height="54" rx="27" fill="#2D2A45" stroke="#5D5778"/>
-    <text x="444" y="36" class="small">AI 洞察</text>
+  <g transform="translate(886 128)" filter="url(#cardShadow)">
+    <rect width="574" height="646" rx="44" fill="#FFFFFF" stroke="#D7E8EB"/>
+    <rect x="28" y="28" width="518" height="92" rx="28" fill="#F3FAFB"/>
+    <circle cx="78" cy="74" r="24" fill="url(#teal)"/>
+    <text x="124" y="68" class="small">Today</text>
+    <text x="124" y="98" class="body">Plan → Review → Insight</text>
+    <g transform="translate(44 162)">
+      <text x="0" y="0" class="small">Energy</text>
+      <text x="0" y="64" class="metric">8.2</text>
+      <rect x="128" y="22" width="348" height="20" rx="10" fill="#E7F2F4"/>
+      <rect x="128" y="22" width="276" height="20" rx="10" fill="url(#teal)"/>
+    </g>
+    <g transform="translate(44 286)">
+      <rect width="228" height="164" rx="30" fill="#F7FBFC" stroke="#DBEBEE"/>
+      <text x="28" y="46" class="cardTitle">Plan</text>
+      <text x="28" y="86" class="body">优先级 · 任务</text>
+      <path d="M30 122H176" stroke="#3B8EA5" stroke-width="12" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(302 286)">
+      <rect width="228" height="164" rx="30" fill="#FFF9EA" stroke="#EFE1B8"/>
+      <text x="28" y="46" class="cardTitle">Review</text>
+      <text x="28" y="86" class="body">目标 · 情绪 · 明天</text>
+      <path d="M30 122H184" stroke="#D4B978" stroke-width="12" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(44 486)">
+      <rect width="486" height="112" rx="30" fill="#061113"/>
+      <text x="30" y="48" class="cardTitle white">Insight</text>
+      <text x="30" y="82" class="body" fill="#D8E8EC">周报 · 月报 · 模式 · 原则</text>
+      <circle cx="414" cy="56" r="28" fill="url(#gold)"/>
+    </g>
   </g>
-  <g transform="translate(128 600)">
-    <rect width="386" height="154" rx="34" fill="url(#card)" stroke="#3B3658"/>
-    <text x="32" y="52" class="cardTitle">Plan</text>
-    <text x="32" y="92" class="body">精力 · 优先级 · 任务继承</text>
-    <path d="M32 120H326" stroke="#7C4DFF" stroke-width="10" stroke-linecap="round"/>
-    <path d="M32 120H208" stroke="#B996FF" stroke-width="10" stroke-linecap="round"/>
+  <g transform="translate(126 658)" filter="url(#softShadow)">
+    <rect width="206" height="100" rx="28" fill="#FFFFFF" stroke="#D7E8EB"/>
+    <text x="28" y="44" class="small">Markdown-first</text>
+    <text x="28" y="73" class="body">写回你的 Vault</text>
   </g>
-  <g transform="translate(544 600)">
-    <rect width="386" height="154" rx="34" fill="url(#card)" stroke="#3B3658"/>
-    <text x="32" y="52" class="cardTitle">Review</text>
-    <text x="32" y="92" class="body">目标 · 成果 · 情绪 · 明天</text>
-    <path d="M32 120H326" stroke="#60A5FA" stroke-width="10" stroke-linecap="round"/>
-    <path d="M32 120H256" stroke="#C4B5FD" stroke-width="10" stroke-linecap="round"/>
-  </g>
-  <g transform="translate(960 600)">
-    <rect width="386" height="154" rx="34" fill="url(#card)" stroke="#3B3658"/>
-    <text x="32" y="52" class="cardTitle">Insight</text>
-    <text x="32" y="92" class="body">周报 · 月报 · 模式 · 原则</text>
-    <path d="M32 120H326" stroke="#34D399" stroke-width="10" stroke-linecap="round"/>
-    <path d="M32 120H278" stroke="#A7F3D0" stroke-width="10" stroke-linecap="round"/>
-  </g>
-  <g transform="translate(1000 130)" filter="url(#soft)">
-    <rect width="430" height="386" rx="38" fill="#151827" stroke="#3E395C"/>
-    <text x="34" y="58" class="small">Today Dashboard</text>
-    <text x="34" y="124" class="metric">8.2</text>
-    <text x="124" y="118" class="small">energy score</text>
-    <rect x="34" y="160" width="362" height="20" rx="10" fill="#2D2A45"/>
-    <rect x="34" y="160" width="286" height="20" rx="10" fill="#7C4DFF"/>
-    <rect x="34" y="218" width="164" height="104" rx="24" fill="#221F36"/>
-    <rect x="220" y="218" width="176" height="104" rx="24" fill="#221F36"/>
-    <text x="58" y="260" class="small">3 tasks</text>
-    <text x="244" y="260" class="small">weekly insight</text>
-    <circle cx="77" cy="302" r="10" fill="#34D399"/>
-    <circle cx="106" cy="302" r="10" fill="#FBBF24"/>
-    <circle cx="135" cy="302" r="10" fill="#60A5FA"/>
+  <g transform="translate(358 658)" filter="url(#softShadow)">
+    <rect width="206" height="100" rx="28" fill="#FFFFFF" stroke="#D7E8EB"/>
+    <text x="28" y="44" class="small">Private by design</text>
+    <text x="28" y="73" class="body">你控制数据流向</text>
   </g>
 </svg>

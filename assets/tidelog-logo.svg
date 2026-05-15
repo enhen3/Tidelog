@@ -1,26 +1,31 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">TideLog logo</title>
-  <desc id="desc">A purple rounded app icon with a notebook, pen, and tide mark.</desc>
+  <desc id="desc">A refined tidal-blue app icon with a journal, pen, and warm-gold tide mark.</desc>
   <defs>
-    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#B996FF"/>
-      <stop offset="0.48" stop-color="#7C4DFF"/>
-      <stop offset="1" stop-color="#5D8BFF"/>
+    <linearGradient id="bg" x1="80" y1="52" x2="432" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5AABB8"/>
+      <stop offset="0.48" stop-color="#3B8EA5"/>
+      <stop offset="1" stop-color="#1F6478"/>
     </linearGradient>
-    <linearGradient id="shine" x1="118" y1="83" x2="394" y2="441" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+    <linearGradient id="gold" x1="290" y1="96" x2="438" y2="264" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F1DEAA"/>
+      <stop offset="1" stop-color="#D4B978"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="118" y1="80" x2="362" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.34"/>
+      <stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0.10"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
-    <filter id="shadow" x="34" y="34" width="444" height="452" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#321C70" flood-opacity="0.26"/>
+    <filter id="shadow" x="34" y="30" width="444" height="456" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#123844" flood-opacity="0.28"/>
     </filter>
   </defs>
-  <rect x="54" y="46" width="404" height="420" rx="104" fill="url(#bg)" filter="url(#shadow)"/>
-  <path d="M96 86C173 52 283 50 399 92C418 99 430 116 430 136V352C430 401 391 440 342 440H172C122 440 82 400 82 350V158C82 126 87 101 96 86Z" fill="url(#shine)"/>
-  <path d="M176 142H314C344 142 368 166 368 196V330C368 360 344 384 314 384H176C152 384 132 364 132 340V186C132 162 152 142 176 142Z" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M180 188H276M180 238H304M180 288H272" stroke="white" stroke-width="18" stroke-linecap="round"/>
-  <path d="M127 198H92M127 250H92M127 302H92" stroke="white" stroke-width="20" stroke-linecap="round"/>
-  <path d="M330 110L391 171" stroke="white" stroke-width="26" stroke-linecap="round"/>
-  <path d="M309 194L389 114C407 96 437 96 455 114C472 132 472 161 454 179L374 259L312 273L326 211L309 194Z" fill="#FFF7D6" stroke="white" stroke-width="18" stroke-linejoin="round"/>
-  <path d="M320 358C349 336 381 336 410 358" stroke="#E9DDFF" stroke-width="18" stroke-linecap="round"/>
+  <rect x="54" y="46" width="404" height="420" rx="108" fill="url(#bg)" filter="url(#shadow)"/>
+  <path d="M96 96C174 56 293 54 402 98C421 106 432 123 432 144V354C432 404 392 444 342 444H172C122 444 82 404 82 354V164C82 132 87 108 96 96Z" fill="url(#glass)"/>
+  <path d="M168 140H308C340 140 366 166 366 198V332C366 364 340 390 308 390H172C146 390 126 370 126 344V186C126 160 146 140 168 140Z" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M174 190H274M174 240H302M174 290H266" stroke="white" stroke-width="17" stroke-linecap="round"/>
+  <path d="M122 199H88M122 250H88M122 301H88" stroke="white" stroke-width="19" stroke-linecap="round"/>
+  <path d="M308 210L386 132C404 114 433 114 451 132C469 150 469 179 451 197L373 275L312 289L326 228L308 210Z" fill="url(#gold)" stroke="white" stroke-width="17" stroke-linejoin="round"/>
+  <path d="M340 358C367 339 398 339 424 358" stroke="#F1DEAA" stroke-width="16" stroke-linecap="round"/>
+  <path d="M322 392C354 370 394 370 430 392" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" opacity="0.72"/>
 </svg>

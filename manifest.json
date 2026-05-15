@@ -1,7 +1,7 @@
 {
 	"id": "tidelog",
 	"name": "TideLog",
-	"version": "1.1.28",
+	"version": "1.1.29",
 	"minAppVersion": "1.7.2",
 	"description": "把每日计划、晚间复盘和 AI 洞察沉淀成个人成长系统。Plan, review, and find patterns from your daily notes.",
 	"author": "enhen3",
