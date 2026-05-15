@@ -304,13 +304,13 @@ export class ReviewRenderer {
                     // Desktop: hover to show popover
                     let popoverTimeout: number | null = null;
                     cell.addEventListener('mouseenter', () => {
-                        popoverTimeout = activeWindow.setTimeout(() => {
+                        popoverTimeout = window.setTimeout(() => {
                             this.showTaskPopover(cell, data, dateStr);
                         }, 200);
                     });
                     cell.addEventListener('mouseleave', () => {
-                        if (popoverTimeout) activeWindow.clearTimeout(popoverTimeout);
-                        activeWindow.setTimeout(() => {
+                        if (popoverTimeout) window.clearTimeout(popoverTimeout);
+                        window.setTimeout(() => {
                             const popover = cell.querySelector('.tl-cal-popover') as HTMLElement;
                             if (popover && !popover.matches(':hover')) {
                                 popover.remove();
@@ -421,7 +421,7 @@ export class ReviewRenderer {
         anchor.appendChild(popover);
 
         // Clamp popover within the scroll container so it doesn't clip at edges
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             const scrollParent = anchor.closest('.tl-review-scroll') || anchor.closest('.tl-sidebar');
             if (!scrollParent) return;
             const parentRect = scrollParent.getBoundingClientRect();
@@ -524,7 +524,7 @@ export class ReviewRenderer {
                 // Animated dots
                 const baseText = t('review.generating').replace(/\.+$/, '');
                 let dotCount = 0;
-                const dotsInterval = activeWindow.setInterval(() => {
+                const dotsInterval = window.setInterval(() => {
                     dotCount = (dotCount + 1) % 4;
                     genBtn.setText(baseText + '.'.repeat(dotCount));
                 }, 500);
@@ -532,14 +532,14 @@ export class ReviewRenderer {
                     await h.plugin.insightService.generateMonthlyInsight(
                         () => {},
                         () => {
-                            activeWindow.clearInterval(dotsInterval);
+                            window.clearInterval(dotsInterval);
                             h.invalidateTabCache('review');
                             h.switchTab('review');
                         },
                         moment(calMonth),
                     );
                 } catch {
-                    activeWindow.clearInterval(dotsInterval);
+                    window.clearInterval(dotsInterval);
                     genBtn.setText(t('review.generateFailed'));
                     genBtn.disabled = false;
                     genBtn.removeClass('tl-dash-generate-btn-loading');

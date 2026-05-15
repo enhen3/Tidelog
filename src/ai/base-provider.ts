@@ -70,7 +70,7 @@ export abstract class BaseAIProvider implements AIProvider {
                     const chunk = fullContent.substring(index, end);
                     onChunk(chunk);
                     index = end;
-                    activeWindow.setTimeout(deliver, 10);
+                    window.setTimeout(deliver, 10);
                 } else {
                     resolve(fullContent);
                 }

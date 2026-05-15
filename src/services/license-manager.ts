@@ -41,7 +41,7 @@ async function apiPost(url: string, body: Record<string, unknown>): Promise<Reco
             lastError = err instanceof Error ? err : new Error(String(err));
             // Wait before retry
             if (attempt < MAX_RETRIES) {
-                await new Promise(r => activeWindow.setTimeout(r, 1000 * (attempt + 1)));
+                await new Promise(r => window.setTimeout(r, 1000 * (attempt + 1)));
             }
         }
     }

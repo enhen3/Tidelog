@@ -1,7 +1,7 @@
 {
 	"id": "tidelog",
 	"name": "TideLog",
-	"version": "1.1.21",
+	"version": "1.1.22",
 	"minAppVersion": "1.7.2",
 	"description": "AI-guided daily planning, evening reflection, and metacognition insights.",
 	"author": "enhen3",

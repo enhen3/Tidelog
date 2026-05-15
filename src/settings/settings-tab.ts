@@ -69,15 +69,12 @@ export class TideLogSettingTab extends PluginSettingTab {
             .setDesc(t('settings.aiProviderDesc'))
             .addDropdown((dropdown) =>
                 dropdown
-                    // OpenRouter and SiliconFlow are official brand names with mixed case
-                    // eslint-disable-next-line obsidianmd/ui/sentence-case
-                    .addOption('openrouter', 'OpenRouter')
+                    .addOption('openrouter', this.getProviderName('openrouter'))
                     .addOption('anthropic', 'Anthropic Claude')
                     .addOption('gemini', 'Google Gemini')
                     .addOption('openai', 'OpenAI')
-                    // eslint-disable-next-line obsidianmd/ui/sentence-case
-                    .addOption('siliconflow', 'SiliconFlow')
-                    .addOption('custom', 'Custom (OpenAI compatible)')
+                    .addOption('siliconflow', this.getProviderName('siliconflow'))
+                    .addOption('custom', t('settings.customOpenAICompatible'))
                     .setValue(this.plugin.settings.activeProvider)
                     .onChange((value) => {
                         this.plugin.settings.activeProvider = value as AIProviderType;
@@ -191,8 +188,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             urlSetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-wide');
                 text
-                    // eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder is an example URL
-                    .setPlaceholder('https://api.deepseek.com/v1')
+                    .setPlaceholder(t('settings.baseUrlExample'))
                     .setValue(config.baseUrl || '')
                     .onChange((value) => {
                         this.plugin.settings.providers[provider].baseUrl = value;
@@ -316,13 +312,13 @@ export class TideLogSettingTab extends PluginSettingTab {
                                 if (success) {
                                     new Notice(t('settings.testSuccess'));
                                     button.setButtonText(t('settings.testSuccessBtn'));
-                                    activeWindow.setTimeout(() => {
+                                    window.setTimeout(() => {
                                         button.setButtonText(t('settings.testBtn'));
                                     }, 2000);
                                 } else {
                                     new Notice(t('settings.testFail'));
                                     button.setButtonText(t('settings.testFailBtn'));
-                                    activeWindow.setTimeout(() => {
+                                    window.setTimeout(() => {
                                         button.setButtonText(t('settings.testBtn'));
                                     }, 2000);
                                 }
@@ -334,7 +330,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                                 const code = codeMatch ? codeMatch[1] : '';
                                 new Notice(`❌ ${t('settings.testError')} ${code}`, 8000);
                                 button.setButtonText(code ? `❌ ${code}` : t('settings.testErrorBtn'));
-                                activeWindow.setTimeout(() => {
+                                window.setTimeout(() => {
                                     button.setButtonText(t('settings.testBtn'));
                                 }, 4000);
                             }
@@ -730,8 +726,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             keySetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-key');
                 text
-                    // eslint-disable-next-line obsidianmd/ui/sentence-case -- license-key format placeholder
-                    .setPlaceholder('TL-XXXX-XXXX-XXXX')
+                    .setPlaceholder(t('settings.licenseKeyPlaceholder'))
                     .onChange((value) => { keyValue = value; });
             });
 

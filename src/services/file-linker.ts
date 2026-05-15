@@ -44,7 +44,7 @@ export class FileLinkService {
             this.eventRef = null;
         }
         if (this.debounceTimer) {
-            activeWindow.clearTimeout(this.debounceTimer);
+            window.clearTimeout(this.debounceTimer);
             this.debounceTimer = null;
         }
     }
@@ -54,10 +54,10 @@ export class FileLinkService {
      */
     private debouncedSync(file: TFile): void {
         if (this.debounceTimer) {
-            activeWindow.clearTimeout(this.debounceTimer);
+            window.clearTimeout(this.debounceTimer);
         }
 
-        this.debounceTimer = activeWindow.setTimeout(() => {
+        this.debounceTimer = window.setTimeout(() => {
             void this.syncDailyNoteToKanban(file);
         }, 800);
     }

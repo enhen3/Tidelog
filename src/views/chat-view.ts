@@ -101,9 +101,7 @@ export class ChatView extends ItemView {
     }
 
     getDisplayText(): string {
-        // TideLog is the plugin's brand name; not a sentence-case violation.
-        // eslint-disable-next-line obsidianmd/ui/sentence-case
-        return 'TideLog';
+        return t('view.chatDisplayText');
     }
 
     getIcon(): string {
@@ -141,8 +139,8 @@ export class ChatView extends ItemView {
             if (this.activeTab !== 'kanban' && this.activeTab !== 'review') return;
             if (!(file instanceof TFile) || file.extension !== 'md') return;
             // Debounce to avoid re-render storm
-            if (this.refreshTimer) activeWindow.clearTimeout(this.refreshTimer);
-            this.refreshTimer = activeWindow.setTimeout(() => {
+            if (this.refreshTimer) window.clearTimeout(this.refreshTimer);
+            this.refreshTimer = window.setTimeout(() => {
                 this.switchTab(this.activeTab, false);
             }, 500);
         });
@@ -151,7 +149,7 @@ export class ChatView extends ItemView {
 
     async onClose(): Promise<void> {
         await Promise.resolve();
-        if (this.refreshTimer) activeWindow.clearTimeout(this.refreshTimer);
+        if (this.refreshTimer) window.clearTimeout(this.refreshTimer);
     }
 
     /**
@@ -242,7 +240,7 @@ export class ChatView extends ItemView {
     public switchTab(tab: SidebarTab, animate = false): void {
         this.activeTab = tab;
         // Cancel any pending debounced refresh to prevent queued re-renders
-        if (this.refreshTimer) { activeWindow.clearTimeout(this.refreshTimer); this.refreshTimer = null; }
+        if (this.refreshTimer) { window.clearTimeout(this.refreshTimer); this.refreshTimer = null; }
 
         // When the user actively clicks a tab (animate=true), reset state to
         // "today / current month" so each tab always opens fresh.
@@ -379,7 +377,7 @@ export class ChatView extends ItemView {
             await replaceFile(this.app, file, content);
         } finally {
             // Delay clearing the flag so the vault 'modify' event (async) is suppressed
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -460,7 +458,7 @@ export class ChatView extends ItemView {
 
             await replaceFile(this.app, file, lines.join('\n'));
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -481,7 +479,7 @@ export class ChatView extends ItemView {
                 await replaceFile(this.app, file, lines.join('\n'));
             }
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -495,7 +493,7 @@ export class ChatView extends ItemView {
             content = content.replace(pat, `$1${newText}`);
             await replaceFile(this.app, file, content);
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -509,7 +507,7 @@ export class ChatView extends ItemView {
             content = content.replace(pat, '');
             await replaceFile(this.app, file, content);
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -534,7 +532,7 @@ export class ChatView extends ItemView {
             this.invalidateTabCache('kanban');
             this.switchTab('kanban');
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -559,7 +557,7 @@ export class ChatView extends ItemView {
             this.invalidateTabCache('kanban');
             this.switchTab('kanban');
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -598,7 +596,7 @@ export class ChatView extends ItemView {
             this.invalidateTabCache('kanban');
             this.switchTab('kanban');
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -623,7 +621,7 @@ export class ChatView extends ItemView {
             }
             await replaceFile(this.app, file, lines.join('\n'));
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -660,7 +658,7 @@ export class ChatView extends ItemView {
 
             await replaceFile(this.app, file, lines.join('\n'));
         } finally {
-            activeWindow.setTimeout(() => { this._suppressRefresh = false; }, 200);
+            window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
     }
 
@@ -985,14 +983,14 @@ You can also use the buttons below to generate insight reports:`
         const messageEl = this.createMessageElement('ai');
         let currentIndex = 0;
 
-        const typewriter = activeWindow.setInterval(() => {
+        const typewriter = window.setInterval(() => {
             if (currentIndex < content.length) {
                 currentIndex = Math.min(currentIndex + 3, content.length);
                 messageEl.empty();
                 void MarkdownRenderer.render(this.app, content.substring(0, currentIndex), messageEl, '', this);
                 this.scrollToBottom();
             } else {
-                activeWindow.clearInterval(typewriter);
+                window.clearInterval(typewriter);
             }
         }, 15);
     }

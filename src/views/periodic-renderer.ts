@@ -589,7 +589,7 @@ export class PeriodicRenderer {
                     activeDocument.removeEventListener('touchend', dismiss, true);
                 }
             };
-            activeWindow.setTimeout(() => {
+            window.setTimeout(() => {
                 activeDocument.addEventListener('click', dismiss, true);
                 activeDocument.addEventListener('touchend', dismiss, true);
             }, 0);
@@ -618,15 +618,15 @@ export class PeriodicRenderer {
             let longPressTimer: number | null = null;
             row.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
-                longPressTimer = activeWindow.setTimeout(() => {
+                longPressTimer = window.setTimeout(() => {
                     showPromotePopup(touch.clientX, touch.clientY);
                 }, 500);
             }, { passive: true });
             row.addEventListener('touchmove', () => {
-                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
             row.addEventListener('touchend', () => {
-                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
         }
     }
@@ -1450,7 +1450,7 @@ export class PeriodicRenderer {
                     activeDocument.removeEventListener('touchend', dismiss, true);
                 }
             };
-            activeWindow.setTimeout(() => {
+            window.setTimeout(() => {
                 activeDocument.addEventListener('click', dismiss, true);
                 activeDocument.addEventListener('touchend', dismiss, true);
             }, 0);
@@ -1468,15 +1468,15 @@ export class PeriodicRenderer {
             let longPressTimer: number | null = null;
             row.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
-                longPressTimer = activeWindow.setTimeout(() => {
+                longPressTimer = window.setTimeout(() => {
                     showDatePopup(touch.clientX, touch.clientY);
                 }, 500);
             }, { passive: true });
             row.addEventListener('touchmove', () => {
-                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
             row.addEventListener('touchend', () => {
-                if (longPressTimer) { activeWindow.clearTimeout(longPressTimer); longPressTimer = null; }
+                if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
             }, { passive: true });
         }
 
@@ -1485,7 +1485,7 @@ export class PeriodicRenderer {
         let nestMode = false;
 
         const clearDragState = () => {
-            if (nestTimer) { activeWindow.clearTimeout(nestTimer); nestTimer = null; }
+            if (nestTimer) { window.clearTimeout(nestTimer); nestTimer = null; }
             nestMode = false;
             row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below', 'tl-task-row-nest-hint');
         };
@@ -1516,7 +1516,7 @@ export class PeriodicRenderer {
 
             // Start nest timer (1s hover → nest mode)
             if (!nestTimer) {
-                nestTimer = activeWindow.setTimeout(() => {
+                nestTimer = window.setTimeout(() => {
                     nestMode = true;
                     row.removeClass('tl-task-row-drop-above', 'tl-task-row-drop-below');
                     row.addClass('tl-task-row-nest-hint');
