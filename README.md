@@ -266,7 +266,7 @@ TideLog does not access files outside your Obsidian vault.
 
 ## License
 
-TideLog is source-available, not open source. See [LICENSE](./LICENSE).
+TideLog source code is licensed under the GNU Affero General Public License v3.0. TideLog Pro access, the official license service, and paid distribution terms remain commercial product terms. See [LICENSE](./LICENSE).
 
 ---
 
@@ -330,6 +330,10 @@ TideLog 只在以下场景发起 HTTPS 请求：
 4. 购买和 License portal：设置页按钮会在浏览器中打开爱发电或 License portal，此操作由用户主动触发。
 
 TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。完整隐私说明见 [PRIVACY.md](./PRIVACY.md)。
+
+### 许可证
+
+TideLog 源代码采用 GNU Affero General Public License v3.0。TideLog Pro 授权、官方 License 服务和付费分发条款仍属于商业产品条款。完整条款见 [LICENSE](./LICENSE)。
 
 ### 权限与数据访问
 

@@ -23,4 +23,4 @@ Before opening a pull request:
 3. If you changed the license API, also run `npm run typecheck:api`.
 4. Update `README.md` or `PRIVACY.md` when behavior, network use, or data access changes.
 
-TideLog is not open source software. Contributions are accepted only for inclusion in the upstream TideLog project under the repository license.
+TideLog source code is licensed under the GNU Affero General Public License v3.0. Contributions are accepted only for inclusion in the upstream TideLog project under the repository license.
