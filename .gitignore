@@ -16,6 +16,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Local agent tooling
+.agent/skills/
+
 # ESLint cache
 .eslintcache
 
