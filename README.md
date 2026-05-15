@@ -1,20 +1,39 @@
 # 🌊 TideLog
 
-> AI-guided daily planning and reflection with morning SOP, evening review, insights, and metacognition coaching.
+> Turn daily planning and reflection into an AI-guided growth system inside Obsidian.
 
-TideLog is an Obsidian plugin that helps you build metacognitive awareness through an AI-driven **Plan → Log → Review → Insight** feedback loop.
+TideLog helps you run a repeatable **Plan → Log → Review → Insight** loop without leaving your vault. It is built for people who already write daily notes, but want those notes to become better decisions, clearer priorities, and visible personal patterns.
 
----
+## Why TideLog
 
-## Core Philosophy
+Most journals are write-only: you capture thoughts, but the patterns stay hidden. TideLog turns your daily notes into a coaching workflow:
+
+- **Plan the day** with a morning SOP that captures energy, priorities, and carry-forward tasks.
+- **Review the day** with customizable evening questions instead of staring at a blank page.
+- **Find patterns** with weekly/monthly insight reports, emotion trends, principles, and recurring behaviors.
+- **Keep ownership** of your vault: TideLog writes Markdown files to your Obsidian folders and only calls external services when you trigger AI or license features.
+
+## Quick Start
+
+1. Install TideLog and open **Obsidian Settings → TideLog**.
+2. Configure your preferred AI provider and run **Test connection**.
+3. Use `TideLog: Start morning review` to plan your day.
+4. Use `TideLog: Start evening review` to complete your daily reflection.
+5. Upgrade to **TideLog Pro** when you want the full review flow, dashboards, calendar heatmap, and AI insight reports.
+
+## Free vs Pro at a Glance
+
+The free version is enough to try the workflow. Pro is designed for users who want TideLog to become their long-term self-review system.
+
+- **Free**: morning planning, free chat with your configured AI provider, basic daily note writing, first 2 evening review questions.
+- **Pro**: full 5+4 evening review, weekly/monthly insight reports, dashboard, calendar heatmap, profile suggestions, and pattern/principle extraction.
+- **Buy Pro**: <https://afdian.com/item/463307362c2f11f1b39d52540025c377>
 
 ```
   Plan → Daily Log → AI Analysis → Insight Dialogue → Metacognitive Growth → Better Actions
     ↑                                                                           ↓
     └───────────────────────── Positive Feedback Loop ──────────────────────────┘
 ```
-
-Like having a coaching conversation — discover patterns you wouldn't see on your own.
 
 ---
 
@@ -191,6 +210,7 @@ your-vault/
 | Command | Description |
 |---------|-------------|
 | `TideLog: Open chat` | Open the chat sidebar |
+| `TideLog: Open getting started` | Reopen the quick start guide |
 | `TideLog: Start morning review` | Start morning planning SOP |
 | `TideLog: Start evening review` | Start evening review SOP |
 | `TideLog: Generate weekly insight` | Generate a weekly insight report |
@@ -245,6 +265,14 @@ TideLog is source-available, not open source. See [LICENSE](./LICENSE).
 # TideLog
 
 TideLog 是一个 Obsidian 插件，通过 AI 引导的 **计划 → 日记 → 复盘 → 洞察** 正循环，帮助你建立元认知能力，更深刻地了解自己的思维和行动模式。
+
+### 快速开始
+
+1. 安装后打开 Obsidian 设置 → TideLog。
+2. 配置 AI 服务商和 API Key，并点击测试连接。
+3. 运行 `TideLog: Start morning review` 开始晨间计划。
+4. 运行 `TideLog: Start evening review` 完成晚间复盘。
+5. 如果你需要完整复盘、仪表盘、热力图和 AI 周/月洞察，可以升级 TideLog Pro。
 
 ### 主要功能
 

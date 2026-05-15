@@ -12,12 +12,13 @@ import {
 
 import { TideLogSettings, EveningQuestionConfig } from './types';
 import { DEFAULT_SETTINGS, getDefaultEveningQuestions } from './constants';
-import { setLanguage } from './i18n';
+import { setLanguage, t } from './i18n';
 import { TideLogSettingTab } from './settings/settings-tab';
 import { ChatView, CHAT_VIEW_TYPE } from './views/chat-view';
 import { KanbanView, KANBAN_VIEW_TYPE } from './views/kanban-view';
 import { CalendarView, CALENDAR_VIEW_TYPE } from './views/calendar-view';
 import { DashboardView, DASHBOARD_VIEW_TYPE } from './views/dashboard-view';
+import { OnboardingModal } from './views/onboarding-modal';
 import { VaultManager } from './services/vault-manager';
 import { TemplateManager } from './services/template-manager';
 import { InsightService } from './services/insight-service';
@@ -99,7 +100,7 @@ export default class TideLogPlugin extends Plugin {
         // Add commands
         this.addCommand({
             id: 'open-chat',
-            name: 'Open chat',
+            name: t('cmd.openChat'),
             callback: () => {
                 void this.activateChatView();
             },
@@ -107,7 +108,7 @@ export default class TideLogPlugin extends Plugin {
 
         this.addCommand({
             id: 'start-morning-sop',
-            name: 'Start morning review',
+            name: t('cmd.startMorningReview'),
             callback: () => {
                 void this.activateChatView('morning');
             },
@@ -115,15 +116,23 @@ export default class TideLogPlugin extends Plugin {
 
         this.addCommand({
             id: 'start-evening-sop',
-            name: 'Start evening review',
+            name: t('cmd.startEveningReview'),
             callback: () => {
                 void this.activateChatView('evening');
             },
         });
 
         this.addCommand({
+            id: 'open-getting-started',
+            name: t('cmd.openGettingStarted'),
+            callback: () => {
+                this.openOnboarding();
+            },
+        });
+
+        this.addCommand({
             id: 'generate-weekly-insight',
-            name: 'Generate weekly insight',
+            name: t('cmd.generateWeeklyInsight'),
             callback: () => {
                 void this.generateInsight('weekly');
             },
@@ -131,7 +140,7 @@ export default class TideLogPlugin extends Plugin {
 
         this.addCommand({
             id: 'generate-monthly-insight',
-            name: 'Generate monthly insight',
+            name: t('cmd.generateMonthlyInsight'),
             callback: () => {
                 void this.generateInsight('monthly');
             },
@@ -182,6 +191,9 @@ export default class TideLogPlugin extends Plugin {
         // edit that belongs to the configured TideLog folder.
         this.app.workspace.onLayoutReady(() => {
             this.fileLinkService.startListening();
+            if (!this.settings.onboardingCompleted) {
+                this.openOnboarding();
+            }
         });
 
 
@@ -241,6 +253,16 @@ export default class TideLogPlugin extends Plugin {
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
         setLanguage(this.settings.language);
+    }
+
+    openOnboarding(): void {
+        new OnboardingModal(this.app, this).open();
+    }
+
+    async completeOnboarding(): Promise<void> {
+        if (this.settings.onboardingCompleted) return;
+        this.settings.onboardingCompleted = true;
+        await this.saveSettings();
     }
 
     /**

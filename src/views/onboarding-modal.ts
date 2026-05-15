@@ -1,0 +1,113 @@
+/**
+ * First-run onboarding modal.
+ */
+
+import { App, Modal } from 'obsidian';
+import { t } from '../i18n';
+import type TideLogPlugin from '../main';
+
+export class OnboardingModal extends Modal {
+    private plugin: TideLogPlugin;
+
+    constructor(app: App, plugin: TideLogPlugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen(): void {
+        const { contentEl } = this;
+        contentEl.addClass('tl-onboarding-modal');
+
+        contentEl.createDiv({ cls: 'tl-onboarding-icon', text: '🌊' });
+        contentEl.createEl('h2', {
+            cls: 'tl-onboarding-title',
+            text: t('onboarding.title'),
+        });
+        contentEl.createEl('p', {
+            cls: 'tl-onboarding-desc',
+            text: t('onboarding.desc'),
+        });
+
+        const stepsEl = contentEl.createDiv('tl-onboarding-steps');
+        this.renderStep(
+            stepsEl,
+            '1',
+            t('onboarding.stepAiTitle'),
+            t('onboarding.stepAiDesc'),
+        );
+        this.renderStep(
+            stepsEl,
+            '2',
+            t('onboarding.stepReviewTitle'),
+            t('onboarding.stepReviewDesc'),
+        );
+        this.renderStep(
+            stepsEl,
+            '3',
+            t('onboarding.stepProTitle'),
+            t('onboarding.stepProDesc'),
+        );
+
+        const buttonRow = contentEl.createDiv('tl-onboarding-buttons');
+
+        const setupButton = buttonRow.createEl('button', {
+            cls: 'tl-onboarding-primary',
+            text: t('onboarding.setupBtn'),
+        });
+        setupButton.addEventListener('click', () => {
+            void this.plugin.completeOnboarding();
+            this.close();
+            this.openSettings();
+        });
+
+        const morningButton = buttonRow.createEl('button', {
+            cls: 'tl-onboarding-secondary',
+            text: t('onboarding.morningBtn'),
+        });
+        morningButton.addEventListener('click', () => {
+            void this.plugin.completeOnboarding();
+            this.close();
+            void this.plugin.activateChatView('morning');
+        });
+
+        const buyLink = contentEl.createEl('a', {
+            cls: 'tl-onboarding-link',
+            text: t('onboarding.buyLink'),
+            href: this.plugin.licenseManager.getPurchaseUrl(),
+        });
+        buyLink.setAttr('target', '_blank');
+        buyLink.addEventListener('click', () => {
+            void this.plugin.completeOnboarding();
+        });
+
+        const laterButton = contentEl.createEl('button', {
+            cls: 'tl-onboarding-later',
+            text: t('onboarding.laterBtn'),
+        });
+        laterButton.addEventListener('click', () => {
+            void this.plugin.completeOnboarding();
+            this.close();
+        });
+    }
+
+    onClose(): void {
+        void this.plugin.completeOnboarding();
+        this.contentEl.empty();
+    }
+
+    private renderStep(containerEl: HTMLElement, numberText: string, title: string, desc: string): void {
+        const stepEl = containerEl.createDiv('tl-onboarding-step');
+        stepEl.createDiv({ cls: 'tl-onboarding-step-number', text: numberText });
+        const copyEl = stepEl.createDiv('tl-onboarding-step-copy');
+        copyEl.createDiv({ cls: 'tl-onboarding-step-title', text: title });
+        copyEl.createDiv({ cls: 'tl-onboarding-step-desc', text: desc });
+    }
+
+    private openSettings(): void {
+        const setting = (this.app as unknown as {
+            setting?: { open?: () => void; openTabById?: (id: string) => void };
+        }).setting;
+        setting?.open?.();
+        setting?.openTabById?.(this.plugin.manifest.id);
+    }
+}

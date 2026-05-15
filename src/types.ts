@@ -38,6 +38,9 @@ export interface TideLogSettings {
     // Language
     language: Language;
 
+    // Onboarding
+    onboardingCompleted: boolean;
+
     // AI Provider Settings
     activeProvider: AIProviderType;
     providers: {

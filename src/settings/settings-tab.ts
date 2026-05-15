@@ -17,6 +17,7 @@ import { AIProviderType, EveningQuestionConfig } from '../types';
 import { t } from '../i18n';
 import type { Language } from '../i18n';
 import { formatAPIError } from '../utils/error-formatter';
+import { OnboardingModal } from '../views/onboarding-modal';
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;
@@ -49,6 +50,8 @@ export class TideLogSettingTab extends PluginSettingTab {
                         void this.plugin.saveSettings().then(() => this.display());
                     })
             );
+
+        this.renderGettingStarted(containerEl);
 
         // =================================================================
         // Pro License
@@ -152,6 +155,24 @@ export class TideLogSettingTab extends PluginSettingTab {
         // Evening Question Editor
         // =================================================================
         this.renderEveningQuestions(containerEl);
+    }
+
+    /**
+     * Render onboarding entry point for users who want to revisit setup.
+     */
+    private renderGettingStarted(containerEl: HTMLElement): void {
+        new Setting(containerEl).setName(t('settings.gettingStarted')).setHeading();
+
+        new Setting(containerEl)
+            .setName(t('settings.gettingStartedGuide'))
+            .setDesc(t('settings.gettingStartedDesc'))
+            .addButton((button) =>
+                button
+                    .setButtonText(t('settings.openGettingStarted'))
+                    .onClick(() => {
+                        new OnboardingModal(this.app, this.plugin).open();
+                    })
+            );
     }
 
     /**

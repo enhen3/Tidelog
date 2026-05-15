@@ -4122,6 +4122,123 @@ button.tl-periodic-open-btn {
    Pro Feature — Modal, Locked Views, CTA Buttons
    ============================================================================= */
 
+/* --- First-run Onboarding Modal --- */
+
+.tl-onboarding-modal {
+	text-align: center;
+	padding: var(--size-4-4) var(--size-4-6);
+}
+
+.tl-onboarding-icon {
+	font-size: 44px;
+	margin-bottom: var(--size-4-2);
+}
+
+.tl-onboarding-title {
+	font-size: var(--font-ui-large);
+	font-weight: 700;
+	margin-bottom: var(--size-4-2);
+}
+
+.tl-onboarding-desc {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.5;
+	margin: 0 auto var(--size-4-4);
+	max-width: 520px;
+}
+
+.tl-onboarding-steps {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+	text-align: left;
+}
+
+.tl-onboarding-step {
+	align-items: flex-start;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	display: flex;
+	gap: var(--size-4-3);
+	padding: var(--size-4-3);
+}
+
+.tl-onboarding-step-number {
+	align-items: center;
+	background: linear-gradient(135deg, #3B8EA5 0%, #5AABB8 100%);
+	border-radius: 999px;
+	color: white;
+	display: flex;
+	flex: 0 0 28px;
+	font-weight: 700;
+	height: 28px;
+	justify-content: center;
+}
+
+.tl-onboarding-step-title {
+	color: var(--text-normal);
+	font-weight: 700;
+	margin-bottom: 4px;
+}
+
+.tl-onboarding-step-desc {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.45;
+}
+
+.tl-onboarding-buttons {
+	display: flex;
+	gap: var(--size-4-2);
+	justify-content: center;
+	margin-bottom: var(--size-4-3);
+}
+
+.tl-onboarding-primary,
+.tl-onboarding-secondary,
+.tl-onboarding-later {
+	border-radius: var(--radius-m);
+	cursor: pointer;
+	font-weight: 600;
+	padding: var(--size-4-2) var(--size-4-4);
+}
+
+.tl-onboarding-primary {
+	background: linear-gradient(135deg, #3B8EA5 0%, #5AABB8 100%);
+	border: 0;
+	color: white;
+}
+
+.tl-onboarding-secondary {
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
+}
+
+.tl-onboarding-link {
+	color: var(--text-accent);
+	display: inline-block;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	margin-bottom: var(--size-4-2);
+	text-decoration: none;
+}
+
+.tl-onboarding-link:hover {
+	text-decoration: underline;
+}
+
+.tl-onboarding-later {
+	background: transparent;
+	border: 0;
+	color: var(--text-muted);
+	display: block;
+	margin: 0 auto;
+}
+
 /* --- Pro Modal --- */
 
 .tl-pro-modal {

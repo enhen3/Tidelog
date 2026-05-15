@@ -136,6 +136,16 @@ console.log('Test 1: fresh user (no saved data) — defaults appear');
     const settings = simulateLoadSettings(null);
     assertEqual(settings.eveningQuestions.length, 9, 'fresh user has 9 default questions');
     assertEqual(settings.eveningQuestions[0].type, 'goal_alignment', 'fresh user first question is goal_alignment');
+    assertEqual(settings.onboardingCompleted, false, 'fresh user sees first-run onboarding');
+}
+
+// ----- Test 1b: onboarding flag survives reload ------------------------------
+console.log('\nTest 1b: onboarding completion flag persists');
+{
+    const s1 = simulateLoadSettings(null);
+    s1.onboardingCompleted = true;
+    const s2 = roundTrip(s1);
+    assertEqual(s2.onboardingCompleted, true, 'onboarding completion survives reload');
 }
 
 // ----- Test 2: user reorders questions; survive reload -----------------------

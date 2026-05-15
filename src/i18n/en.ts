@@ -15,6 +15,7 @@ export const en: Record<string, string> = {
     'cmd.openDashboard': 'Open dashboard',
     'cmd.openKanban': 'Open kanban',
     'cmd.openCalendar': 'Open calendar',
+    'cmd.openGettingStarted': 'Open getting started',
     'view.chatDisplayText': 'TideLog',
 
     // ─── settings-tab.ts ───────────────────────────────────
@@ -54,6 +55,24 @@ export const en: Record<string, string> = {
     'settings.sectionAI': 'AI settings',
     'settings.sectionFolders': 'Folders',
     'settings.sectionSOP': 'SOP workflow',
+    'settings.gettingStarted': 'Getting started',
+    'settings.gettingStartedGuide': 'Setup guide',
+    'settings.gettingStartedDesc': 'Open the quick start guide for AI setup, morning planning, evening review, and Pro activation',
+    'settings.openGettingStarted': 'Open guide',
+
+    // ─── onboarding-modal.ts ──────────────────────────────
+    'onboarding.title': 'Start TideLog in 3 steps',
+    'onboarding.desc': 'Set up AI once, then use the morning and evening workflows to turn daily notes into a repeatable growth loop.',
+    'onboarding.stepAiTitle': 'Connect your AI provider',
+    'onboarding.stepAiDesc': 'Choose OpenRouter, Claude, Gemini, OpenAI, SiliconFlow, or a custom OpenAI-compatible endpoint.',
+    'onboarding.stepReviewTitle': 'Run the daily loop',
+    'onboarding.stepReviewDesc': 'Use morning planning to set priorities and evening review to capture what happened.',
+    'onboarding.stepProTitle': 'Unlock deeper insights with Pro',
+    'onboarding.stepProDesc': 'Pro adds the full 5+4 review flow, dashboards, heatmaps, and weekly/monthly AI insight reports.',
+    'onboarding.setupBtn': 'Configure AI',
+    'onboarding.morningBtn': 'Start morning plan',
+    'onboarding.buyLink': 'Purchase TideLog Pro →',
+    'onboarding.laterBtn': 'Maybe later',
 
     // ─── chat-view.ts ──────────────────────────────────────
     'chat.welcomeTitle': '👋 Hi, I\'m Flow',

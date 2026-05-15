@@ -58,6 +58,7 @@ function applyOptions(el, options) {
         else el.classList.add(...String(options.cls).split(/\s+/).filter(Boolean));
     }
     if (options.text !== undefined) el.textContent = String(options.text);
+    if (options.href !== undefined) el.setAttribute('href', String(options.href));
     if (options.attr) for (const [k, v] of Object.entries(options.attr)) el.setAttribute(k, String(v));
     if (options.type) el.setAttribute('type', options.type);
 }
@@ -86,6 +87,7 @@ HTMLElement.prototype.addClass = function (...c) { this.classList.add(...c); };
 HTMLElement.prototype.removeClass = function (...c) { this.classList.remove(...c); };
 HTMLElement.prototype.hasClass = function (c) { return this.classList.contains(c); };
 HTMLElement.prototype.setText = function (t) { this.textContent = String(t); };
+HTMLElement.prototype.setAttr = function (name, value) { this.setAttribute(name, String(value)); };
 HTMLElement.prototype.setCssProps = function (props) {
     for (const [k, v] of Object.entries(props)) this.style.setProperty(k, String(v));
 };
@@ -113,8 +115,10 @@ class Setting {
     addExtraButton() { return this; }
 }
 class PluginSettingTab { constructor(app, plugin) { this.app = app; this.plugin = plugin; this.containerEl = activeDocument.createElement('div'); } display() {} }
+class Modal { constructor(app) { this.app = app; this.contentEl = activeDocument.createElement('div'); } open() { this.onOpen?.(); } close() { this.onClose?.(); } }
 module.exports = {
     App: class {},
+    Modal,
     PluginSettingTab,
     Setting,
     Notice: class { constructor(){} },
@@ -157,11 +161,12 @@ async function bundle(entryPath) {
 // Shared entry so settings-tab, constants, i18n all share the same i18n instance
 const entrySrc = `
 export { TideLogSettingTab } from ${JSON.stringify(path.join(__dirname, 'src/settings/settings-tab.ts'))};
+export { OnboardingModal } from ${JSON.stringify(path.join(__dirname, 'src/views/onboarding-modal.ts'))};
 export { getDefaultEveningQuestions, DEFAULT_SETTINGS } from ${JSON.stringify(path.join(__dirname, 'src/constants.ts'))};
 `;
 const entryPath = path.join(__dirname, '.test-ui-entry.ts');
 fs.writeFileSync(entryPath, entrySrc);
-const { TideLogSettingTab, getDefaultEveningQuestions, DEFAULT_SETTINGS } = await bundle(entryPath);
+const { TideLogSettingTab, OnboardingModal, getDefaultEveningQuestions, DEFAULT_SETTINGS } = await bundle(entryPath);
 
 // ---------------------------------------------------------------------------
 // Test framework
@@ -427,6 +432,52 @@ console.log('\nTest 8: delete still works');
     await new Promise(r => setTimeout(r, 0));
 
     check(plugin.settings.eveningQuestions.length === initialCount - 1, `first question deleted (got ${plugin.settings.eveningQuestions.length})`);
+}
+
+// Test 9: first-run onboarding renders and actions persist the completion flag
+console.log('\nTest 9: onboarding modal renders and completes');
+{
+    let settingsOpened = false;
+    let openedTabId = '';
+    let completedCount = 0;
+    let morningStarted = false;
+    const plugin = {
+        settings: { ...DEFAULT_SETTINGS, onboardingCompleted: false },
+        manifest: { id: 'tidelog' },
+        licenseManager: { getPurchaseUrl: () => 'https://afdian.com/item/463307362c2f11f1b39d52540025c377' },
+        completeOnboarding: async () => {
+            plugin.settings.onboardingCompleted = true;
+            completedCount++;
+        },
+        activateChatView: async (type) => {
+            if (type === 'morning') morningStarted = true;
+        },
+    };
+    const app = {
+        setting: {
+            open: () => { settingsOpened = true; },
+            openTabById: (id) => { openedTabId = id; },
+        },
+    };
+
+    const modal = new OnboardingModal(app, plugin);
+    modal.open();
+
+    check(modal.contentEl.querySelectorAll('.tl-onboarding-step').length === 3, 'onboarding shows three setup steps');
+    check(modal.contentEl.querySelector('.tl-onboarding-link')?.getAttribute('href') === plugin.licenseManager.getPurchaseUrl(), 'onboarding purchase link uses license manager URL');
+
+    click(modal.contentEl.querySelector('.tl-onboarding-primary'));
+    check(plugin.settings.onboardingCompleted === true, 'configure action marks onboarding completed');
+    check(settingsOpened === true, 'configure action opens settings');
+    check(openedTabId === 'tidelog', 'configure action opens TideLog settings tab');
+    check(completedCount >= 1, 'completion handler called');
+
+    plugin.settings.onboardingCompleted = false;
+    const modal2 = new OnboardingModal(app, plugin);
+    modal2.open();
+    click(modal2.contentEl.querySelector('.tl-onboarding-secondary'));
+    check(plugin.settings.onboardingCompleted === true, 'morning action marks onboarding completed');
+    check(morningStarted === true, 'morning action starts morning plan');
 }
 
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===\n`);

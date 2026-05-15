@@ -88,6 +88,7 @@ export function getDefaultEveningQuestions(): EveningQuestionConfig[] {
 export const DEFAULT_SETTINGS: TideLogSettings = {
     proLicense: { key: '', activated: false },
     language: 'zh',
+    onboardingCompleted: false,
     activeProvider: 'openrouter',
     providers: {
         openrouter: {

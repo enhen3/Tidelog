@@ -15,6 +15,7 @@ export const zh: Record<string, string> = {
     'cmd.openDashboard': '打开仪表盘',
     'cmd.openKanban': '打开看板',
     'cmd.openCalendar': '打开日历',
+    'cmd.openGettingStarted': '打开新手引导',
     'view.chatDisplayText': 'TideLog',
 
     // ─── settings-tab.ts ───────────────────────────────────
@@ -54,6 +55,24 @@ export const zh: Record<string, string> = {
     'settings.sectionAI': 'AI 设置',
     'settings.sectionFolders': '文件夹',
     'settings.sectionSOP': 'SOP 流程',
+    'settings.gettingStarted': '新手引导',
+    'settings.gettingStartedGuide': '快速开始',
+    'settings.gettingStartedDesc': '打开 AI 配置、晨间计划、晚间复盘和 Pro 激活的快速引导',
+    'settings.openGettingStarted': '打开引导',
+
+    // ─── onboarding-modal.ts ──────────────────────────────
+    'onboarding.title': '3 步开始使用 TideLog',
+    'onboarding.desc': '先完成一次 AI 配置，然后用晨间计划和晚间复盘，把每日记录变成可持续的成长闭环。',
+    'onboarding.stepAiTitle': '连接你的 AI 服务',
+    'onboarding.stepAiDesc': '支持 OpenRouter、Claude、Gemini、OpenAI、SiliconFlow 或自定义 OpenAI 兼容接口。',
+    'onboarding.stepReviewTitle': '跑通每日闭环',
+    'onboarding.stepReviewDesc': '早上用计划明确优先级，晚上用复盘记录发生了什么。',
+    'onboarding.stepProTitle': '用 Pro 解锁深度洞察',
+    'onboarding.stepProDesc': 'Pro 包含完整 5+4 复盘、仪表盘、日历热力图、AI 周报和月报洞察。',
+    'onboarding.setupBtn': '配置 AI',
+    'onboarding.morningBtn': '开始晨间计划',
+    'onboarding.buyLink': '购买 TideLog Pro →',
+    'onboarding.laterBtn': '稍后再说',
 
     // ─── chat-view.ts ──────────────────────────────────────
     'chat.welcomeTitle': '👋 你好，我是 Flow',
