@@ -1,63 +1,15 @@
 <svg width="1600" height="640" viewBox="0 0 1600 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">TideLog loop</title>
-  <desc id="desc">A clean loop showing morning plan, daily log, evening review, insights, and better action.</desc>
+  <title id="title">TideLog workflow loop</title>
+  <desc id="desc">A four step loop: Plan, Review, Insight, Action.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="640" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F8FCFC"/>
-      <stop offset="1" stop-color="#F7F0DC"/>
-    </linearGradient>
-    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#5AABB8"/>
-      <stop offset="1" stop-color="#3B8EA5"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#F1DEAA"/>
-      <stop offset="1" stop-color="#D4B978"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#123844" flood-opacity="0.10"/>
-    </filter>
-    <style>
-      .h { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 52px; font-weight: 800; fill: #061113; letter-spacing: -1.5px; }
-      .p { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 24px; font-weight: 520; fill: #557078; }
-      .t { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 30px; font-weight: 760; fill: #061113; }
-      .n { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; font-size: 20px; font-weight: 780; fill: #FFFFFF; }
-      .small { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 22px; font-weight: 580; fill: #6E858C; }
-    </style>
+    <linearGradient id="accent" x1="140" y1="420" x2="1460" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#8BE7F1"/><stop offset=".5" stop-color="#60A5FA"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+    <style>.h{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;font-size:34px;font-weight:700;fill:#F8FAFC}.b{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:21px;font-weight:440;fill:#A9B6C8}.k{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:16px;font-weight:560;fill:#93C5FD}</style>
   </defs>
-  <rect width="1600" height="640" rx="48" fill="url(#bg)"/>
-  <text x="96" y="104" class="h">从「写下来」到「用起来」</text>
-  <text x="96" y="154" class="p">TideLog 把每天的微小记录，推进成可重复的行动反馈。</text>
-  <path d="M282 354C420 208 640 208 780 354C920 500 1140 500 1278 354" stroke="#CFE5E9" stroke-width="24" stroke-linecap="round"/>
-  <path d="M1280 354C1342 288 1430 284 1492 336" stroke="#E7D59D" stroke-width="24" stroke-linecap="round"/>
-  <path d="M1492 336L1455 333M1492 336L1481 300" stroke="#E7D59D" stroke-width="24" stroke-linecap="round"/>
-  <g transform="translate(96 252)" filter="url(#shadow)">
-    <rect width="286" height="190" rx="36" fill="#FFFFFF" stroke="#D8E8EC"/>
-    <circle cx="54" cy="54" r="28" fill="url(#teal)"/><text x="47" y="63" class="n">1</text>
-    <text x="34" y="118" class="t">晨间计划</text>
-    <text x="34" y="154" class="small">精力 · 优先级 · 任务</text>
-  </g>
-  <g transform="translate(424 252)" filter="url(#shadow)">
-    <rect width="286" height="190" rx="36" fill="#FFFFFF" stroke="#D8E8EC"/>
-    <circle cx="54" cy="54" r="28" fill="#8EBBC5"/><text x="47" y="63" class="n">2</text>
-    <text x="34" y="118" class="t">当日记录</text>
-    <text x="34" y="154" class="small">任务 · 情绪 · 事件</text>
-  </g>
-  <g transform="translate(752 252)" filter="url(#shadow)">
-    <rect width="286" height="190" rx="36" fill="#FFFFFF" stroke="#E8DDB9"/>
-    <circle cx="54" cy="54" r="28" fill="url(#gold)"/><text x="47" y="63" class="n">3</text>
-    <text x="34" y="118" class="t">晚间复盘</text>
-    <text x="34" y="154" class="small">目标 · 成果 · 明天</text>
-  </g>
-  <g transform="translate(1080 252)" filter="url(#shadow)">
-    <rect width="286" height="190" rx="36" fill="#061113"/>
-    <circle cx="54" cy="54" r="28" fill="url(#teal)"/><text x="47" y="63" class="n">4</text>
-    <text x="34" y="118" class="t" fill="#FFFFFF">AI 洞察</text>
-    <text x="34" y="154" class="small" fill="#CFE5E9">周报 · 月报 · 模式</text>
-  </g>
-  <g transform="translate(1408 252)" filter="url(#shadow)">
-    <rect width="96" height="190" rx="34" fill="#D4B978"/>
-    <path d="M30 92H66M48 74V110" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
-    <text x="23" y="150" class="n">行动</text>
-  </g>
+  <rect width="1600" height="640" rx="36" fill="#080B12"/>
+  <path d="M258 448C374 354 526 346 690 390C814 424 904 462 1034 444C1166 426 1252 362 1328 316" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" opacity=".22"/>
+  <path d="M1280 316H1328V364" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".22"/>
+  <g transform="translate(120 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">01 / MORNING</text><text x="34" y="112" class="h">Plan</text><text x="34" y="156" class="b">Energy, priorities,</text><text x="34" y="188" class="b">tasks, carry-forward.</text></g>
+  <g transform="translate(484 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">02 / EVENING</text><text x="34" y="112" class="h">Review</text><text x="34" y="156" class="b">Guided prompts for</text><text x="34" y="188" class="b">outcomes and lessons.</text></g>
+  <g transform="translate(848 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">03 / WEEKLY</text><text x="34" y="112" class="h">Insight</text><text x="34" y="156" class="b">AI reports, trends,</text><text x="34" y="188" class="b">patterns, principles.</text></g>
+  <g transform="translate(1212 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">04 / NEXT</text><text x="34" y="112" class="h">Action</text><text x="34" y="156" class="b">Dashboard, calendar,</text><text x="34" y="188" class="b">Kanban, next moves.</text></g>
 </svg>

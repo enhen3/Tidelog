@@ -1,31 +1,36 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">TideLog logo</title>
-  <desc id="desc">A refined tidal-blue app icon with a journal, pen, and warm-gold tide mark.</desc>
+  <desc id="desc">A minimal dark app icon showing a tide curve crossing structured daily note lines.</desc>
   <defs>
-    <linearGradient id="bg" x1="80" y1="52" x2="432" y2="460" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#5AABB8"/>
-      <stop offset="0.48" stop-color="#3B8EA5"/>
-      <stop offset="1" stop-color="#1F6478"/>
+    <linearGradient id="bg" x1="72" y1="48" x2="440" y2="468" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="0.52" stop-color="#0B1320"/>
+      <stop offset="1" stop-color="#05070B"/>
     </linearGradient>
-    <linearGradient id="gold" x1="290" y1="96" x2="438" y2="264" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F1DEAA"/>
-      <stop offset="1" stop-color="#D4B978"/>
+    <linearGradient id="tide" x1="98" y1="330" x2="420" y2="178" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8BE7F1"/>
+      <stop offset="0.45" stop-color="#5FA8FF"/>
+      <stop offset="1" stop-color="#A78BFA"/>
     </linearGradient>
-    <linearGradient id="glass" x1="118" y1="80" x2="362" y2="420" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.34"/>
-      <stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0.10"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <filter id="shadow" x="34" y="30" width="444" height="456" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#123844" flood-opacity="0.28"/>
+    <filter id="shadow" x="22" y="18" width="468" height="484" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#020617" flood-opacity="0.32"/>
+    </filter>
+    <filter id="glow" x="66" y="132" width="380" height="270" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.45 0 0 0 0 0.72 0 0 0 0 1 0 0 0 0.34 0"/>
+      <feBlend in="SourceGraphic"/>
     </filter>
   </defs>
-  <rect x="54" y="46" width="404" height="420" rx="108" fill="url(#bg)" filter="url(#shadow)"/>
-  <path d="M96 96C174 56 293 54 402 98C421 106 432 123 432 144V354C432 404 392 444 342 444H172C122 444 82 404 82 354V164C82 132 87 108 96 96Z" fill="url(#glass)"/>
-  <path d="M168 140H308C340 140 366 166 366 198V332C366 364 340 390 308 390H172C146 390 126 370 126 344V186C126 160 146 140 168 140Z" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M174 190H274M174 240H302M174 290H266" stroke="white" stroke-width="17" stroke-linecap="round"/>
-  <path d="M122 199H88M122 250H88M122 301H88" stroke="white" stroke-width="19" stroke-linecap="round"/>
-  <path d="M308 210L386 132C404 114 433 114 451 132C469 150 469 179 451 197L373 275L312 289L326 228L308 210Z" fill="url(#gold)" stroke="white" stroke-width="17" stroke-linejoin="round"/>
-  <path d="M340 358C367 339 398 339 424 358" stroke="#F1DEAA" stroke-width="16" stroke-linecap="round"/>
-  <path d="M322 392C354 370 394 370 430 392" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" opacity="0.72"/>
+  <rect x="54" y="42" width="404" height="428" rx="104" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="96" y="90" width="320" height="332" rx="48" fill="white" fill-opacity="0.035" stroke="white" stroke-opacity="0.085" stroke-width="2"/>
+  <path d="M145 156H278" stroke="white" stroke-opacity="0.86" stroke-width="20" stroke-linecap="round"/>
+  <path d="M145 212H346" stroke="white" stroke-opacity="0.52" stroke-width="18" stroke-linecap="round"/>
+  <path d="M145 268H310" stroke="white" stroke-opacity="0.34" stroke-width="18" stroke-linecap="round"/>
+  <path d="M145 324H246" stroke="white" stroke-opacity="0.22" stroke-width="18" stroke-linecap="round"/>
+  <g filter="url(#glow)">
+    <path d="M106 336C162 276 209 279 256 309C308 342 359 323 407 250" stroke="url(#tide)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M106 336C162 276 209 279 256 309C308 342 359 323 407 250" stroke="white" stroke-opacity="0.46" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <circle cx="407" cy="250" r="20" fill="#F8FAFC"/>
+  <circle cx="407" cy="250" r="10" fill="#7C3AED"/>
 </svg>

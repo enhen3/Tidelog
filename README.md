@@ -1,126 +1,133 @@
 <p align="center">
-  <img src="assets/tidelog-logo.svg" alt="TideLog logo" width="96">
+  <img src="assets/tidelog-logo.svg" alt="TideLog logo" width="88">
 </p>
 
 <h1 align="center">TideLog</h1>
 
 <p align="center">
-  <strong>把每天的计划、复盘和洞察，变成真正会改变行动的系统。</strong>
+  <strong>Turn Obsidian Daily Notes into a feedback loop for planning, review, insight, and action.</strong>
 </p>
 
 <p align="center">
-  计划 · 复盘 · 洞察 · 行动 · Markdown-first
+  A Markdown-first daily operating system for people who want their notes to change what they do next.<br>
+  <em>把每天写下来的计划、复盘和洞察，变成真正会反过来推动行动的系统。</em>
 </p>
 
-![TideLog hero](assets/tidelog-hero.svg)
+![TideLog product hero](assets/tidelog-hero.svg)
 
-## TideLog 是什么
+## Daily notes are not the system. The loop is.
 
-TideLog 不是一个更复杂的日记模板，也不是又一个任务清单。
+Most people do not fail at note-taking because they lack another template.
 
-它是一套在 Obsidian 里运行的日常成长闭环：早上帮你把一天变清楚，晚上帮你把经历复盘成可用信息，再用 AI 把周/月趋势、情绪波动、反复出现的模式和可复用原则沉淀下来。
+They fail because yesterday’s notes do not reliably return to tomorrow’s decisions. Plans stay separate from reviews. Reviews become diary fragments. Insights appear once, then disappear into the vault.
 
-> 目标不是“多写一点”，而是让你已经写下来的内容，真正反过来影响下一步行动。
+**TideLog adds the missing loop inside Obsidian:**
+
+```text
+Plan → Review → Insight → Action
+```
 
 ![TideLog workflow loop](assets/tidelog-loop.svg)
 
-## 它解决的问题
+## What TideLog helps you do
 
-| 如果你现在这样 | TideLog 会帮你这样做 |
+| If your Obsidian looks like this | TideLog gives you |
 |---|---|
-| 每天都写 Daily note，但很少回看 | 把计划、任务、情绪和复盘写成固定结构，后续可以被检索、统计和总结 |
-| 晚上想复盘，却经常只写流水账 | 用可自定义问题引导你回看目标、成果、焦虑、情绪和明天行动 |
-| 记录很多，但看不见长期模式 | 自动生成周报、月报、情绪趋势、成功模式、挑战分析和原则沉淀 |
-| 想用 AI 理解自己，但不想把系统搬出 Vault | 在自己的 Obsidian 工作流里完成计划、复盘、洞察和对话 |
-| 害怕数据被锁进新工具 | 核心内容写回 Markdown 文件，文件夹路径可以自己配置 |
+| You write Daily Notes but rarely revisit them | A repeatable morning + evening structure that makes each day comparable |
+| Your reviews become free-form diary entries | Guided, editable review questions tied to goals, outcomes, emotions, and next actions |
+| You have months of notes but no visible pattern | Weekly/monthly AI insight reports, emotion trends, recurring behaviors, principles, and profile suggestions |
+| You want AI help without moving life into another app | AI workflows that operate from your configured folders and write Markdown back to your vault |
+| Your tasks and reflections live in different places | Dashboard, Calendar heatmap, and Kanban views that turn reflections back into action |
 
-## 核心体验
+## The core experience
 
 ![TideLog feature preview](assets/tidelog-preview.svg)
 
-### 🌅 晨间计划
+### 1. Plan the day
 
-用一个轻量 SOP 开始当天：评估精力、明确优先级、记录任务和子任务，并自动继承过去几天未完成的事项。
+Start with a lightweight morning SOP: energy, priorities, tasks, subtasks, and unfinished items carried forward from previous days.
 
-### 🌙 晚间复盘
+### 2. Review the evening
 
-用一组可编辑、可排序、可启停的问题完成复盘。你可以使用默认问题，也可以把它改成自己的方法论。
+Use editable review prompts instead of a blank page. Keep the questions that work, disable the ones that do not, and make the system fit your own method.
 
-### 🧭 AI 洞察
+### 3. Find patterns with AI
 
-把每天的复盘进一步整理成周报、月报、情绪趋势、行为模式、用户画像建议和可复用原则。
+Generate weekly/monthly insight reports from your own notes: mood shifts, recurring obstacles, successful behaviors, user/profile suggestions, and reusable principles.
 
-### 📊 可视化视图
+### 4. Turn insight back into action
 
-通过 Dashboard、日历热力图和 Kanban 视图，把任务、情绪、计划和长期模式放到更容易回看的位置。
+Use the Dashboard, Calendar heatmap, and Kanban views to see what is happening over time—and decide what to do next.
 
-## 安装与使用 / Install and usage
+## Who TideLog is for
 
-1. Install TideLog from **Obsidian Community plugins**: search for `TideLog`, then enable it.
-2. 打开 **Obsidian 设置 → TideLog**，配置你要使用的 AI 服务商和 API Key。
-3. 运行 `TideLog: Start morning review`，用晨间计划明确当天优先级。
-4. 运行 `TideLog: Start evening review`，用晚间复盘沉淀当天经验。
-5. 需要长期洞察时，使用 `TideLog: Generate weekly insight`、`TideLog: Generate monthly insight`、`TideLog: Open dashboard`、`TideLog: Open calendar heatmap` 等命令。
+TideLog is designed for people who already live in Obsidian and want a stronger feedback system:
 
-## 适合谁
+- Daily Notes users who want their notes to affect tomorrow’s priorities.
+- Freelancers, independent builders, students, researchers, and career-transition periods where self-management matters.
+- People building a personal operating system, second brain, review habit, or long-term AI memory workflow.
+- Users who care about Markdown ownership and do not want their private life locked inside another SaaS tool.
 
-- 已经在 Obsidian 里写日记、Daily note、周/月复盘，但希望它们更有行动反馈。
-- 希望 AI 长期理解自己的行为模式，而不是只做一次性聊天。
-- 想把任务、情绪、原则、模式和个人成长记录沉淀在自己的 Markdown Vault 中。
-- 正在搭建第二大脑、个人操作系统、复盘系统或独立工作流。
+It may be unnecessary if you only want a beautiful occasional diary app. TideLog is for people who want a repeatable system.
 
-如果你只是想偶尔写一篇日记，TideLog 可能不是必要工具。它更适合想把复盘变成稳定习惯，并希望从长期记录中得到反馈的人。
+## Install and start
 
-## 免费版与 Pro
+1. Install TideLog from **Obsidian Community plugins**: search for `TideLog`, install, then enable it.
+2. Open **Obsidian Settings → TideLog** and configure your AI provider and API key if you want AI features.
+3. Run `TideLog: Start morning review` to plan the day.
+4. Run `TideLog: Start evening review` to review the evening.
+5. When you have enough notes, run `TideLog: Generate weekly insight`, `TideLog: Generate monthly insight`, `TideLog: Open dashboard`, or `TideLog: Open calendar heatmap`.
 
-TideLog 可以免费安装和试用。完整的长期复盘系统需要 TideLog Pro License。
+## Free and Pro
 
-| 功能 | 免费版 | Pro |
+TideLog is free to install and try. TideLog Pro unlocks the complete long-term review system.
+
+| Feature | Free | Pro |
 |---|---:|---:|
-| 晨间计划 SOP | 支持 | 支持 |
-| 使用自带 API Key 自由对话 | 支持 | 支持 |
-| 基础任务记录与日记写入 | 支持 | 支持 |
-| 晚间复盘问题 | 前 2 个 | 完整 5+4 流程 |
-| 周报/月报洞察 | 不支持 | 支持 |
-| 用户画像建议 | 不支持 | 支持 |
-| Dashboard / 日历热力图 / Kanban | 不支持 | 支持 |
-| 设备数 | 不适用 | 每个 License 3 台设备 |
-| 离线宽限期 | 不适用 | 7 天 |
+| Morning planning SOP | Yes | Yes |
+| Chat with your own AI API key | Yes | Yes |
+| Basic task capture and Markdown writing | Yes | Yes |
+| Evening review prompts | First 2 prompts | Full 5+4 flow |
+| Weekly/monthly insight reports | — | Yes |
+| User/profile suggestions | — | Yes |
+| Dashboard / Calendar heatmap / Kanban | — | Yes |
+| Devices | — | 3 devices per license |
+| Offline grace period | — | 7 days |
 
-当前通过爱发电购买：
+Current purchase options via Afdian:
 
-- 年度版：¥49/年。
-- 终身版：¥99 一次性买断。
-- 购买地址：<https://afdian.com/item/463307362c2f11f1b39d52540025c377>。
+- Annual: **¥49/year**
+- Lifetime: **¥99 one-time purchase**
+- Purchase: <https://afdian.com/item/463307362c2f11f1b39d52540025c377>
 
-购买后，爱发电会提供 TideLog License。请在 **Obsidian 设置 → TideLog → Pro** 中输入激活。如果找不到 License，可以使用设置页中的 License portal，凭购买邮箱和爱发电订单号查询。
+After purchase, Afdian provides a TideLog License. Activate it in **Obsidian Settings → TideLog → Pro**. If you cannot find the license, use the License portal in the settings page with your purchase email and Afdian order number.
 
-## 数据、隐私与网络请求
+## Privacy and data ownership
 
-TideLog 的默认原则是：你的日常记录留在你的 Vault 中；只有你主动触发需要网络的功能时，才会发起 HTTPS 请求。
+TideLog is designed around a simple principle: **your daily records stay in your vault unless you explicitly trigger a feature that needs a network request.**
 
-TideLog 会在这些场景读取或写入 Vault：
+TideLog reads or writes your vault only for the workflows you configure:
 
-- 扫描你配置的日记、计划和归档文件夹，用于日历热力图、Dashboard、Kanban、任务继承和周/月总结。
-- 读取相关笔记，用于渲染视图、继承未完成任务，或生成你主动触发的 AI 提示词。
-- 在你配置的文件夹中创建或更新晨间计划、晚间复盘、任务、洞察报告、模板和缓存文件。
+- scanning configured daily/planning/archive folders for Dashboard, Calendar heatmap, Kanban, task carry-forward, and weekly/monthly summaries;
+- reading relevant notes to render views or prepare AI prompts you explicitly trigger;
+- creating or updating morning plans, evening reviews, tasks, insight reports, templates, and local cache files in your configured folders.
 
-TideLog 会通过 Obsidian SecretStorage 保存你输入的 AI API Key 和 TideLog Pro License key；普通插件设置只保存服务商、模型、文件夹路径、设备标识符和授权状态等非密钥信息。
+TideLog stores your AI API key and TideLog Pro license key with Obsidian SecretStorage. Regular plugin settings store only non-secret configuration such as provider, model, folder paths, generated device identifier, and license status.
 
-TideLog 只在以下场景发起网络请求：
+TideLog makes outbound HTTPS requests only for:
 
-1. **AI API calls**：使用晨间计划、晚间复盘、洞察生成或自由对话等 AI 功能时，会将相关提示词和必要笔记内容发送到你在设置中配置的 AI 服务商。
-2. **Connection tests**：点击测试连接按钮时，会向所选 AI 服务商验证 API Key 和模型配置。
-3. **License activation and verification**：激活或验证 Pro 时，会向 `https://tidelog-api.mydreamchronicle.com` 发送 License key 和生成的设备标识符，用于授权验证和 3 台设备限制。授权请求不包含 Vault 笔记内容。
-4. **Purchase and License portal links**：设置页按钮会在浏览器中打开爱发电或 `https://tidelog-api.mydreamchronicle.com/portal`，此操作由用户主动触发。
+1. **AI API calls** when you trigger AI chat, planning, review, or insight generation through your configured provider;
+2. **connection tests** when you test an AI provider/API key;
+3. **license activation and verification** through `https://tidelog-api.mydreamchronicle.com` with your license key and generated device identifier—no vault note content is sent for license checks;
+4. **purchase and license portal links** opened by your own click.
 
-TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。TideLog 不访问 Obsidian Vault 之外的文件。完整隐私说明见 [PRIVACY.md](./PRIVACY.md)。
+TideLog does **not** include client-side telemetry, analytics SDKs, dynamic ads, or any self-update mechanism. TideLog does not access files outside your Obsidian vault. See [PRIVACY.md](./PRIVACY.md) for the full privacy policy.
 
 ## Support
 
 - GitHub issues: <https://github.com/enhen3/Tidelog/issues>
-- License activation support: 请附上爱发电订单号、License key 前缀、设备错误提示和 TideLog 版本。
-- 请不要在公开 issue 中粘贴完整 API Key、完整 License key 或私人日记内容。
+- License activation support: include your Afdian order number, license key prefix, device error message, and TideLog version.
+- Do not paste full API keys, full license keys, or private diary content into public issues.
 
 ## License
 
@@ -129,23 +136,20 @@ TideLog source code is licensed under the GNU Affero General Public License v3.0
 ---
 
 <details>
-<summary>English overview</summary>
+<summary>中文简介</summary>
 
 # TideLog
 
-Turn daily planning, evening review, and AI insights into a durable personal growth system in your Markdown vault.
+TideLog 是一个在 Obsidian 里运行的日常反馈系统：
 
-TideLog helps you run a repeatable **Plan → Review → Insight → Action** loop:
+```text
+晨间计划 → 晚间复盘 → AI 洞察 → 下一步行动
+```
 
-- **Plan the day** with a guided morning SOP for energy, priorities, tasks, subtasks, and carry-forward items.
-- **Review the day** with customizable evening questions instead of staring at a blank page.
-- **Find patterns** with weekly/monthly insight reports, emotion trends, principles, and recurring behaviors.
-- **Keep ownership** of your notes: TideLog writes Markdown files to your configured folders and only calls external services when you trigger AI or license features.
+它不是更复杂的日记模板，也不是又一个任务清单。它想解决的是：你已经写下了很多 Daily Notes，但这些记录很少真正反过来改变明天怎么做。
 
-The free version lets you try the core workflow. TideLog Pro unlocks the full evening review flow, weekly/monthly insights, profile suggestions, dashboard, calendar heatmap, and Kanban views.
+TideLog 会把你的计划、任务、情绪、复盘、周报、月报、Dashboard、日历热力图和 Kanban 尽量沉淀在你自己的 Markdown vault 中。AI 功能只在你主动触发时调用你配置的服务商。
 
-TideLog makes outbound HTTPS requests only for AI calls, AI connection tests, license activation/verification, and user-initiated purchase or license portal links. It does not include client-side telemetry, analytics SDKs, dynamic ads, or any self-update mechanism.
-
-See [PRIVACY.md](./PRIVACY.md) for the full privacy policy.
+免费版可以试用核心流程；Pro 解锁完整晚间复盘、周/月洞察、用户画像建议、Dashboard、日历热力图和 Kanban。
 
 </details>
