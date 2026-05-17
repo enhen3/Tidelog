@@ -1,43 +1,43 @@
 {
-  "name": "tidelog",
-  "version": "1.1.33",
-  "description": "TideLog — AI-guided daily planning, review, and insight system for Obsidian",
-  "main": "main.js",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "node esbuild.config.mjs",
-    "typecheck": "tsc --noEmit --skipLibCheck",
-    "typecheck:api": "tsc --noEmit -p api/tsconfig.json",
-    "lint:obsidian": "eslint -c eslint.config.review.mjs src/**/*.ts",
-    "test": "node test-bug-repro.mjs && node test-evening-sop.mjs && node test-save-load.mjs && node test-settings-ui.mjs && node test-commercial-flow.mjs",
-    "build": "npm run typecheck && node esbuild.config.mjs production",
-    "deploy": "cp main.js styles.css manifest.json \"${OBSIDIAN_VAULT:?Set OBSIDIAN_VAULT to your vault path}/.obsidian/plugins/tidelog/\" && echo '✅ Deployed to vault'",
-    "release:check": "node scripts/check-release-assets.mjs",
-    "check": "npm run typecheck && npm run typecheck:api && npm run lint:obsidian && npm test && npm run build && npm run release:check",
-    "version": "node version-bump.mjs && git add manifest.json versions.json"
-  },
-  "keywords": [
-    "obsidian",
-    "plugin",
-    "ai",
-    "journaling",
-    "productivity"
-  ],
-  "license": "AGPL-3.0",
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260515.1",
-    "@types/node": "^16.11.6",
-    "@typescript-eslint/eslint-plugin": "^8.57.0",
-    "@typescript-eslint/parser": "^8.57.0",
-    "esbuild": "0.25.0",
-    "eslint": "^10.0.3",
-    "eslint-plugin-obsidianmd": "^0.2.9",
-    "jsdom": "^29.1.1",
-    "tslib": "2.4.0",
-    "typescript": "5.4.5"
-  },
-  "dependencies": {
-    "obsidian": "latest"
-  }
+	"name": "tidelog",
+	"version": "1.1.34",
+	"description": "TideLog — AI-guided daily planning, review, and insight system for Obsidian",
+	"main": "main.js",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"typecheck": "tsc --noEmit --skipLibCheck",
+		"typecheck:api": "tsc --noEmit -p api/tsconfig.json",
+		"lint:obsidian": "eslint -c eslint.config.review.mjs src/**/*.ts",
+		"test": "node test-bug-repro.mjs && node test-evening-sop.mjs && node test-save-load.mjs && node test-settings-ui.mjs && node test-commercial-flow.mjs",
+		"build": "npm run typecheck && node esbuild.config.mjs production",
+		"deploy": "cp main.js styles.css manifest.json \"${OBSIDIAN_VAULT:?Set OBSIDIAN_VAULT to your vault path}/.obsidian/plugins/tidelog/\" && echo '✅ Deployed to vault'",
+		"release:check": "node scripts/check-release-assets.mjs",
+		"check": "npm run typecheck && npm run typecheck:api && npm run lint:obsidian && npm test && npm run build && npm run release:check",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"plugin",
+		"ai",
+		"journaling",
+		"productivity"
+	],
+	"license": "AGPL-3.0",
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260515.1",
+		"@types/node": "^16.11.6",
+		"@typescript-eslint/eslint-plugin": "^8.57.0",
+		"@typescript-eslint/parser": "^8.57.0",
+		"esbuild": "0.25.0",
+		"eslint": "^10.0.3",
+		"eslint-plugin-obsidianmd": "^0.2.9",
+		"jsdom": "^29.1.1",
+		"tslib": "2.4.0",
+		"typescript": "5.4.5"
+	},
+	"dependencies": {
+		"obsidian": "latest"
+	}
 }
