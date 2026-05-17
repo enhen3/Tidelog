@@ -121,7 +121,9 @@ function assertContains(text, needle, label) {
 // ---------------------------------------------------------------------------
 
 function makePlugin(eveningQuestions, opts = {}) {
+    const state = { yamlUpdates: [], appendedSections: [] };
     return {
+        __state: state,
         settings: {
             language: 'zh',
             activeProvider: 'openrouter',
@@ -134,8 +136,8 @@ function makePlugin(eveningQuestions, opts = {}) {
         vaultManager: {
             getUserProfileContent: async () => null,
             getOrCreateDailyNote: async () => ({ path: 'Daily/2026-05-12.md' }),
-            appendToSection: async () => {},
-            updateDailyNoteYAML: async () => {},
+            appendToSection: async (...args) => { state.appendedSections.push(args); },
+            updateDailyNoteYAML: async (_path, fields) => { state.yamlUpdates.push(fields); },
             addPrinciple: async () => {},
         },
         app: {
@@ -305,6 +307,25 @@ console.log('\nTest 7: legacy questions without enabled flag remain enabled');
 
     assertContains(out[0], 'LEGACY-1', 'legacy question without enabled=false is still asked');
     assertEqual(sop.questionFlow.length, 2, 'legacy questions without enabled flag are included');
+}
+
+console.log('\nTest 8: final mood score does not overwrite joy/emotion answer');
+{
+    const userQuestions = [
+        { type: 'happiness_emotion', sectionName: '开心事与情绪', initialMessage: '今天心情如何？', required: true, enabled: true },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true });
+    const sop = new EveningSOP(plugin);
+
+    const out = [];
+    const ctx = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx, (m) => out.push(m));
+    await sop.handleResponse('今天很开心，因为傍晚出去散步了。', ctx, (m) => out.push(m));
+    await sop.handleResponse('7', ctx, (m) => out.push(m));
+
+    assertEqual(ctx.responses.happiness_emotion, '今天很开心，因为傍晚出去散步了。', 'joy/emotion answer is preserved');
+    assertEqual(ctx.responses.emotion_score, '7', 'final numeric mood score is stored separately');
+    assertEqual(plugin.__state.yamlUpdates.at(-1)?.emotion_score, 7, 'plain number mood score is written to YAML');
 }
 
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===\n`);

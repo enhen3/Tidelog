@@ -124,11 +124,9 @@ async function checkRateLimit(
 function generateKey(): string {
 	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 	const segment = () => {
-		let s = '';
-		for (let i = 0; i < 4; i++) {
-			s += chars[Math.floor(Math.random() * chars.length)];
-		}
-		return s;
+		const bytes = new Uint8Array(4);
+		crypto.getRandomValues(bytes);
+		return [...bytes].map((byte) => chars[byte & 31]).join('');
 	};
 	return `TL-${segment()}-${segment()}-${segment()}`;
 }
@@ -308,8 +306,15 @@ async function handleAdminGenerate(request: Request, env: Env): Promise<Response
 		orderId?: string;
 	}>();
 
-	const count = Math.min(body.count || 10, 500);
+	const requestedCount = Number.isInteger(body.count) ? body.count as number : 10;
+	const count = Math.max(1, Math.min(requestedCount, 500));
 	const licenseType = body.licenseType || 'lifetime';
+	if (licenseType !== 'annual' && licenseType !== 'lifetime') {
+		return error('Invalid license type. Expected annual or lifetime.', 400);
+	}
+
+	const email = body.email?.trim().toLowerCase() || null;
+	const orderId = body.orderId?.trim() || null;
 	const expiresAt = licenseType === 'annual'
 		? Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60
 		: null;
@@ -320,7 +325,7 @@ async function handleAdminGenerate(request: Request, env: Env): Promise<Response
 		const key = generateKey();
 		await env.DB.prepare(
 			'INSERT INTO licenses (key, license_type, expires_at, email, order_id) VALUES (?, ?, ?, ?, ?)'
-		).bind(key, licenseType, expiresAt, body.email || null, body.orderId || null).run();
+		).bind(key, licenseType, expiresAt, email, orderId).run();
 		keys.push(key);
 	}
 
@@ -1010,8 +1015,8 @@ export default {
 
 			return error('Not found', 404);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Internal server error';
-			return error(message, 500);
+			console.error('[TideLog License API] Request failed', err);
+			return error('Internal server error', 500);
 		}
 	},
 } satisfies ExportedHandler<Env>;

@@ -10,7 +10,7 @@ import {
     addIcon,
 } from 'obsidian';
 
-import { TideLogSettings, EveningQuestionConfig } from './types';
+import { TideLogSettings, EveningQuestionConfig, AIProviderType } from './types';
 import { DEFAULT_SETTINGS, getDefaultEveningQuestions } from './constants';
 import { setLanguage, t } from './i18n';
 import { TideLogSettingTab } from './settings/settings-tab';
@@ -28,8 +28,18 @@ import { KanbanService } from './services/kanban-service';
 import { FileLinkService } from './services/file-linker';
 import { DashboardService } from './services/dashboard-service';
 import { LicenseManager } from './services/license-manager';
+import { ProModal } from './views/pro-modal';
 
 import { migrateSettings } from './settings-migration';
+
+const PROVIDER_KEYS: AIProviderType[] = [
+    'openrouter',
+    'anthropic',
+    'gemini',
+    'openai',
+    'siliconflow',
+    'custom',
+];
 
 export default class TideLogPlugin extends Plugin {
     settings: TideLogSettings = DEFAULT_SETTINGS;
@@ -148,6 +158,10 @@ export default class TideLogPlugin extends Plugin {
             id: 'generate-dashboard',
             name: 'Generate / refresh dashboard (Markdown)',
             callback: async () => {
+                if (!this.licenseManager.isPro()) {
+                    this.showProRequired(t('view.dashboardDisplayText'));
+                    return;
+                }
                 const file = await this.dashboardService.generateDashboard();
                 const leaf = this.app.workspace.getLeaf();
                 await leaf.openFile(file);
@@ -243,14 +257,90 @@ export default class TideLogPlugin extends Plugin {
         };
 
         // Run any pending settings migrations (e.g. deprecated model replacement)
-        if (migrateSettings(this.settings)) {
-            await this.saveData(this.settings);
+        const settingsMigrated = migrateSettings(this.settings);
+        const secretsMigrated = this.migratePersistedSecretsToSecretStorage();
+        this.loadSecretsIntoRuntimeSettings();
+
+        if (settingsMigrated || secretsMigrated) {
+            await this.saveData(this.getPersistableSettings());
         }
     }
 
     async saveSettings(): Promise<void> {
-        await this.saveData(this.settings);
+        this.persistRuntimeSecrets();
+        await this.saveData(this.getPersistableSettings());
         setLanguage(this.settings.language);
+    }
+
+    private getProviderSecretId(provider: AIProviderType): string {
+        return `tidelog-${provider}-api-key`;
+    }
+
+    private getLicenseSecretId(): string {
+        return 'tidelog-license-key';
+    }
+
+    private migratePersistedSecretsToSecretStorage(): boolean {
+        let migrated = false;
+
+        for (const provider of PROVIDER_KEYS) {
+            const persistedKey = this.settings.providers[provider].apiKey?.trim();
+            if (!persistedKey) continue;
+            this.app.secretStorage.setSecret(this.getProviderSecretId(provider), persistedKey);
+            migrated = true;
+        }
+
+        const persistedLicenseKey = this.settings.proLicense.key?.trim();
+        if (persistedLicenseKey) {
+            this.app.secretStorage.setSecret(this.getLicenseSecretId(), persistedLicenseKey);
+            migrated = true;
+        }
+
+        return migrated;
+    }
+
+    private loadSecretsIntoRuntimeSettings(): void {
+        for (const provider of PROVIDER_KEYS) {
+            this.settings.providers[provider].apiKey =
+                this.app.secretStorage.getSecret(this.getProviderSecretId(provider)) || '';
+        }
+
+        this.settings.proLicense.key =
+            this.app.secretStorage.getSecret(this.getLicenseSecretId()) || '';
+    }
+
+    private persistRuntimeSecrets(): void {
+        for (const provider of PROVIDER_KEYS) {
+            this.app.secretStorage.setSecret(
+                this.getProviderSecretId(provider),
+                this.settings.providers[provider].apiKey || '',
+            );
+        }
+
+        this.app.secretStorage.setSecret(
+            this.getLicenseSecretId(),
+            this.settings.proLicense.key || '',
+        );
+    }
+
+    private getPersistableSettings(): TideLogSettings {
+        const providers = { ...this.settings.providers };
+        for (const provider of PROVIDER_KEYS) {
+            providers[provider] = {
+                ...this.settings.providers[provider],
+                apiKey: '',
+            };
+        }
+
+        return {
+            ...this.settings,
+            proLicense: {
+                ...this.settings.proLicense,
+                key: '',
+            },
+            providers,
+            eveningQuestions: this.settings.eveningQuestions.map((q) => ({ ...q })),
+        };
     }
 
     openOnboarding(): void {
@@ -357,6 +447,11 @@ export default class TideLogPlugin extends Plugin {
      * Generate weekly or monthly insight report
      */
     async generateInsight(type: 'weekly' | 'monthly'): Promise<void> {
+        if (!this.licenseManager.isPro()) {
+            this.showProRequired(type === 'weekly' ? t('chat.weeklyInsight') : t('chat.monthlyInsight'));
+            return;
+        }
+
         // Ensure vault structure exists before writing insight files
         await this.initializeVaultStructure();
 
@@ -371,5 +466,9 @@ export default class TideLogPlugin extends Plugin {
                 (view as ChatView).triggerInsight(type);
             }
         }
+    }
+
+    private showProRequired(featureName: string): void {
+        new ProModal(this.app, featureName, this.licenseManager).open();
     }
 }

@@ -184,7 +184,7 @@ export class EveningSOP {
     ): Promise<void> {
         // Handle emotion score (final step after all questions)
         if (this.isEmotionScoreStep) {
-            context.responses['happiness_emotion'] = content;
+            context.responses['emotion_score'] = content;
             await this.finishEveningSOP(context, onMessage);
             return;
         }
@@ -424,7 +424,7 @@ ${emotionQ}`
         onMessage: (message: string) => void
     ): Promise<void> {
         // Calculate emotion score if available
-        const emotionResponse = context.responses['happiness_emotion'] || '';
+        const emotionResponse = context.responses['emotion_score'] || context.responses['happiness_emotion'] || '';
         const emotionScore = this.extractEmotionScore(emotionResponse);
 
         // Write YAML metadata to daily note
@@ -600,7 +600,7 @@ Strict rules:
      * Extract emotion score from response
      */
     private extractEmotionScore(text: string): string | null {
-        const match = text.match(/(\d+)\s*[分/]/);
+        const match = text.match(/(?:^|[^\d])(10|[1-9])(?:\s*(?:分|\/\s*10)?)?(?=$|[^\d])/);
         return match ? match[1] : null;
     }
 

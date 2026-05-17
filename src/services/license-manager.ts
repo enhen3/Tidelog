@@ -4,7 +4,7 @@
  */
 
 import { requestUrl } from 'obsidian';
-import TideLogPlugin from '../main';
+import type TideLogPlugin from '../main';
 
 /** API base URL */
 const API_BASE = 'https://tidelog-api.mydreamchronicle.com';
@@ -19,9 +19,10 @@ const PURCHASE_URL = 'https://afdian.com/item/463307362c2f11f1b39d52540025c377';
 const MAX_RETRIES = 2;
 
 /**
- * Robust HTTP POST with retry + fetch fallback.
- * Obsidian's requestUrl sometimes doesn't route through system VPN/proxy,
- * so we fall back to native fetch when it fails.
+ * Robust HTTP POST with retry.
+ * Obsidian's requestUrl can fail transiently when the user's network or proxy
+ * changes, so short retries prevent a paid-license action from failing too
+ * eagerly.
  */
 async function apiPost(url: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
     const jsonBody = JSON.stringify(body);
@@ -130,7 +131,7 @@ export class LicenseManager {
             const errMsg = err instanceof Error ? err.message : String(err);
             return {
                 success: false,
-                message: `网络连接失败，请检查网络后重试。如仍无法激活，请将以下信息发送给开发者：\n激活码: ${trimmed}\n设备ID: ${deviceId}\n错误: ${errMsg}`,
+                message: `网络连接失败，请检查网络后重试。如仍无法激活，请将以下信息发送给开发者：\n激活码: ${this.maskKey(trimmed)}\n设备ID: ${deviceId}\n错误: ${errMsg}`,
             };
         }
     }
@@ -227,11 +228,16 @@ export class LicenseManager {
     }
 
     private randomHex(length: number): string {
-        const chars = '0123456789abcdef';
-        let result = '';
-        for (let i = 0; i < length; i++) {
-            result += chars[Math.floor(Math.random() * chars.length)];
-        }
-        return result;
+        const bytes = new Uint8Array(Math.ceil(length / 2));
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes)
+            .map((byte) => byte.toString(16).padStart(2, '0'))
+            .join('')
+            .slice(0, length);
+    }
+
+    private maskKey(key: string): string {
+        if (key.length <= 10) return `${key.slice(0, 4)}...`;
+        return `${key.slice(0, 6)}...${key.slice(-4)}`;
     }
 }

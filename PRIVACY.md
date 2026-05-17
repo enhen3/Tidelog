@@ -10,8 +10,12 @@ TideLog stores the following in your Obsidian vault or plugin data:
 
 - Daily notes, plans, reviews, dashboard files, insight reports, principles, patterns, and profile notes that the plugin creates or updates.
 - Plugin settings, including selected AI provider, model names, folder paths, review question customizations, and Pro license activation state.
-- API keys that you enter for your selected AI provider.
 - A generated TideLog device identifier used for Pro license activation.
+
+TideLog stores sensitive secrets through Obsidian SecretStorage:
+
+- API keys that you enter for your selected AI provider.
+- Your TideLog Pro License key after activation.
 
 Your vault content remains local unless you explicitly use an AI feature or another network-connected feature described below.
 

@@ -3,7 +3,7 @@
  */
 
 import { App, Modal } from 'obsidian';
-import { LicenseManager } from '../services/license-manager';
+import type { LicenseManager } from '../services/license-manager';
 import { t } from '../i18n';
 
 export class ProModal extends Modal {
