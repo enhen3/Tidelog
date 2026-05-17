@@ -54,12 +54,32 @@ export class KanbanView extends ItemView {
         container.addClass('tl-kanban-container');
 
         this.containerEl_ = container;
+
+        if (!this.plugin.licenseManager.isPro()) {
+            this.renderProLocked(container, t('kanban.displayText'));
+            return;
+        }
+
         await this.render();
     }
 
     async onClose(): Promise<void> {
         await Promise.resolve();
         this.containerEl_ = null;
+    }
+
+    private renderProLocked(container: HTMLElement, featureName: string): void {
+        const locked = container.createDiv('tl-pro-locked-view');
+        locked.createDiv({ cls: 'tl-pro-locked-icon', text: '🔒' });
+        locked.createEl('h3', { cls: 'tl-pro-locked-title', text: t('pro.featureTitle', featureName) });
+        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('pro.dashboardDesc') });
+
+        const buyBtn = locked.createDiv('tl-pro-locked-buttons').createEl('a', {
+            cls: 'tl-pro-cta-btn tl-pro-cta-cn',
+            text: t('pro.purchase'),
+            href: this.plugin.licenseManager.getPurchaseUrl(),
+        });
+        buyBtn.setAttr('target', '_blank');
     }
 
     // =========================================================================

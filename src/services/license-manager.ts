@@ -36,8 +36,17 @@ async function apiPost(url: string, body: Record<string, unknown>): Promise<Reco
                 method: 'POST',
                 headers,
                 body: jsonBody,
+                throw: false,
             });
-            return response.json as Record<string, unknown>;
+
+            const data = response.json as Record<string, unknown>;
+            if (response.status >= 500 && attempt < MAX_RETRIES) {
+                lastError = new Error(`License server returned ${response.status}`);
+                await new Promise(r => window.setTimeout(r, 1000 * (attempt + 1)));
+                continue;
+            }
+
+            return data;
         } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
             // Wait before retry
