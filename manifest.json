@@ -3,7 +3,7 @@
 	"name": "TideLog",
 	"version": "1.1.32",
 	"minAppVersion": "1.11.4",
-	"description": "Turn Obsidian Daily Notes into a feedback loop for planning, review, AI insight, and action.",
+	"description": "把 Obsidian Daily Notes 变成晨间计划、晚间复盘、AI 洞察和下一步行动的反馈系统。",
 	"author": "enhen3",
 	"authorUrl": "https://github.com/enhen3",
 	"fundingUrl": "https://afdian.com/item/463307362c2f11f1b39d52540025c377",

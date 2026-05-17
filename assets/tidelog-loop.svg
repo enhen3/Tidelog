@@ -1,15 +1,15 @@
 <svg width="1600" height="640" viewBox="0 0 1600 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">TideLog workflow loop</title>
-  <desc id="desc">A four step loop: Plan, Review, Insight, Action.</desc>
+  <desc id="desc">A four step loop: 计划, 复盘, 洞察, 行动.</desc>
   <defs>
     <linearGradient id="accent" x1="140" y1="420" x2="1460" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#8BE7F1"/><stop offset=".5" stop-color="#60A5FA"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
     <style>.h{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;font-size:34px;font-weight:700;fill:#F8FAFC}.b{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:21px;font-weight:440;fill:#A9B6C8}.k{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:16px;font-weight:560;fill:#93C5FD}</style>
   </defs>
   <rect width="1600" height="640" rx="36" fill="#080B12"/>
-  <path d="M258 448C374 354 526 346 690 390C814 424 904 462 1034 444C1166 426 1252 362 1328 316" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" opacity=".22"/>
-  <path d="M1280 316H1328V364" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".22"/>
-  <g transform="translate(120 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">01 / MORNING</text><text x="34" y="112" class="h">Plan</text><text x="34" y="156" class="b">Energy, priorities,</text><text x="34" y="188" class="b">tasks, carry-forward.</text></g>
-  <g transform="translate(484 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">02 / EVENING</text><text x="34" y="112" class="h">Review</text><text x="34" y="156" class="b">Guided prompts for</text><text x="34" y="188" class="b">outcomes and lessons.</text></g>
-  <g transform="translate(848 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">03 / WEEKLY</text><text x="34" y="112" class="h">Insight</text><text x="34" y="156" class="b">AI reports, trends,</text><text x="34" y="188" class="b">patterns, principles.</text></g>
-  <g transform="translate(1212 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">04 / NEXT</text><text x="34" y="112" class="h">Action</text><text x="34" y="156" class="b">Dashboard, calendar,</text><text x="34" y="188" class="b">Kanban, next moves.</text></g>
+  <path d="M258 470C376 398 528 392 690 426C814 452 904 482 1034 468C1168 454 1254 398 1328 360" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" opacity=".16"/>
+  <path d="M1280 360H1328V408" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".16"/>
+  <g transform="translate(120 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">01 / 晨间</text><text x="34" y="112" class="h">计划</text><text x="34" y="156" class="b">精力、优先级、</text><text x="34" y="188" class="b">任务、未完成事项。</text></g>
+  <g transform="translate(484 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">02 / 晚间</text><text x="34" y="112" class="h">复盘</text><text x="34" y="156" class="b">用问题回看</text><text x="34" y="188" class="b">结果与经验。</text></g>
+  <g transform="translate(848 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">03 / 周期</text><text x="34" y="112" class="h">洞察</text><text x="34" y="156" class="b">AI 报告、趋势、</text><text x="34" y="188" class="b">模式、原则。</text></g>
+  <g transform="translate(1212 156)"><rect width="286" height="254" rx="30" fill="white" fill-opacity=".045" stroke="white" stroke-opacity=".10"/><text x="34" y="58" class="k">04 / 下一步</text><text x="34" y="112" class="h">行动</text><text x="34" y="156" class="b">Dashboard、日历、</text><text x="34" y="188" class="b">Kanban、下一步。</text></g>
 </svg>
