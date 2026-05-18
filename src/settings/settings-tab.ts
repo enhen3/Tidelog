@@ -30,7 +30,10 @@ export class TideLogSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+        containerEl.addClass('tl-settings-tab');
         if (Platform.isMobile) containerEl.addClass('is-mobile');
+
+        this.renderSettingsHero(containerEl);
 
         // =================================================================
         // Language Setting
@@ -152,6 +155,51 @@ export class TideLogSettingTab extends PluginSettingTab {
         // Evening Question Editor
         // =================================================================
         this.renderEveningQuestions(containerEl);
+    }
+
+    /**
+     * Render a premium, brand-colored settings hero so the settings page feels
+     * like a finished product surface instead of a default Obsidian form list.
+     */
+    private renderSettingsHero(containerEl: HTMLElement): void {
+        const heroEl = containerEl.createDiv('tl-settings-hero');
+        const copyEl = heroEl.createDiv('tl-settings-hero-copy');
+        const lockupEl = copyEl.createDiv('tl-settings-lockup');
+        const logoEl = lockupEl.createDiv('tl-settings-logo-mark');
+        logoEl.createSpan('tl-settings-logo-line');
+        logoEl.createSpan('tl-settings-logo-dot');
+        const lockupCopyEl = lockupEl.createDiv('tl-settings-lockup-copy');
+        lockupCopyEl.createDiv({ cls: 'tl-settings-eyebrow', text: 'TideLog · Obsidian feedback loop' });
+        lockupCopyEl.createDiv({ cls: 'tl-settings-lockup-subtitle', text: 'Markdown-first · Local by default · AI optional' });
+        copyEl.createDiv({
+            cls: 'tl-settings-hero-title',
+            text: t('settings.heroTitle'),
+        });
+        copyEl.createEl('p', {
+            cls: 'tl-settings-hero-desc',
+            text: t('settings.heroDesc'),
+        });
+
+        const flowEl = copyEl.createDiv('tl-settings-flow');
+        ['Plan', 'Review', 'Insight', 'Action'].forEach((label) => {
+            flowEl.createSpan({ cls: 'tl-settings-flow-pill', text: label });
+        });
+
+        const proofEl = copyEl.createDiv('tl-settings-proof-row');
+        ['No telemetry', 'Vault-native', '3-min setup'].forEach((label) => {
+            proofEl.createSpan({ cls: 'tl-settings-proof-pill', text: label });
+        });
+
+        const visualEl = heroEl.createDiv('tl-settings-hero-visual');
+        const cardEl = visualEl.createDiv('tl-settings-mini-card');
+        cardEl.createDiv({ cls: 'tl-settings-mini-label', text: 'Today' });
+        cardEl.createDiv({ cls: 'tl-settings-mini-title', text: 'Daily Note → Action' });
+        const rowsEl = cardEl.createDiv('tl-settings-mini-rows');
+        ['Morning plan', 'Evening review', 'Weekly insight'].forEach((label, index) => {
+            const rowEl = rowsEl.createDiv('tl-settings-mini-row');
+            rowEl.createSpan({ cls: `tl-settings-mini-dot tl-settings-mini-dot-${index + 1}` });
+            rowEl.createSpan({ text: label });
+        });
     }
 
     /**
@@ -695,6 +743,21 @@ export class TideLogSettingTab extends PluginSettingTab {
         const isPro = this.plugin.licenseManager.isPro();
 
         new Setting(containerEl).setName('Pro').setHeading();
+
+        const proCardEl = containerEl.createDiv('tl-settings-pro-card');
+        proCardEl.createDiv({ cls: 'tl-settings-pro-kicker', text: isPro ? 'TideLog Pro active' : 'TideLog Pro' });
+        proCardEl.createDiv({
+            cls: 'tl-settings-pro-title',
+            text: isPro ? t('settings.proActiveTitle') : t('settings.proUpgradeTitle'),
+        });
+        proCardEl.createDiv({
+            cls: 'tl-settings-pro-desc',
+            text: isPro ? t('settings.proActiveDesc') : t('settings.proUpgradeDesc'),
+        });
+        const proFeaturesEl = proCardEl.createDiv('tl-settings-pro-features');
+        [t('settings.proFeatureReview'), t('settings.proFeatureInsight'), t('settings.proFeatureDashboard')].forEach((feature) => {
+            proFeaturesEl.createSpan({ cls: 'tl-settings-pro-feature', text: feature });
+        });
 
         // Status
         const statusSetting = new Setting(containerEl)

@@ -61,6 +61,15 @@ export const en: Record<string, string> = {
     'settings.gettingStartedGuide': 'Setup guide',
     'settings.gettingStartedDesc': 'Open the quick start guide for AI setup, morning planning, evening review, and Pro activation',
     'settings.openGettingStarted': 'Open guide',
+    'settings.heroTitle': 'Make daily notes return to the next action.',
+    'settings.heroDesc': 'Configure AI, folders, review prompts, and Pro here. TideLog is not about writing more — it connects Plan → Review → Insight → Action inside your Obsidian vault.',
+    'settings.proUpgradeTitle': 'Unlock the complete feedback system',
+    'settings.proUpgradeDesc': 'Pro is built for deeper behavior patterns, weekly/monthly insights, Dashboard, Calendar heatmap, and Kanban action surfaces.',
+    'settings.proActiveTitle': 'Your full feedback system is active',
+    'settings.proActiveDesc': 'Keep accumulating morning plans, evening reviews, and long-term insights so notes keep changing your actions.',
+    'settings.proFeatureReview': 'Full 5+4 review flow',
+    'settings.proFeatureInsight': 'AI weekly/monthly reports',
+    'settings.proFeatureDashboard': 'Dashboard / Calendar / Kanban',
 
     // ─── onboarding-modal.ts ──────────────────────────────
     'onboarding.title': 'Start TideLog in 3 steps',

@@ -101,7 +101,7 @@ TideLog 可以免费安装和试用。Pro 解锁完整的长期复盘系统。
 
 - 年度版：**¥49/年**
 - 终身版：**¥99 一次性买断**
-- 购买地址：<https://afdian.com/item/463307362c2f11f1b39d52540025c377>
+- 购买地址：[购买 TideLog Pro](https://afdian.com/item/463307362c2f11f1b39d52540025c377)
 
 购买后，在 **Obsidian Settings → TideLog → Pro** 输入 TideLog License 即可激活。
 
@@ -118,13 +118,15 @@ TideLog 的原则很简单：**你的日常记录默认留在你的 vault 里。
 
 ## 支持与协议
 
-- 问题反馈：<https://github.com/enhen3/Tidelog/issues>
-- License / API Key 属于敏感信息，请不要贴在公开 issue 中。
+- 问题反馈：通过 [TideLog GitHub Issues](https://github.com/enhen3/Tidelog/issues) 提交。
+- 请不要在公开 issue 中粘贴 License Key、API Key 或私人笔记内容。
 - 源码协议：GNU AGPL v3.0。Pro 授权与付费分发遵循商业产品条款，见 [LICENSE](./LICENSE)。
 
 ---
 
 ## English version
+
+![TideLog product hero](assets/tidelog-hero.svg)
 
 **Make yesterday’s notes change tomorrow’s actions.**
 
@@ -140,6 +142,8 @@ TideLog adds the missing loop:
 🌅 Plan today → 🌙 Review tonight → 🧭 See patterns → ✅ Change the next action
 ```
 
+![TideLog feedback loop](assets/tidelog-loop.svg)
+
 ### What TideLog helps you do
 
 - Make Daily Notes comparable with a repeatable morning + evening structure.
@@ -147,6 +151,8 @@ TideLog adds the missing loop:
 - Generate weekly/monthly AI insight reports from your own notes.
 - Keep your workflow Markdown-first and inside your vault.
 - Use Dashboard, Calendar heatmap, and Kanban views to turn reflection back into action.
+
+![TideLog feature overview](assets/tidelog-preview.svg)
 
 ### Install and start
 
@@ -161,3 +167,9 @@ TideLog adds the missing loop:
 Your daily records stay in your vault by default. TideLog only sends network requests when you explicitly use AI features, test a connection, activate a license, or open purchase/license links.
 
 TideLog stores AI API keys and Pro license keys with Obsidian SecretStorage. It does not include telemetry, analytics SDKs, dynamic ads, or a self-update mechanism.
+
+### Support and payment
+
+- Bug reports and feature requests: [TideLog GitHub Issues](https://github.com/enhen3/Tidelog/issues)
+- Please do not paste License keys, API keys, or private note content into public issues.
+- International payment is being prepared. If you want TideLog Pro, please leave a note in GitHub Issues so I can prioritize the setup based on real demand.

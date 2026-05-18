@@ -61,6 +61,15 @@ export const zh: Record<string, string> = {
     'settings.gettingStartedGuide': '快速开始',
     'settings.gettingStartedDesc': '打开 AI 配置、晨间计划、晚间复盘和 Pro 激活的快速引导',
     'settings.openGettingStarted': '打开引导',
+    'settings.heroTitle': '让每天的记录，回到下一步行动。',
+    'settings.heroDesc': '在这里配置 AI、每日文件夹、复盘问题和 Pro 授权。TideLog 的核心不是多写一点，而是让 Plan → Review → Insight → Action 在你的 Obsidian vault 里形成闭环。',
+    'settings.proUpgradeTitle': '解锁完整复盘系统',
+    'settings.proUpgradeDesc': 'Pro 适合希望长期追踪行为模式、周/月洞察、Dashboard、日历热力图和 Kanban 行动层的重度用户。',
+    'settings.proActiveTitle': '你的完整反馈系统已启用',
+    'settings.proActiveDesc': '继续积累晨间计划、晚间复盘和长期洞察，让笔记持续反向推动行动。',
+    'settings.proFeatureReview': '完整 5+4 复盘',
+    'settings.proFeatureInsight': 'AI 周报/月报',
+    'settings.proFeatureDashboard': 'Dashboard / Calendar / Kanban',
 
     // ─── onboarding-modal.ts ──────────────────────────────
     'onboarding.title': '3 步开始使用 TideLog',

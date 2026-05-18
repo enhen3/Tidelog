@@ -18,15 +18,35 @@ export class OnboardingModal extends Modal {
         const { contentEl } = this;
         contentEl.addClass('tl-onboarding-modal');
 
-        contentEl.createDiv({ cls: 'tl-onboarding-icon', text: '🌊' });
-        contentEl.createEl('h2', {
+        const heroEl = contentEl.createDiv('tl-onboarding-hero');
+        const brandEl = heroEl.createDiv('tl-onboarding-brand');
+        const markEl = brandEl.createDiv('tl-onboarding-mark');
+        markEl.createSpan('tl-onboarding-mark-line');
+        markEl.createSpan('tl-onboarding-mark-dot');
+        const brandCopyEl = brandEl.createDiv('tl-onboarding-brand-copy');
+        brandCopyEl.createDiv({ cls: 'tl-onboarding-eyebrow', text: 'TideLog for Obsidian' });
+        brandCopyEl.createDiv({ cls: 'tl-onboarding-brand-subtitle', text: 'Plan · Review · Insight · Action' });
+
+        heroEl.createEl('h2', {
             cls: 'tl-onboarding-title',
             text: t('onboarding.title'),
         });
-        contentEl.createEl('p', {
+        heroEl.createEl('p', {
             cls: 'tl-onboarding-desc',
             text: t('onboarding.desc'),
         });
+
+        const productEl = contentEl.createDiv('tl-onboarding-product-card');
+        const productHeaderEl = productEl.createDiv('tl-onboarding-product-header');
+        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-plan' });
+        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-review' });
+        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-action' });
+        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-label', text: 'Daily Note feedback loop' });
+        const loopEl = productEl.createDiv('tl-onboarding-loop');
+        ['Plan', 'Review', 'Insight', 'Action'].forEach((label) => {
+            loopEl.createSpan({ cls: 'tl-onboarding-loop-pill', text: label });
+        });
+        productEl.createDiv({ cls: 'tl-onboarding-product-caption', text: 'Start small: run one morning plan and one evening review.' });
 
         const stepsEl = contentEl.createDiv('tl-onboarding-steps');
         this.renderStep(
