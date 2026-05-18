@@ -27,6 +27,16 @@ export class TideLogSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    private saveSettingsPreservingScroll(afterSave?: () => void): void {
+        const scrollTop = this.containerEl.scrollTop;
+        void this.plugin.saveSettings().then(() => {
+            afterSave?.();
+            window.requestAnimationFrame(() => {
+                this.containerEl.scrollTop = scrollTop;
+            });
+        });
+    }
+
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -34,63 +44,49 @@ export class TideLogSettingTab extends PluginSettingTab {
         if (Platform.isMobile) containerEl.addClass('is-mobile');
 
         this.renderSettingsHero(containerEl);
-
-        // =================================================================
-        // Language Setting
-        // =================================================================
-        new Setting(containerEl).setName(t('settings.language')).setHeading();
-
-        new Setting(containerEl)
-            .setName(t('settings.language'))
-            .setDesc(t('settings.languageDesc'))
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption('zh', '简体中文')
-                    .addOption('en', 'English')
-                    .setValue(this.plugin.settings.language)
-                    .onChange((value) => {
-                        this.plugin.settings.language = value as Language;
-                        void this.plugin.saveSettings().then(() => this.display());
-                    })
-            );
-
         this.renderGettingStarted(containerEl);
-
-        // =================================================================
-        // Pro License
-        // =================================================================
         this.renderProLicense(containerEl);
 
-        // =================================================================
-        // AI Provider Settings
-        // =================================================================
+        // Core workflow setup: connect AI first, then decide where files are
+        // written and how late-night dates are interpreted.
+        this.renderAISettings(containerEl);
+        this.renderFolderSettings(containerEl);
+        this.renderDayBoundarySetting(containerEl);
+
+        // Review questions are the main behavior-design surface, so they sit
+        // after the basics and can double as a clear Free → Pro upgrade path.
+        this.renderEveningQuestions(containerEl);
+
+        // Language is useful, but rarely revisited after first setup. Keep it
+        // at the end so the top of the page follows the user's setup journey.
+        this.renderLanguageSetting(containerEl);
+    }
+
+    private renderAISettings(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.sectionAI')).setHeading();
 
-        // Active provider selection
         new Setting(containerEl)
             .setName(t('settings.aiProvider'))
             .setDesc(t('settings.aiProviderDesc'))
             .addDropdown((dropdown) =>
                 dropdown
                     .addOption('openrouter', this.getProviderName('openrouter'))
-                    .addOption('anthropic', 'Anthropic Claude')
-                    .addOption('gemini', 'Google Gemini')
-                    .addOption('openai', 'OpenAI')
+                    .addOption('anthropic', this.getProviderName('anthropic'))
+                    .addOption('gemini', this.getProviderName('gemini'))
+                    .addOption('openai', this.getProviderName('openai'))
                     .addOption('siliconflow', this.getProviderName('siliconflow'))
                     .addOption('custom', t('settings.customOpenAICompatible'))
                     .setValue(this.plugin.settings.activeProvider)
                     .onChange((value) => {
                         this.plugin.settings.activeProvider = value as AIProviderType;
-                        void this.plugin.saveSettings().then(() => this.display());
+                        this.saveSettingsPreservingScroll(() => this.display());
                     })
             );
 
-        // Provider-specific settings
         this.renderProviderSettings(containerEl);
+    }
 
-        // =================================================================
-        // Folder Settings
-        // =================================================================
+    private renderFolderSettings(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.sectionFolders')).setHeading();
 
         new Setting(containerEl)
@@ -132,29 +128,71 @@ export class TideLogSettingTab extends PluginSettingTab {
                     })
             );
 
-        // =================================================================
-        // Date Settings
-        // =================================================================
+        containerEl.createDiv({ cls: 'tl-settings-section-note', text: t('settings.folderSectionNote') });
+    }
+
+    private renderDayBoundarySetting(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.dayBoundaryHour')).setHeading();
 
-        new Setting(containerEl)
+        const getBoundaryExampleTime = (value: number) => {
+            if (value <= 1) return '00:30';
+            const exampleHour = Math.max(0, Math.min(7, value - 1));
+            return `${String(exampleHour).padStart(2, '0')}:30`;
+        };
+        const formatBoundary = (value: number) => value === 0
+            ? t('settings.dayBoundaryAtMidnight')
+            : t('settings.dayBoundaryValue', `${String(value).padStart(2, '0')}:00`, getBoundaryExampleTime(value));
+
+        const boundarySetting = new Setting(containerEl)
             .setName(t('settings.dayBoundaryHour'))
-            .setDesc(t('settings.dayBoundaryHourDesc'))
-            .addSlider((slider) =>
-                slider
-                    .setLimits(0, 12, 1)
-                    .setValue(this.plugin.settings.dayBoundaryHour)
-                    .setDynamicTooltip()
+            .setDesc(t('settings.dayBoundaryHourDesc'));
+
+        const clampedBoundaryHour = Math.min(8, this.plugin.settings.dayBoundaryHour);
+        if (clampedBoundaryHour !== this.plugin.settings.dayBoundaryHour) {
+            this.plugin.settings.dayBoundaryHour = clampedBoundaryHour;
+            void this.plugin.saveSettings();
+        }
+
+        let valueEl: HTMLElement;
+        boundarySetting.addSlider((slider) => {
+            const sliderParentEl = slider.sliderEl.parentElement ?? containerEl;
+            valueEl = sliderParentEl.createSpan('tl-settings-boundary-value');
+            valueEl.setText(`${String(clampedBoundaryHour).padStart(2, '0')}:00`);
+            slider.sliderEl.after(valueEl);
+
+            return slider
+                .setLimits(0, 8, 1)
+                .setValue(clampedBoundaryHour)
+                .onChange((value) => {
+                    this.plugin.settings.dayBoundaryHour = value;
+                    valueEl.setText(`${String(value).padStart(2, '0')}:00`);
+                    boundaryNote.setText(formatBoundary(value));
+                    void this.plugin.saveSettings();
+                });
+        });
+
+        const boundaryNote = containerEl.createDiv({
+            cls: 'tl-settings-boundary-note',
+            text: formatBoundary(clampedBoundaryHour),
+        });
+    }
+
+    private renderLanguageSetting(containerEl: HTMLElement): void {
+        new Setting(containerEl).setName(t('settings.sectionPreferences')).setHeading();
+
+        new Setting(containerEl)
+            .setName(t('settings.language'))
+            .setDesc(t('settings.languageDesc'))
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption('zh', '简体中文')
+                    .addOption('en', 'English')
+                    .setValue(this.plugin.settings.language)
                     .onChange((value) => {
-                        this.plugin.settings.dayBoundaryHour = value;
-                        void this.plugin.saveSettings();
+                        this.plugin.settings.language = value as Language;
+                        this.saveSettingsPreservingScroll(() => this.display());
                     })
             );
-
-        // =================================================================
-        // Evening Question Editor
-        // =================================================================
-        this.renderEveningQuestions(containerEl);
     }
 
     /**
@@ -186,19 +224,8 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         const proofEl = copyEl.createDiv('tl-settings-proof-row');
-        ['No telemetry', 'Vault-native', '3-min setup'].forEach((label) => {
+        ['No telemetry', 'Vault-native', 'AI optional'].forEach((label) => {
             proofEl.createSpan({ cls: 'tl-settings-proof-pill', text: label });
-        });
-
-        const visualEl = heroEl.createDiv('tl-settings-hero-visual');
-        const cardEl = visualEl.createDiv('tl-settings-mini-card');
-        cardEl.createDiv({ cls: 'tl-settings-mini-label', text: 'Today' });
-        cardEl.createDiv({ cls: 'tl-settings-mini-title', text: 'Daily Note → Action' });
-        const rowsEl = cardEl.createDiv('tl-settings-mini-rows');
-        ['Morning plan', 'Evening review', 'Weekly insight'].forEach((label, index) => {
-            const rowEl = rowsEl.createDiv('tl-settings-mini-row');
-            rowEl.createSpan({ cls: `tl-settings-mini-dot tl-settings-mini-dot-${index + 1}` });
-            rowEl.createSpan({ text: label });
         });
     }
 
@@ -208,16 +235,29 @@ export class TideLogSettingTab extends PluginSettingTab {
     private renderGettingStarted(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.gettingStarted')).setHeading();
 
-        new Setting(containerEl)
-            .setName(t('settings.gettingStartedGuide'))
-            .setDesc(t('settings.gettingStartedDesc'))
-            .addButton((button) =>
-                button
-                    .setButtonText(t('settings.openGettingStarted'))
-                    .onClick(() => {
-                        new OnboardingModal(this.app, this.plugin).open();
-                    })
-            );
+        const guideEl = containerEl.createDiv('tl-settings-guide-card');
+        const mainEl = guideEl.createDiv('tl-settings-guide-main');
+        const copyEl = mainEl.createDiv('tl-settings-guide-copy');
+        copyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.gettingStartedGuide') });
+        copyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.gettingStartedTitle') });
+        copyEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.gettingStartedDesc') });
+
+        const stepsEl = mainEl.createDiv('tl-settings-guide-steps');
+        [
+            t('settings.guideStepAI'),
+            t('settings.guideStepPlan'),
+            t('settings.guideStepReview'),
+        ].forEach((step, index) => {
+            const stepEl = stepsEl.createDiv('tl-settings-guide-step');
+            stepEl.createSpan({ cls: 'tl-settings-guide-step-number', text: String(index + 1) });
+            stepEl.createSpan({ text: step });
+        });
+
+        const actionEl = guideEl.createDiv('tl-settings-card-actions');
+        const openBtn = actionEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('settings.openGettingStarted') });
+        openBtn.addEventListener('click', () => {
+            new OnboardingModal(this.app, this.plugin).open();
+        });
     }
 
     /**
@@ -340,53 +380,47 @@ export class TideLogSettingTab extends PluginSettingTab {
                 });
         });
 
-        // --- Test connection button ---
-        new Setting(containerEl)
-            .setName(t('settings.testConnection'))
-            .setDesc(t('settings.testConnectionDesc'))
-            .addButton((button) =>
-                button
-                    .setButtonText(t('settings.testBtn'))
-                    .setCta()
-                    .onClick(() => {
-                        void (async () => {
-                            button.setButtonText(t('settings.testing'));
-                            button.setDisabled(true);
+        this.renderInlineTestConnection(modelSetting);
+    }
 
-                            try {
-                                const aiProvider = this.plugin.getAIProvider();
-                                const success = await aiProvider.testConnection();
 
-                                if (success) {
-                                    new Notice(t('settings.testSuccess'));
-                                    button.setButtonText(t('settings.testSuccessBtn'));
-                                    window.setTimeout(() => {
-                                        button.setButtonText(t('settings.testBtn'));
-                                    }, 2000);
-                                } else {
-                                    new Notice(t('settings.testFail'));
-                                    button.setButtonText(t('settings.testFailBtn'));
-                                    window.setTimeout(() => {
-                                        button.setButtonText(t('settings.testBtn'));
-                                    }, 2000);
-                                }
-                            } catch (error) {
-                                const activeProvider = this.plugin.settings.activeProvider;
-                                const errMsg = formatAPIError(error, activeProvider);
-                                // Extract error code for Notice (strip markdown)
-                                const codeMatch = errMsg.match(/\*\*(TL-\d+)\*\*/);
-                                const code = codeMatch ? codeMatch[1] : '';
-                                new Notice(`❌ ${t('settings.testError')} ${code}`, 8000);
-                                button.setButtonText(code ? `❌ ${code}` : t('settings.testErrorBtn'));
-                                window.setTimeout(() => {
-                                    button.setButtonText(t('settings.testBtn'));
-                                }, 4000);
+    private renderInlineTestConnection(setting: Setting): void {
+        setting.addButton((button) =>
+            button
+                .setButtonText(t('settings.testBtn'))
+                .setCta()
+                .onClick(() => {
+                    void (async () => {
+                        button.setButtonText(t('settings.testing'));
+                        button.setDisabled(true);
+
+                        try {
+                            const aiProvider = this.plugin.getAIProvider();
+                            const success = await aiProvider.testConnection();
+
+                            if (success) {
+                                new Notice(t('settings.testSuccess'));
+                                button.setButtonText(t('settings.testSuccessBtn'));
+                                window.setTimeout(() => { button.setButtonText(t('settings.testBtn')); }, 2000);
+                            } else {
+                                new Notice(t('settings.testFail'));
+                                button.setButtonText(t('settings.testFailBtn'));
+                                window.setTimeout(() => { button.setButtonText(t('settings.testBtn')); }, 2000);
                             }
+                        } catch (error) {
+                            const activeProvider = this.plugin.settings.activeProvider;
+                            const errMsg = formatAPIError(error, activeProvider);
+                            const codeMatch = errMsg.match(/\*\*(TL-\d+)\*\*/);
+                            const code = codeMatch ? codeMatch[1] : '';
+                            new Notice(`❌ ${t('settings.testError')} ${code}`, 8000);
+                            button.setButtonText(code ? `❌ ${code}` : t('settings.testErrorBtn'));
+                            window.setTimeout(() => { button.setButtonText(t('settings.testBtn')); }, 4000);
+                        }
 
-                            button.setDisabled(false);
-                        })();
-                    })
-            );
+                        button.setDisabled(false);
+                    })();
+                })
+        );
     }
 
     /**
@@ -394,11 +428,11 @@ export class TideLogSettingTab extends PluginSettingTab {
      */
     private getProviderName(provider: AIProviderType): string {
         const names: Record<AIProviderType, string> = {
-            openrouter: 'OpenRouter',
-            anthropic: 'Anthropic Claude',
-            gemini: 'Google Gemini',
+            openrouter: 'OpenRouter（模型路由）',
+            anthropic: 'Anthropic Claude（Claude）',
+            gemini: 'Google Gemini（Gemini）',
             openai: 'OpenAI',
-            siliconflow: 'SiliconFlow',
+            siliconflow: '硅基流动（SiliconFlow）',
             custom: t('settings.customProvider'),
         };
         return names[provider];
@@ -409,11 +443,11 @@ export class TideLogSettingTab extends PluginSettingTab {
      */
     private getModelPlaceholder(provider: AIProviderType): string {
         const placeholders: Record<AIProviderType, string> = {
-            openrouter: 'anthropic/claude-sonnet-4',
-            anthropic: 'claude-sonnet-4-20250514',
-            gemini: 'gemini-2.0-flash',
-            openai: 'gpt-4o',
-            siliconflow: 'deepseek-ai/DeepSeek-V3.2',
+            openrouter: 'anthropic/claude-sonnet-4.5',
+            anthropic: 'claude-sonnet-4-5-20250929',
+            gemini: 'gemini-2.5-flash',
+            openai: 'gpt-5.1',
+            siliconflow: 'deepseek-ai/DeepSeek-V3.2-Exp',
             custom: 'deepseek-chat',
         };
         return placeholders[provider];
@@ -426,41 +460,40 @@ export class TideLogSettingTab extends PluginSettingTab {
         switch (provider) {
             case 'openrouter':
                 return {
-                    'anthropic/claude-sonnet-4': t('settings.recommended', 'Claude Sonnet 4'),
-                    'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
-                    'anthropic/claude-3-haiku': t('settings.fast', 'Claude 3 Haiku'),
-                    'openai/gpt-4o': 'GPT-4o',
-                    'openai/gpt-4o-mini': 'GPT-4o Mini',
-                    'google/gemini-2.0-flash': 'Gemini 2.0 Flash',
-                    'meta-llama/llama-3.3-70b': 'Llama 3.3 70B',
+                    'anthropic/claude-sonnet-4.5': t('settings.recommended', 'Claude Sonnet 4.5'),
+                    'anthropic/claude-sonnet-4': 'Claude Sonnet 4',
+                    'openai/gpt-5.1': 'GPT-5.1',
+                    'openai/gpt-4.1': 'GPT-4.1',
+                    'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
+                    'google/gemini-2.5-pro': 'Gemini 2.5 Pro',
+                    'meta-llama/llama-3.3-70b-instruct': 'Llama 3.3 70B Instruct',
                 };
             case 'anthropic':
                 return {
+                    'claude-sonnet-4-5-20250929': t('settings.recommended', 'Claude Sonnet 4.5'),
                     'claude-sonnet-4-20250514': 'Claude Sonnet 4',
-                    'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-                    'claude-3-haiku-20240307': 'Claude 3 Haiku',
+                    'claude-3-5-haiku-20241022': t('settings.fast', 'Claude 3.5 Haiku'),
                 };
             case 'gemini':
                 return {
-                    'gemini-2.0-flash': t('settings.recommended', 'Gemini 2.0 Flash'),
-                    'gemini-2.0-flash-lite': t('settings.fast', 'Gemini 2.0 Flash Lite'),
-                    'gemini-1.5-pro-latest': 'Gemini 1.5 Pro',
-                    'gemini-1.5-flash-latest': 'Gemini 1.5 Flash',
+                    'gemini-2.5-flash': t('settings.recommended', 'Gemini 2.5 Flash'),
+                    'gemini-2.5-pro': t('settings.powerful', 'Gemini 2.5 Pro'),
+                    'gemini-2.0-flash': t('settings.fast', 'Gemini 2.0 Flash'),
                 };
             case 'openai':
                 return {
-                    'gpt-4o': t('settings.recommended', 'GPT-4o'),
-                    'gpt-4o-mini': 'GPT-4o Mini',
-                    'gpt-4-turbo': 'GPT-4 Turbo',
+                    'gpt-5.1': t('settings.recommended', 'GPT-5.1'),
+                    'gpt-5-mini': t('settings.fast', 'GPT-5 mini'),
+                    'gpt-4.1': 'GPT-4.1',
+                    'gpt-4.1-mini': 'GPT-4.1 mini',
                 };
             case 'siliconflow':
                 return {
-                    'deepseek-ai/DeepSeek-V3.2': t('settings.recommended', 'DeepSeek V3.2'),
-                    'deepseek-ai/DeepSeek-V3.1-Terminus': 'DeepSeek V3.1 Terminus',
-                    'Qwen/Qwen3.5-397B-A17B': t('settings.powerful', 'Qwen3.5 397B'),
-                    'Qwen/Qwen3-30B-A3B': t('settings.fast', 'Qwen3 30B'),
+                    'deepseek-ai/DeepSeek-V3.2-Exp': t('settings.recommended', 'DeepSeek V3.2 Exp'),
                     'deepseek-ai/DeepSeek-R1': t('settings.reasoning', 'DeepSeek R1'),
-                    'Pro/zai-org/GLM-4.7': 'GLM-4.7',
+                    'Qwen/Qwen3-Coder-480B-A35B-Instruct': t('settings.powerful', 'Qwen3 Coder 480B'),
+                    'Qwen/Qwen3-32B': t('settings.fast', 'Qwen3 32B'),
+                    'zai-org/GLM-4.6': 'GLM-4.6',
                 };
             case 'custom':
                 // No presets — user types the model ID
@@ -487,14 +520,56 @@ export class TideLogSettingTab extends PluginSettingTab {
         new Setting(containerEl).setName(t('settings.eveningQuestions')).setHeading();
 
         const questions = this.plugin.settings.eveningQuestions;
+        const isPro = this.plugin.licenseManager.isPro();
+        const enabledCount = questions.filter((q) => q.enabled !== false).length;
+        const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
+
+        const introEl = containerEl.createDiv(`tl-q-intro ${isPro ? 'is-pro' : 'is-free'}`);
+        const introCopyEl = introEl.createDiv('tl-q-intro-copy');
+        introCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.reviewFlowKicker') });
+        introCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.reviewFlowTitle') });
+        introCopyEl.createDiv({
+            cls: 'tl-settings-card-desc',
+            text: isPro
+                ? t('settings.reviewProDesc', enabledCount)
+                : t('settings.reviewFreeDesc', enabledCount),
+        });
+        introCopyEl.createDiv({
+            cls: `tl-q-plan-status ${isPro ? 'is-pro' : 'is-free'}`,
+            text: isPro ? t('settings.reviewProActiveBadge') : t('settings.reviewFreeBadge'),
+        });
+        if (!isPro) {
+            const upgradeBtn = introEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('settings.reviewUpgradeBtn') });
+            upgradeBtn.addEventListener('click', () => { window.open(purchaseUrl); });
+        }
 
         // Question list container for drag-and-drop
         const listEl = containerEl.createDiv('tl-q-list');
 
         let dragIdx: number | null = null;
+        let enabledOrdinal = 0;
+        const refreshQuestionLimitBadges = () => {
+            let ordinal = 0;
+            listEl.querySelectorAll<HTMLElement>('.tl-q-row').forEach((item) => {
+                const idx = Number(item.dataset.index);
+                const enabled = this.plugin.settings.eveningQuestions[idx]?.enabled !== false;
+                item.classList.toggle('tl-q-disabled', !enabled);
+                const over = !isPro && enabled && ++ordinal > 2;
+                item.classList.toggle('tl-q-pro-over-limit', over);
+                const badge = item.querySelector<HTMLElement>('.tl-q-limit-badge');
+                if (over && !badge) {
+                    const spacer = item.querySelector('.tl-q-spacer');
+                    spacer?.before(item.createSpan({ cls: 'tl-q-limit-badge', text: t('settings.proRequiredBadge') }));
+                }
+                if (!over && badge) badge.remove();
+            });
+        };
 
         questions.forEach((question, index) => {
             const row = listEl.createDiv('tl-q-row');
+            const isEnabled = question.enabled !== false;
+            const freeOverLimit = !isPro && isEnabled && ++enabledOrdinal > 2;
+            if (freeOverLimit) row.addClass('tl-q-pro-over-limit');
             row.dataset.index = String(index);
             if (question.enabled === false) row.addClass('tl-q-disabled');
 
@@ -512,6 +587,9 @@ export class TideLogSettingTab extends PluginSettingTab {
 
             // --- Name (static label; editing happens in the detail panel) ---
             const nameEl = row.createSpan({ cls: 'tl-q-name', text: question.sectionName || t('settings.unnamed') });
+            if (freeOverLimit) {
+                row.createSpan({ cls: 'tl-q-limit-badge', text: t('settings.proRequiredBadge') });
+            }
 
             // --- Spacer ---
             row.createSpan({ cls: 'tl-q-spacer' });
@@ -529,10 +607,14 @@ export class TideLogSettingTab extends PluginSettingTab {
             toggleInput.addEventListener('change', () => {
                 void (async () => {
                     this.plugin.settings.eveningQuestions[index].enabled = toggleInput.checked;
-                    if (toggleInput.checked) {
-                        row.removeClass('tl-q-disabled');
-                    } else {
-                        row.addClass('tl-q-disabled');
+                    refreshQuestionLimitBadges();
+                    if (!isPro && toggleInput.checked) {
+                        const activeBeforeThis = this.plugin.settings.eveningQuestions
+                            .slice(0, index + 1)
+                            .filter((q) => q.enabled !== false).length;
+                        if (activeBeforeThis > 2) {
+                            new Notice(t('settings.reviewProRequiredNotice'), 6000);
+                        }
                     }
                     await this.plugin.saveSettings();
                 })();
@@ -741,101 +823,70 @@ export class TideLogSettingTab extends PluginSettingTab {
      */
     private renderProLicense(containerEl: HTMLElement): void {
         const isPro = this.plugin.licenseManager.isPro();
+        const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
 
         new Setting(containerEl).setName('Pro').setHeading();
 
         const proCardEl = containerEl.createDiv('tl-settings-pro-card');
-        proCardEl.createDiv({ cls: 'tl-settings-pro-kicker', text: isPro ? 'TideLog Pro active' : 'TideLog Pro' });
-        proCardEl.createDiv({
-            cls: 'tl-settings-pro-title',
+        const mainEl = proCardEl.createDiv('tl-settings-pro-main');
+        mainEl.createDiv({ cls: 'tl-settings-card-kicker', text: isPro ? 'TideLog Pro active' : 'TideLog Pro' });
+        mainEl.createDiv({
+            cls: 'tl-settings-card-title',
             text: isPro ? t('settings.proActiveTitle') : t('settings.proUpgradeTitle'),
         });
-        proCardEl.createDiv({
-            cls: 'tl-settings-pro-desc',
+        mainEl.createDiv({
+            cls: 'tl-settings-card-desc',
             text: isPro ? t('settings.proActiveDesc') : t('settings.proUpgradeDesc'),
         });
-        const proFeaturesEl = proCardEl.createDiv('tl-settings-pro-features');
+
+        const proFeaturesEl = mainEl.createDiv('tl-settings-pro-features');
         [t('settings.proFeatureReview'), t('settings.proFeatureInsight'), t('settings.proFeatureDashboard')].forEach((feature) => {
             proFeaturesEl.createSpan({ cls: 'tl-settings-pro-feature', text: feature });
         });
 
-        // Status
-        const statusSetting = new Setting(containerEl)
-            .setName(t('settings.proStatus'))
-            .setDesc(isPro ? t('settings.proActive') : t('settings.proFree'));
+        if (!isPro) {
+            const redeemEl = mainEl.createDiv('tl-settings-redeem-inline');
+            redeemEl.createDiv({ cls: 'tl-settings-redeem-title', text: t('settings.redeemCode') });
+            let keyValue = '';
+            const inputEl = redeemEl.createEl('input', { cls: 'tl-setting-input-key' });
+            inputEl.type = 'text';
+            inputEl.placeholder = t('settings.licenseKeyPlaceholder');
+            inputEl.addEventListener('input', () => { keyValue = inputEl.value; });
+            const activateBtn = redeemEl.createEl('button', { cls: 'tl-settings-action-btn', text: t('settings.activate') });
+            activateBtn.addEventListener('click', () => {
+                void (async () => {
+                    activateBtn.setText(t('settings.verifying'));
+                    activateBtn.setAttribute('disabled', 'true');
+                    const result = await this.plugin.licenseManager.activate(keyValue);
+                    if (result.success) {
+                        new Notice(`🎉 ${result.message}`);
+                        this.display();
+                    } else {
+                        new Notice(`❌ ${result.message}`);
+                        activateBtn.setText(t('settings.activate'));
+                        activateBtn.removeAttribute('disabled');
+                    }
+                })();
+            });
+        }
+
+        const sideEl = proCardEl.createDiv('tl-settings-pro-side');
+        sideEl.createDiv({ cls: `tl-settings-pro-status ${isPro ? 'is-pro' : 'is-free'}`, text: isPro ? t('settings.proActive') : t('settings.proFree') });
 
         if (isPro) {
             const label = this.plugin.licenseManager.getLicenseLabel();
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
-            statusSetting.setDesc(`✅ ${label} ${t('settings.proActivated')}${expiryText}`);
-
-            // Portal link for Pro users — manage device bindings
-            const portalSetting = new Setting(containerEl)
-                .setName(t('settings.manageDevices'))
-                .setDesc(t('settings.manageDevicesDesc'));
-            portalSetting.addButton((button) =>
-                button
-                    .setButtonText(t('settings.manageDevicesBtn'))
-                    .onClick(() => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); })
-            );
+            sideEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
+            const portalBtn = sideEl.createEl('button', { cls: 'tl-settings-action-btn', text: t('settings.manageDevicesBtn') });
+            portalBtn.addEventListener('click', () => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); });
         } else {
-            // Key input + activate
-            const keySetting = new Setting(containerEl)
-                .setName(t('settings.redeemCode'))
-                .setDesc(t('settings.redeemDesc'));
-
-            let keyValue = '';
-            keySetting.addText((text) => {
-                text.inputEl.addClass('tl-setting-input-key');
-                text
-                    .setPlaceholder(t('settings.licenseKeyPlaceholder'))
-                    .onChange((value) => { keyValue = value; });
-            });
-
-            keySetting.addButton((button) =>
-                button
-                    .setButtonText(t('settings.activate'))
-                    .setCta()
-                    .onClick(() => {
-                        void (async () => {
-                            button.setButtonText(t('settings.verifying'));
-                            button.setDisabled(true);
-                            const result = await this.plugin.licenseManager.activate(keyValue);
-                            if (result.success) {
-                                new Notice(`🎉 ${result.message}`);
-                                this.display();
-                            } else {
-                                new Notice(`❌ ${result.message}`);
-                                button.setButtonText(t('settings.activate'));
-                                button.setDisabled(false);
-                            }
-                        })();
-                    })
-            );
-
-            // Portal link for free users — look up lost license key
-            new Setting(containerEl)
-                .setName(t('settings.lostCode'))
-                .setDesc(t('settings.lostCodeDesc'))
-                .addButton((button) =>
-                    button
-                        .setButtonText(t('settings.lostCodeBtn'))
-                        .onClick(() => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); })
-                );
-
-            // Purchase link
-            const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
-            const purchaseSetting = new Setting(containerEl)
-                .setName(t('settings.purchasePro'))
-                .setDesc(t('settings.purchaseDesc'));
-
-            purchaseSetting.addButton((button) =>
-                button
-                    .setButtonText(t('pro.purchase'))
-                    .setCta()
-                    .onClick(() => { window.open(purchaseUrl); })
-            );
+            const purchaseBtn = sideEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('pro.purchase') });
+            purchaseBtn.addEventListener('click', () => { window.open(purchaseUrl); });
+            const portalBtn = sideEl.createEl('button', { cls: 'tl-settings-secondary-btn', text: t('settings.lostCodeBtn') });
+            portalBtn.addEventListener('click', () => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); });
+            sideEl.createDiv({ cls: 'tl-settings-redeem-desc', text: t('settings.redeemDesc') });
         }
     }
+
 }

@@ -1,92 +1,92 @@
 <svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">TideLog product hero</title>
-  <desc id="desc">A premium brand-colored TideLog hero showing Obsidian daily notes becoming a feedback loop.</desc>
+  <desc id="desc">A light TideLog hero showing Obsidian daily notes becoming a feedback loop from planning to review to insight and action.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="900" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#060506"/>
-      <stop offset="0.56" stop-color="#0B1417"/>
-      <stop offset="1" stop-color="#10252C"/>
+      <stop stop-color="#F8F7F1"/>
+      <stop offset="0.55" stop-color="#EAF4F5"/>
+      <stop offset="1" stop-color="#F4E6BC"/>
     </linearGradient>
-    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1180 160) rotate(138) scale(620 360)">
-      <stop stop-color="#D4B978" stop-opacity="0.24"/>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1190 170) rotate(138) scale(620 360)">
+      <stop stop-color="#D4B978" stop-opacity="0.32"/>
       <stop offset="1" stop-color="#D4B978" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(430 740) rotate(-24) scale(540 300)">
-      <stop stop-color="#3B8EA5" stop-opacity="0.32"/>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 730) rotate(-24) scale(560 310)">
+      <stop stop-color="#3B8EA5" stop-opacity="0.26"/>
       <stop offset="1" stop-color="#3B8EA5" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#3B8EA5"/>
-      <stop offset="0.58" stop-color="#5AABB8"/>
+      <stop offset="0.62" stop-color="#5AABB8"/>
       <stop offset="1" stop-color="#D4B978"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="34" stdDeviation="38" flood-color="#000000" flood-opacity="0.44"/>
+      <feDropShadow dx="0" dy="28" stdDeviation="34" flood-color="#17414B" flood-opacity="0.18"/>
     </filter>
     <style>
-      .label{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:22px;font-weight:650;letter-spacing:5px;fill:#D4B978;opacity:.92}
-      .title{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;font-size:76px;font-weight:680;line-height:1;letter-spacing:-3px;fill:#F5F3EA}
-      .sub{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:30px;font-weight:430;fill:#CBD5D6;letter-spacing:-.4px}
-      .small{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:19px;font-weight:560;fill:#B9C6C8}
-      .cardTitle{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:24px;font-weight:680;fill:#F5F3EA}
-      .body{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:20px;font-weight:460;fill:#B9C6C8}
-      .mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:17px;font-weight:520;fill:#D4B978}
+      .label{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:21px;font-weight:720;letter-spacing:5px;fill:#3B8EA5;opacity:.95}
+      .title{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;font-size:78px;font-weight:720;line-height:1;letter-spacing:-3.2px;fill:#071417}
+      .sub{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:30px;font-weight:460;fill:#40585D;letter-spacing:-.35px}
+      .small{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:19px;font-weight:620;fill:#466166}
+      .cardTitle{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:24px;font-weight:720;fill:#071417}
+      .body{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:20px;font-weight:480;fill:#516B70}
+      .mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:17px;font-weight:620;fill:#3B8EA5}
     </style>
   </defs>
   <rect width="1600" height="900" rx="44" fill="url(#bg)"/>
   <rect width="1600" height="900" rx="44" fill="url(#glowA)"/>
   <rect width="1600" height="900" rx="44" fill="url(#glowB)"/>
-  <g opacity=".18">
+  <g opacity=".20">
     <path d="M0 706C230 620 392 632 604 702C850 783 1038 760 1218 654C1378 560 1500 552 1600 588" stroke="url(#accent)" stroke-width="2"/>
-    <path d="M0 760C240 686 410 696 608 752C854 820 1040 802 1244 704C1394 632 1502 626 1600 652" stroke="#F5F3EA" stroke-opacity=".22" stroke-width="1"/>
+    <path d="M0 760C240 686 410 696 608 752C854 820 1040 802 1244 704C1394 632 1502 626 1600 652" stroke="#3B8EA5" stroke-opacity=".25" stroke-width="1"/>
   </g>
-  <g transform="translate(112 142)">
+  <g transform="translate(112 138)">
     <text x="0" y="0" class="label">TIDELOG · OBSIDIAN FEEDBACK LOOP</text>
-    <text x="0" y="98" class="title">让昨天的笔记</text>
-    <text x="0" y="184" class="title">推动明天的行动</text>
-    <text x="0" y="260" class="sub">晨间计划，晚间复盘。</text>
-    <text x="0" y="304" class="sub">看见模式，再决定下一步。</text>
-    <g transform="translate(0 382)">
-      <rect width="574" height="78" rx="24" fill="#FFFFFF" fill-opacity=".052" stroke="#FFFFFF" stroke-opacity=".10"/>
+    <text x="0" y="100" class="title">把 Daily Notes</text>
+    <text x="0" y="188" class="title">变成行动反馈系统</text>
+    <text x="0" y="264" class="sub">计划今天，复盘今晚。</text>
+    <text x="0" y="308" class="sub">看见模式，再改变下一步。</text>
+    <g transform="translate(0 388)">
+      <rect width="604" height="78" rx="24" fill="#FFFFFF" fill-opacity=".72" stroke="#3B8EA5" stroke-opacity=".15"/>
       <text x="28" y="48" class="mono">Plan → Review → Insight → Action</text>
     </g>
-    <g transform="translate(0 500)">
-      <rect width="188" height="48" rx="24" fill="#F5F3EA"/>
-      <text x="31" y="31" class="small" fill="#071417">Markdown-first</text>
-      <rect x="206" width="154" height="48" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".10"/>
-      <text x="241" y="31" class="small">无遥测</text>
-      <rect x="378" width="166" height="48" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".10"/>
-      <text x="412" y="31" class="small">AI 可选</text>
+    <g transform="translate(0 506)">
+      <rect width="198" height="48" rx="24" fill="#071417"/>
+      <text x="28" y="31" class="small" fill="#F8F7F1">Markdown-first</text>
+      <rect x="216" width="154" height="48" rx="24" fill="#FFFFFF" fill-opacity=".68" stroke="#3B8EA5" stroke-opacity=".18"/>
+      <text x="251" y="31" class="small">无遥测</text>
+      <rect x="388" width="166" height="48" rx="24" fill="#FFFFFF" fill-opacity=".68" stroke="#3B8EA5" stroke-opacity=".18"/>
+      <text x="422" y="31" class="small">AI 可选</text>
     </g>
   </g>
   <g transform="translate(850 112)" filter="url(#shadow)">
-    <rect width="604" height="668" rx="36" fill="#0B1417" stroke="#FFFFFF" stroke-opacity=".12"/>
-    <rect x="24" y="24" width="556" height="74" rx="22" fill="#FFFFFF" fill-opacity=".05"/>
-    <circle cx="64" cy="61" r="10" fill="#C47070" opacity=".72"/><circle cx="94" cy="61" r="10" fill="#D4B978" opacity=".78"/><circle cx="124" cy="61" r="10" fill="#3B8EA5" opacity=".82"/>
+    <rect width="604" height="668" rx="36" fill="#FFFFFF" fill-opacity=".78" stroke="#3B8EA5" stroke-opacity=".18"/>
+    <rect x="24" y="24" width="556" height="74" rx="22" fill="#F5F9FA"/>
+    <circle cx="64" cy="61" r="10" fill="#C47070" opacity=".72"/><circle cx="94" cy="61" r="10" fill="#D4B978" opacity=".90"/><circle cx="124" cy="61" r="10" fill="#3B8EA5" opacity=".88"/>
     <text x="166" y="67" class="small">TideLog / Today</text>
     <g transform="translate(44 132)">
-      <rect width="516" height="112" rx="26" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/>
+      <rect width="516" height="112" rx="26" fill="#F8FBFC" stroke="#3B8EA5" stroke-opacity=".14"/>
       <text x="28" y="42" class="cardTitle">Morning Plan</text>
       <text x="28" y="78" class="body">Energy · Priority · Carry-over tasks</text>
       <path d="M408 58C434 28 468 30 492 58" stroke="url(#accent)" stroke-width="12" stroke-linecap="round"/>
     </g>
     <g transform="translate(44 276)">
-      <rect width="246" height="148" rx="26" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/>
+      <rect width="246" height="148" rx="26" fill="#F8FBFC" stroke="#D4B978" stroke-opacity=".26"/>
       <text x="26" y="42" class="cardTitle">Evening Review</text>
       <text x="26" y="80" class="body">Goal · Mood</text>
       <text x="26" y="112" class="body">Lesson · Tomorrow</text>
     </g>
     <g transform="translate(314 276)">
-      <rect width="246" height="148" rx="26" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/>
+      <rect width="246" height="148" rx="26" fill="#F8FBFC" stroke="#3B8EA5" stroke-opacity=".18"/>
       <text x="26" y="42" class="cardTitle">AI Insight</text>
       <text x="26" y="80" class="body">Patterns, principles</text>
       <text x="26" y="112" class="body">and next actions</text>
     </g>
     <g transform="translate(44 456)">
-      <rect width="516" height="154" rx="26" fill="url(#accent)" opacity=".94"/>
+      <rect width="516" height="154" rx="26" fill="url(#accent)" opacity=".96"/>
       <text x="30" y="50" class="cardTitle" fill="#061113">This week’s pattern</text>
-      <text x="30" y="90" class="body" fill="#061113">Specific first actions make the day easier</text>
-      <text x="30" y="122" class="body" fill="#061113">to review, repeat, and improve.</text>
+      <text x="30" y="90" class="body" fill="#061113">Notes become useful when they return</text>
+      <text x="30" y="122" class="body" fill="#061113">as priorities, decisions, and next actions.</text>
     </g>
   </g>
 </svg>

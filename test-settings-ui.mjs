@@ -440,7 +440,7 @@ console.log('\nTest 9: onboarding modal renders and completes');
     let settingsOpened = false;
     let openedTabId = '';
     let completedCount = 0;
-    let morningStarted = false;
+    let reviewStarted = false;
     const plugin = {
         settings: { ...DEFAULT_SETTINGS, onboardingCompleted: false },
         manifest: { id: 'tidelog' },
@@ -450,7 +450,7 @@ console.log('\nTest 9: onboarding modal renders and completes');
             completedCount++;
         },
         activateChatView: async (type) => {
-            if (type === 'morning') morningStarted = true;
+            if (type === 'evening') reviewStarted = true;
         },
     };
     const app = {
@@ -464,6 +464,7 @@ console.log('\nTest 9: onboarding modal renders and completes');
     modal.open();
 
     check(modal.contentEl.querySelectorAll('.tl-onboarding-step').length === 3, 'onboarding shows three setup steps');
+    check(modal.contentEl.querySelectorAll('.tl-onboarding-method-card').length === 3, 'onboarding explains product philosophy, method, and Pro value');
     check(modal.contentEl.querySelector('.tl-onboarding-link')?.getAttribute('href') === plugin.licenseManager.getPurchaseUrl(), 'onboarding purchase link uses license manager URL');
 
     click(modal.contentEl.querySelector('.tl-onboarding-primary'));
@@ -476,8 +477,32 @@ console.log('\nTest 9: onboarding modal renders and completes');
     const modal2 = new OnboardingModal(app, plugin);
     modal2.open();
     click(modal2.contentEl.querySelector('.tl-onboarding-secondary'));
-    check(plugin.settings.onboardingCompleted === true, 'morning action marks onboarding completed');
-    check(morningStarted === true, 'morning action starts morning plan');
+    check(plugin.settings.onboardingCompleted === true, 'review action marks onboarding completed');
+    check(reviewStarted === true, 'review action starts daily review');
+}
+
+// Test 10: settings regressions requested in the polish pass
+console.log('\nTest 10: settings polish regression guards');
+{
+    const settingsSrc = fs.readFileSync(path.join(__dirname, 'src/settings/settings-tab.ts'), 'utf8');
+    const zhSrc = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
+    const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+
+    check(settingsSrc.includes('setLimits(0, 8, 1)'), 'day boundary slider is limited to 0–8');
+    check(settingsSrc.includes('slider.sliderEl.after(valueEl)'), 'day boundary label is placed beside the slider');
+    check(settingsSrc.includes('getBoundaryExampleTime'), 'day boundary examples are computed from the selected hour');
+    check(settingsSrc.includes('refreshQuestionLimitBadges'), 'question Pro badges refresh immediately after enable toggles');
+    check(!zhSrc.includes('Pro 中生效') && zhSrc.includes('Pro 生效中') && zhSrc.includes('需 Pro'), 'review question badges distinguish Pro active vs Pro required');
+    check(settingsSrc.includes('saveSettingsPreservingScroll'), 'rerenders preserve current scroll position');
+    check(settingsSrc.includes('renderInlineTestConnection'), 'AI test connection is integrated into the model row');
+    check(cssSrc.includes('tl-settings-guide-main'), 'getting-started guide uses a full-width consistent settings layout');
+    check(cssSrc.includes('tl-settings-redeem-inline'), 'license redeem UI is compact and inline with Pro card');
+    check(settingsSrc.includes('reviewProRequiredNotice'), 'free users get a Pro requirement notice when enabling extra review questions');
+    check(cssSrc.includes('tl-onboarding-method-grid'), 'onboarding includes richer method/value cards');
+    check(cssSrc.includes('color: #071417') || cssSrc.includes('color: #0B1B1F'), 'settings hero copy uses dark readable text on the light hero background');
+    check(cssSrc.includes('overflow-y: auto') && cssSrc.includes('max-height: min(760px, calc(100vh - 96px))'), 'onboarding modal can scroll when content is taller than the viewport');
+    check(cssSrc.includes('.tl-settings-logo-mark::before') && cssSrc.includes('box-shadow:') && cssSrc.includes('tl-settings-logo-line'), 'settings logo uses the current note-lines plus tide-curve visual language');
+    check(cssSrc.includes('.tl-settings-boundary-note') && cssSrc.includes('font-weight: 500'), 'day boundary helper note is visually demoted');
 }
 
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===\n`);

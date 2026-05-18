@@ -46,7 +46,24 @@ export class OnboardingModal extends Modal {
         ['Plan', 'Review', 'Insight', 'Action'].forEach((label) => {
             loopEl.createSpan({ cls: 'tl-onboarding-loop-pill', text: label });
         });
-        productEl.createDiv({ cls: 'tl-onboarding-product-caption', text: 'Start small: run one morning plan and one evening review.' });
+        productEl.createDiv({ cls: 'tl-onboarding-product-caption', text: t('onboarding.productCaption') });
+
+        const methodEl = contentEl.createDiv('tl-onboarding-method-grid');
+        this.renderMethodCard(
+            methodEl,
+            t('onboarding.methodPhilosophyTitle'),
+            t('onboarding.methodPhilosophyDesc'),
+        );
+        this.renderMethodCard(
+            methodEl,
+            t('onboarding.methodWorkflowTitle'),
+            t('onboarding.methodWorkflowDesc'),
+        );
+        this.renderMethodCard(
+            methodEl,
+            t('onboarding.methodProTitle'),
+            t('onboarding.methodProDesc'),
+        );
 
         const stepsEl = contentEl.createDiv('tl-onboarding-steps');
         this.renderStep(
@@ -80,14 +97,14 @@ export class OnboardingModal extends Modal {
             this.openSettings();
         });
 
-        const morningButton = buttonRow.createEl('button', {
+        const reviewButton = buttonRow.createEl('button', {
             cls: 'tl-onboarding-secondary',
-            text: t('onboarding.morningBtn'),
+            text: t('onboarding.reviewBtn'),
         });
-        morningButton.addEventListener('click', () => {
+        reviewButton.addEventListener('click', () => {
             void this.plugin.completeOnboarding();
             this.close();
-            void this.plugin.activateChatView('morning');
+            void this.plugin.activateChatView('evening');
         });
 
         const buyLink = contentEl.createEl('a', {
@@ -121,6 +138,12 @@ export class OnboardingModal extends Modal {
         const copyEl = stepEl.createDiv('tl-onboarding-step-copy');
         copyEl.createDiv({ cls: 'tl-onboarding-step-title', text: title });
         copyEl.createDiv({ cls: 'tl-onboarding-step-desc', text: desc });
+    }
+
+    private renderMethodCard(containerEl: HTMLElement, title: string, desc: string): void {
+        const cardEl = containerEl.createDiv('tl-onboarding-method-card');
+        cardEl.createDiv({ cls: 'tl-onboarding-method-title', text: title });
+        cardEl.createDiv({ cls: 'tl-onboarding-method-desc', text: desc });
     }
 
     private openSettings(): void {
