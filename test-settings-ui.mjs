@@ -486,7 +486,18 @@ console.log('\nTest 10: settings polish regression guards');
 {
     const settingsSrc = fs.readFileSync(path.join(__dirname, 'src/settings/settings-tab.ts'), 'utf8');
     const zhSrc = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
+    const enSrc = fs.readFileSync(path.join(__dirname, 'src/i18n/en.ts'), 'utf8');
     const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+    const readAsset = name => fs.readFileSync(path.join(__dirname, name), 'utf8');
+    const publicProductCopy = [
+        zhSrc,
+        enSrc,
+        readAsset('assets/tidelog-hero.svg'),
+        readAsset('assets/tidelog-preview.svg'),
+        readAsset('marketing/afdian-tidelog-pro-cover.svg'),
+        readAsset('marketing/afdian-tidelog-pro-description.md'),
+        readAsset('README.md'),
+    ].join('\n');
 
     check(settingsSrc.includes('setLimits(0, 8, 1)'), 'day boundary slider is limited to 0–8');
     check(settingsSrc.includes('slider.sliderEl.after(valueEl)'), 'day boundary label is placed beside the slider');
@@ -496,6 +507,17 @@ console.log('\nTest 10: settings polish regression guards');
     check(settingsSrc.includes('saveSettingsPreservingScroll'), 'rerenders preserve current scroll position');
     check(settingsSrc.includes('renderInlineTestConnection'), 'AI test connection is integrated into the model row');
     check(cssSrc.includes('tl-settings-guide-main'), 'getting-started guide uses a full-width consistent settings layout');
+    check(settingsSrc.includes('tl-settings-workflow-card') && cssSrc.includes('.tl-settings-workflow-card'), 'settings page includes a new workflow explanation card');
+    check(zhSrc.includes('Plan → Review → Insights') && enSrc.includes('Plan → Review → Insights'), 'settings copy explains the Plan Review Insights loop');
+    check(zhSrc.includes('完成复盘后刷新计划建议') && enSrc.includes('refresh planning suggestions after a review'), 'settings AI copy mentions post-review suggestion refresh');
+    check(zhSrc.includes('settings.enableMorning') && zhSrc.includes('启用 Plan 流程'), 'settings old Morning switch copy is renamed to the Plan flow');
+    check(zhSrc.includes('settings.enableEvening') && zhSrc.includes('启用 Review 流程'), 'settings old Evening switch copy is renamed to the Review flow');
+    check(!settingsSrc.includes('proFeatureDashboard') && !zhSrc.includes('settings.proFeatureDashboard') && !enSrc.includes('settings.proFeatureDashboard'), 'settings Pro copy no longer uses old dashboard feature wording');
+    check(!zhSrc.includes('解锁完整晚间复盘、AI 洞察报告、仪表盘') && !enSrc.includes('dashboard, and more'), 'settings purchase copy avoids old dashboard wording');
+    check(!publicProductCopy.includes('Morning Plan') && !publicProductCopy.includes('Evening Review'), 'public product copy no longer uses old Morning Plan / Evening Review labels');
+    check(!publicProductCopy.includes('Four product surfaces') && !publicProductCopy.includes('Dashboard, Calendar heatmap, and Kanban'), 'public product assets no longer present old four-surface dashboard positioning');
+    check(!publicProductCopy.includes('完整 5+4') && !publicProductCopy.includes('完整晚间复盘'), 'public Pro copy no longer markets the old 5+4 evening-review packaging');
+    check(publicProductCopy.includes('AI 眼中的你') && publicProductCopy.includes('报告预览'), 'public product copy mentions AI profile and report preview');
     check(cssSrc.includes('tl-settings-redeem-inline'), 'license redeem UI is compact and inline with Pro card');
     check(settingsSrc.includes('reviewProRequiredNotice'), 'free users get a Pro requirement notice when enabling extra review questions');
     check(cssSrc.includes('tl-onboarding-method-grid'), 'onboarding includes richer method/value cards');

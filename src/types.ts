@@ -117,6 +117,7 @@ export interface SOPContext {
     currentStep: number;
     currentQuestion?: EveningQuestionType;
     responses: Record<string, string>;
+    reviewTargetDate?: string;
     weeklyPlanContent?: string;
     todayPlanContent?: string;
     userProfileContent?: string;

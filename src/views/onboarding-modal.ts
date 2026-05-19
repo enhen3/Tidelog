@@ -25,7 +25,7 @@ export class OnboardingModal extends Modal {
         markEl.createSpan('tl-onboarding-mark-dot');
         const brandCopyEl = brandEl.createDiv('tl-onboarding-brand-copy');
         brandCopyEl.createDiv({ cls: 'tl-onboarding-eyebrow', text: 'TideLog for Obsidian' });
-        brandCopyEl.createDiv({ cls: 'tl-onboarding-brand-subtitle', text: 'Plan · Review · Insight · Action' });
+        brandCopyEl.createDiv({ cls: 'tl-onboarding-brand-subtitle', text: 'Plan · Review · Insights' });
 
         heroEl.createEl('h2', {
             cls: 'tl-onboarding-title',
@@ -41,9 +41,9 @@ export class OnboardingModal extends Modal {
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-plan' });
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-review' });
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-action' });
-        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-label', text: 'Daily Note feedback loop' });
+        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-label', text: 'Plan to insight loop' });
         const loopEl = productEl.createDiv('tl-onboarding-loop');
-        ['Plan', 'Review', 'Insight', 'Action'].forEach((label) => {
+        ['Plan', 'Review', 'Insights'].forEach((label) => {
             loopEl.createSpan({ cls: 'tl-onboarding-loop-pill', text: label });
         });
         productEl.createDiv({ cls: 'tl-onboarding-product-caption', text: t('onboarding.productCaption') });

@@ -3,7 +3,7 @@
  * and manages pattern detection & user profile suggestions
  */
 
-import { moment, TFile } from 'obsidian';
+import { moment, TFile, TFolder } from 'obsidian';
 import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import { formatAPIError } from '../utils/error-formatter';
@@ -15,6 +15,10 @@ import {
     MONTHLY_INSIGHT_PROMPT,
     PROFILE_SUGGESTION_PROMPT,
 } from '../sop/prompts';
+
+interface GenerateInsightOptions {
+    force?: boolean;
+}
 
 export class InsightService {
     private plugin: TideLogPlugin;
@@ -28,11 +32,20 @@ export class InsightService {
      */
     async generateWeeklyInsight(
         onChunk: (chunk: string) => void,
-        onComplete: (fullReport: string) => void
+        onComplete: (fullReport: string) => void,
+        targetWeek?: moment.Moment,
+        options: GenerateInsightOptions = {},
     ): Promise<void> {
-        const today = moment();
+        const today = targetWeek ? moment(targetWeek) : moment();
         const weekStart = today.clone().startOf('isoWeek');
         const weekEnd = today.clone().endOf('isoWeek');
+
+        const existingReport = this.findInsightReport('weekly', weekStart);
+        if (existingReport && !options.force) {
+            onChunk(t('insights.alreadyGenerated'));
+            onComplete('');
+            return;
+        }
 
         // Read daily notes for this week
         const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(weekStart, weekEnd);
@@ -57,6 +70,7 @@ export class InsightService {
         const userProfile = await this.plugin.vaultManager.getUserProfileContent();
         const patterns = await this.plugin.vaultManager.getPatternsContent();
         const principles = await this.plugin.vaultManager.getPrinciplesContent();
+        const planContext = await this.readWeeklyPlanContext(weekStart);
 
         const systemPrompt = getBaseContextPrompt(userProfile) + '\n\n' + WEEKLY_INSIGHT_PROMPT;
 
@@ -64,6 +78,7 @@ export class InsightService {
 
 ${allJournals}
 
+${planContext ? `\n\n${this.label('Related plan context', '相关计划上下文')}\n${planContext}` : ''}
 ${patterns ? `\n\n${t('insight.knownPatterns')}\n${patterns}` : ''}
 ${principles ? `\n\n${t('insight.knownPrinciples')}\n${principles}` : ''}
 
@@ -108,10 +123,18 @@ ${t('insight.generateWeeklyReport')}`;
         onChunk: (chunk: string) => void,
         onComplete: (fullReport: string) => void,
         targetMonth?: moment.Moment,
+        options: GenerateInsightOptions = {},
     ): Promise<void> {
         const ref = targetMonth ? moment(targetMonth) : moment();
         const monthStart = ref.clone().startOf('month');
         const monthEnd = ref.clone().endOf('month');
+
+        const existingReport = this.findInsightReport('monthly', monthStart);
+        if (existingReport && !options.force) {
+            onChunk(t('insights.alreadyGenerated'));
+            onComplete('');
+            return;
+        }
 
         // Read daily notes for this month
         const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(monthStart, monthEnd);
@@ -137,6 +160,7 @@ ${t('insight.generateWeeklyReport')}`;
         const userProfile = await this.plugin.vaultManager.getUserProfileContent();
         const patterns = await this.plugin.vaultManager.getPatternsContent();
         const principles = await this.plugin.vaultManager.getPrinciplesContent();
+        const planContext = await this.readMonthlyPlanContext(monthStart, monthEnd);
 
         const systemPrompt = getBaseContextPrompt(userProfile) + '\n\n' + MONTHLY_INSIGHT_PROMPT;
 
@@ -144,6 +168,7 @@ ${t('insight.generateWeeklyReport')}`;
 
 ${allJournals}
 
+${planContext ? `\n\n${this.label('Related plan context', '相关计划上下文')}\n${planContext}` : ''}
 ${patterns ? `\n\n${t('insight.knownPatterns')}\n${patterns}` : ''}
 ${principles ? `\n\n${t('insight.knownPrinciples')}\n${principles}` : ''}
 
@@ -181,6 +206,48 @@ ${t('insight.generateMonthlyReport')}`;
         }
     }
 
+    private async readWeeklyPlanContext(weekStart: moment.Moment): Promise<string> {
+        const weekPath = this.plugin.vaultManager.getWeeklyPlanPath(weekStart.toDate());
+        const monthPath = this.plugin.vaultManager.getMonthlyPlanPath(weekStart.toDate());
+        const parts = await Promise.all([
+            this.readPlanFile(weekPath, this.label('Weekly plan', '周计划')),
+            this.readPlanFile(monthPath, this.label('Monthly plan', '月计划')),
+        ]);
+        return parts.filter(Boolean).join('\n\n').slice(0, 5000);
+    }
+
+    private async readMonthlyPlanContext(monthStart: moment.Moment, monthEnd: moment.Moment): Promise<string> {
+        const parts: string[] = [];
+        const monthPath = this.plugin.vaultManager.getMonthlyPlanPath(monthStart.toDate());
+        const monthPlan = await this.readPlanFile(monthPath, this.label('Monthly plan', '月计划'));
+        if (monthPlan) parts.push(monthPlan);
+
+        const seen = new Set<string>();
+        const cursor = monthStart.clone().startOf('isoWeek');
+        while (cursor.isSameOrBefore(monthEnd, 'day')) {
+            const path = this.plugin.vaultManager.getWeeklyPlanPath(cursor.toDate());
+            if (!seen.has(path)) {
+                seen.add(path);
+                const weeklyPlan = await this.readPlanFile(path, this.label('Weekly plan', '周计划'));
+                if (weeklyPlan) parts.push(weeklyPlan);
+            }
+            cursor.add(1, 'week');
+        }
+
+        return parts.join('\n\n').slice(0, 7000);
+    }
+
+    private async readPlanFile(path: string, label: string): Promise<string> {
+        const file = this.plugin.app.vault.getAbstractFileByPath(path);
+        if (!(file instanceof TFile)) return '';
+        const content = await this.plugin.app.vault.cachedRead(file);
+        return `### ${label}: ${file.basename}\n${this.extractKeySections(content)}`.trim();
+    }
+
+    private label(en: string, zh: string): string {
+        return getLanguage() === 'en' ? en : zh;
+    }
+
     /**
      * Generate profile update suggestions
      */
@@ -190,6 +257,13 @@ ${t('insight.generateMonthlyReport')}`;
     ): Promise<void> {
         const today = moment();
         const twoWeeksAgo = today.clone().subtract(14, 'days');
+
+        const existingProfile = this.findProfileAnalysisForMonth(today.format('YYYY-MM'));
+        if (existingProfile) {
+            onChunk(t('insights.alreadyGenerated'));
+            onComplete?.('');
+            return;
+        }
 
         const dailyNotes = this.plugin.vaultManager.getDailyNotesInRange(twoWeeksAgo, today);
 
@@ -329,6 +403,31 @@ ${t('insight.generateMonthlyReport')}`;
         } catch (error) {
             console.error(`Failed to save ${type} insight report:`, error);
         }
+    }
+
+    private findInsightReport(type: 'weekly' | 'monthly', date: moment.Moment): TFile | null {
+        const fileNames = type === 'weekly'
+            ? [
+                t('insight.weeklyFileName', date.format('YYYY'), String(date.isoWeek())),
+                t('insight.weeklyFileName', date.format('YYYY'), String(date.isoWeek()).padStart(2, '0')),
+            ]
+            : [t('insight.monthlyFileName', date.format('YYYY-MM'))];
+
+        for (const fileName of fileNames) {
+            const file = this.plugin.app.vault.getAbstractFileByPath(`${this.plugin.settings.archiveFolder}/Insights/${fileName}`);
+            if (file instanceof TFile) return file;
+        }
+        return null;
+    }
+
+    private findProfileAnalysisForMonth(monthKey: string): TFile | null {
+        const folder = this.plugin.app.vault.getAbstractFileByPath(`${this.plugin.settings.archiveFolder}/Insights`);
+        if (!(folder instanceof TFolder)) return null;
+        const files = folder.children
+            .filter((child): child is TFile => child instanceof TFile)
+            .filter((file) => file.name.startsWith(monthKey) && (file.name.includes('画像更新') || file.name.includes('profile-update')))
+            .sort((a, b) => b.name.localeCompare(a.name));
+        return files[0] ?? null;
     }
 
     /**

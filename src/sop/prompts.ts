@@ -666,119 +666,103 @@ export const FREE_WRITING_PROMPT = getFreeWritingPrompt();
 
 export function getWeeklyInsightPrompt(): string {
     if (getLanguage() === 'en') {
-        return `<task>Generate weekly insight report</task>
+        return `<task>Write a weekly insight report</task>
 
-Based on the user's journal data this week, generate a report combining deep analysis and warm care.
-Core value: Help the user see behavioral/emotional/cognitive patterns they haven't noticed.
+Your job is to open the facts, not decorate them. Read daily notes, weekly/monthly plans, known patterns, and principles as evidence. Then explain what actually happened this week, what pattern it reveals, and what the user should try next.
 
-<analysis_framework>
-Three-dimensional cross-analysis:
-- Behavior: what was done, efficiency rhythm, completion patterns
-- Emotion: trajectory, triggers, coping methods
-- Cognition: thinking habits, self-talk characteristics, attribution style
-</analysis_framework>
+<method>
+1. Evidence first: quote or paraphrase concrete tasks, reviews, dates, counts, goal changes, and repeated words.
+2. Pattern judgment second: separate confirmed patterns from weak signals. Say when evidence is thin.
+3. Next action last: give 2-3 small actions grounded in the evidence, not generic productivity advice.
+</method>
 
 <report_structure>
-### 1. Weekly Keywords
-Capture the week's theme in one word or phrase. 1-2 sentence overview of completion and energy trends.
+### 1. This Week In One Sentence
+One concise sentence with the week theme, completion/loop data, and emotional direction.
 
-### 2. Emotion Curve
-Emotional trajectory. Where were the highs and lows? What triggered them? Overall trending up, down, or flat?
+### 2. What Actually Happened
+Use short paragraphs. Anchor every point in specific evidence from notes or plans.
 
-### 3. Success Patterns
-Top 2-3 achievements. More importantly: what are the common success factors? Which practices are worth deliberately maintaining?
+### 3. Patterns Worth Noticing
+Behavior, emotion, and thinking patterns. Mark confidence as high / medium / low.
 
-### 4. Challenges & Obstacles
-Main difficulties and blocking factors. Do they form a repeating pattern?
-Reference categories: low energy / hard to start / priority drift / external interruptions
+### 4. Friction And Missed Loops
+Name the friction directly. Avoid blame; explain the mechanism.
 
-### 5. Pattern Discovery (most valuable section)
-Newly discovered patterns + changes in known patterns + cross-day rhythmic patterns. Support with specific examples.
+### 5. Next Week Plan Advice
+2-3 practical suggestions: what to do, why it fits the evidence, and the first step.
 
-### 6. Next Week Action Items
-2-3 suggestions that can be tried immediately. Format: what to do + why (based on what pattern) + how to do it.
-
-### 7. Dashboard Summary
-2-3 sentences, no Markdown, including at least one data point and one pattern insight. Warm tone but high information density.
+### 6. Dashboard Summary
+2-3 natural sentences, no Markdown, with one data point and one pattern insight.
 </report_structure>
 
 <writing_rules>
-- English, warm and encouraging but doesn't avoid problems
-- Support arguments with specific examples and numbers
-- Suggestions specific enough to "start tomorrow"
-- If data is insufficient, say so honestly
+- Write in natural English, short paragraphs, no corporate or AI-sounding filler.
+- Do not invent facts, emotions, motivations, dates, or outcomes.
+- If the source data is sparse, state the limit and only make cautious observations.
+- Avoid cliches such as "in conclusion", "journey", "unlock your potential", or generic encouragement.
 </writing_rules>
 
 <extraction>
-At the end of the report, extract newly discovered patterns and principles, wrapped in tags:
+At the end, keep these machine-readable tags exactly:
 
 <new_patterns>
-- One line per newly discovered behavioral/emotional/thinking pattern, concise description
+- One new behavioral/emotional/thinking pattern per line, or "none"
 </new_patterns>
 
 <new_principles>
-- One line per reusable principle, specific and actionable
+- One reusable principle per line, specific and actionable, or "none"
 </new_principles>
-
-If nothing new is found, write "none" inside the corresponding tags.
 </extraction>`;
     }
 
-    return `<task>生成本周洞察报告</task>
+    return `<task>撰写本周洞察报告</task>
 
-基于用户本周日记数据，生成一份兼具深度分析和温暖关怀的报告。
-核心价值：帮用户看到自己没察觉的行为/情绪/认知模式。
+你的任务不是把日记润色成漂亮总结，而是把事实剖开：读用户的日记录、周计划、月计划、已知模式和原则，说明这一周真正发生了什么、背后显露出什么规律、下一步该怎样调整。
 
-<analysis_framework>
-三维交叉分析：
-- 行为：做了什么、效率节奏、完成模式
-- 情绪：变化轨迹、触发因素、应对方式
-- 认知：思维习惯、自我对话特征、归因方式
-</analysis_framework>
+<method>
+1. 先列证据：具体任务、复盘原话或转述、日期、闭环次数、目标变化、反复出现的词。
+2. 再做判断：区分稳定模式和弱信号；证据不足时直接说明，不要硬下结论。
+3. 最后给建议：只给 2-3 条，必须能从证据推出，不能写泛泛的效率鸡汤。
+</method>
 
 <report_structure>
-### 1. 本周关键词
-用一个词或短语捕捉本周主题。1-2 句概述完成情况和精力趋势。
+### 1. 本周一句话
+用一句自然的话概括本周主题，带上完成/闭环数据和情绪方向。
 
-### 2. 情绪曲线
-情绪变化轨迹。高点和低点分别在哪？什么触发的？整体上行、下行还是平稳？
+### 2. 这一周实际发生了什么
+短段落写作。每个判断都要落到具体记录或计划证据上。
 
-### 3. 成功模式
-最突出的 2-3 个成就。更重要的是：成功的共同因素是什么？哪些做法值得刻意保持？
+### 3. 值得注意的模式
+从行为、情绪、思考三个角度分析，并标注置信度：高 / 中 / 低。
 
-### 4. 挑战与阻碍
-主要困难和阻碍因素。是否形成了重复模式？
-归类参考：精力不足 / 启动困难 / 优先级偏移 / 外部打断
+### 4. 阻力与未闭环
+直接指出卡点，但不责备用户；解释机制，比如启动成本、目标过多、精力波动、外部打断。
 
-### 5. 模式发现（最有价值的部分）
-新发现的规律 + 已知模式的变化 + 跨日节奏性规律。用具体事例支撑。
+### 5. 下周计划建议
+2-3 条：做什么、为什么适合用户、第一步怎么开始。
 
-### 6. 下周行动建议
-2-3 条可以立即尝试的建议。格式：做什么 + 为什么（基于什么模式）+ 怎么做。
-
-### 7. 仪表盘摘要
-2-3 句话，不用 Markdown，包含至少一个数据点和一个模式洞察。语气温暖但信息密度高。
+### 6. 仪表盘摘要
+2-3 句自然中文，不用 Markdown，包含一个数据点和一个模式判断。
 </report_structure>
 
 <writing_rules>
-- 中文，温暖鼓励但不回避问题
-- 用具体事例和数字支撑论点
-- 建议具体到"明天就能开始做"
-- 数据不足如实说明
+- 写给真实的人看，短段落、自然中文、不要 AI 腔。
+- 不得编造事实、情绪、动机、日期、结果。
+- 数据少就承认证据不足，只做谨慎观察。
+- 避免套话，比如"总的来说""在这个过程中""赋能""开启新篇章"。
 </writing_rules>
 
 <extraction>
-在报告最后，请提取本次发现的新模式和新原则，分别用标签包裹：
+报告最后必须保留以下机器可解析标签：
 
 <new_patterns>
-- 每条新发现的行为/情绪/思维模式一行，简洁描述
+- 每行一个新行为/情绪/思维模式；没有就写"无"
 </new_patterns>
 
 <new_principles>
-- 每条可复用的原则一行，具体可操作
+- 每行一个可复用原则，必须具体可操作；没有就写"无"
 </new_principles>
-
-如果没有新发现，对应标签内写"无"即可。
 </extraction>`;
 }
 
@@ -786,115 +770,109 @@ export const WEEKLY_INSIGHT_PROMPT = getWeeklyInsightPrompt();
 
 export function getMonthlyInsightPrompt(): string {
     if (getLanguage() === 'en') {
-        return `<task>Generate in-depth monthly insight report</task>
+        return `<task>Write a monthly deep insight report</task>
 
-The core value of a monthly report is not stacking weekly reports, but seeing trends, growth arcs, and systemic changes from a higher perspective.
+The monthly report must look across weeks. Do not stitch weekly summaries together. Use daily notes, weekly plans, monthly plans, known patterns, and principles to identify trend, drift, progress, and repeated friction.
+
+<method>
+1. Build the evidence table mentally: goals, plans, completed tasks, reviews, loops, emotional turns, and repeated obstacles.
+2. Compare across weeks: what strengthened, weakened, repeated, or changed direction?
+3. Convert the analysis into next-month operating advice.
+</method>
 
 <report_structure>
-### 1. Monthly Theme
-1-2 sentences capturing the core theme. Estimated goal completion rate, overall energy and efficiency trends.
+### 1. Month Theme
+One clear sentence, then 2-3 lines about goal progress, loops, and energy trend.
 
-### 2. Growth Arc
-Top 3 achievements and their significance. What improved compared to the start of the month? Did things that used to be scary become easier? What was added to the principles library?
+### 2. The Month As A Story Of Evidence
+Write naturally. Use concrete scenes and data, not generic summary language.
 
-### 3. Emotional Panorama
-Monthly emotion arc. High-energy weeks vs low-energy weeks patterns. List of positive/negative emotion triggers.
+### 3. Cross-Week Pattern Analysis
+Behavior / emotion / thinking / relationships if present. Mark confidence as high / medium / low.
 
-### 4. Deep Pattern Analysis
-Analyze by dimension, mark confidence level (🟢High: multiple times 🟡Medium: 2-3 times 🔴Low: 1 time):
-- Behavioral patterns: efficiency patterns, decision tendencies, habit progress
-- Emotional patterns: trigger scenarios, regulation methods and their effectiveness
-- Thinking patterns: cognitive tendencies, self-talk characteristics, attribution style
-- Interpersonal patterns (if applicable): how relationship interactions affect emotions and behavior
+### 4. Growth And Cost
+What became easier? What still consumed energy? What tradeoff appears repeatedly?
 
-### 5. Growth Recommendations
-Behaviors to reinforce: 2-3 items (proven effective strategies)
-Patterns to adjust: 1-2 items (with specific alternative strategies)
-Key focus areas for next month
+### 5. Next Month Operating System
+2-4 recommendations tied to evidence: keep / reduce / redesign / test.
 
-### 6. Profile Update
-Do emotional traits, success patterns, or growth boundaries need updating?
+### 6. Profile Update Notes
+Say what should be updated in the user profile and why.
 
 ### 7. Dashboard Summary
-2-3 sentences, no Markdown, including one growth highlight and one pattern worth attention.
+2-3 natural sentences, no Markdown, with one growth highlight and one risk/pattern.
 </report_structure>
 
 <writing_rules>
-- English, deep analysis without being superficial
-- Support all insights with specific journal examples
-- Cross-week comparison is the core value of monthly reports
-- Suggestions specific enough for immediate action
-- If data is insufficient, say so honestly
+- Natural English, compact paragraphs, no AI essay tone.
+- Do not invent facts, dates, emotions, or causal explanations.
+- Every important claim needs evidence from notes or plans.
+- If data is thin, explain the limitation before giving cautious advice.
 </writing_rules>
 
 <extraction>
-At the end of the report, extract newly discovered patterns and principles, wrapped in tags:
+At the end, keep these machine-readable tags exactly:
 
 <new_patterns>
-- One line per newly discovered behavioral/emotional/thinking pattern
+- One new behavioral/emotional/thinking pattern per line, or "none"
 </new_patterns>
 
 <new_principles>
-- One line per reusable principle
+- One reusable principle per line, specific and actionable, or "none"
 </new_principles>
-
-If nothing new is found, write "none" inside the corresponding tags.
 </extraction>`;
     }
 
-    return `<task>生成本月深度洞察报告</task>
+    return `<task>撰写本月深度洞察报告</task>
 
-月报的核心价值不是周报的叠加，而是从更高视角看到趋势、成长弧线和系统性变化。
+月报必须做跨周观察。不要把几份周报拼在一起，而是结合日记录、周计划、月计划、已知模式和原则，判断趋势、偏移、成长和重复阻力。
+
+<method>
+1. 先在心里建立证据表：目标、计划、已完成任务、复盘、闭环、情绪转折、反复出现的阻力。
+2. 做跨周比较：什么增强了、减弱了、反复出现了、方向改变了？
+3. 把分析转化为下个月的行动系统。
+</method>
 
 <report_structure>
 ### 1. 月度主题
-1-2 句捕捉核心主题。目标完成率估算，精力与效率整体趋势。
+一句话概括这个月，然后用 2-3 行说明目标推进、闭环和精力趋势。
 
-### 2. 成长弧线
-最大的 3 个成就及意义。与月初相比进步了什么？之前害怕的事是否变容易了？原则库增长了什么？
+### 2. 这个月的事实故事
+自然写作，用具体场景和数据，不写空泛总结。
 
-### 3. 情绪全景
-月度情绪弧线。高能量周 vs 低能量周的规律。正面/负面情绪触发器清单。
+### 3. 跨周模式分析
+行为 / 情绪 / 思考 / 人际（如有）。标注置信度：高 / 中 / 低。
 
-### 4. 模式深度分析
-按维度分析，标注置信度（🟢高：多次 🟡中：2-3次 🔴低：1次）：
-- 行为模式：效率模式、决策倾向、习惯进展
-- 情绪模式：触发场景、调节方式及效果
-- 思维模式：认知倾向、自我对话特征、归因方式
-- 人际模式（如有）：关系互动对情绪和行为的影响
+### 4. 成长与代价
+什么变容易了？什么仍在消耗精力？反复出现的取舍是什么？
 
-### 5. 成长建议
-强化的行为 2-3 条（已验证有效的策略）
-调整的模式 1-2 条（附具体替代策略）
-下月重点关注领域
+### 5. 下月行动系统
+2-4 条建议，分别对应：保留 / 减少 / 重设计 / 小实验。
 
-### 6. 用户画像更新
-情绪特征、成功模式、成长边界是否需要更新？
+### 6. 用户画像更新提示
+说明哪些画像内容值得更新，以及证据是什么。
 
 ### 7. 仪表盘摘要
-2-3 句话，不用 Markdown，包含一个成长亮点和一个值得关注的模式。
+2-3 句自然中文，不用 Markdown，包含一个成长亮点和一个风险/模式。
 </report_structure>
 
 <writing_rules>
-- 中文，深度分析不浮于表面
-- 一切洞察用日记中的具体事例支撑
-- 跨周对比是月报的核心价值
-- 建议具体到可立即行动
-- 数据不足如实说明
+- 自然中文，短段落，不要 AI 论文腔。
+- 不得编造事实、日期、情绪、动机或因果。
+- 重要判断必须能在日记或计划中找到证据。
+- 数据少就先说明限制，再给谨慎建议。
 </writing_rules>
 
 <extraction>
-在报告最后，请提取本次发现的新模式和新原则，分别用标签包裹：
+报告最后必须保留以下机器可解析标签：
 
 <new_patterns>
-- 每条新发现的行为/情绪/思维模式一行
+- 每行一个新行为/情绪/思维模式；没有就写"无"
 </new_patterns>
 
 <new_principles>
-- 每条可复用的原则一行
+- 每行一个可复用原则，必须具体可操作；没有就写"无"
 </new_principles>
-
-如果没有新发现，对应标签内写"无"即可。
 </extraction>`;
 }
 
@@ -902,9 +880,9 @@ export const MONTHLY_INSIGHT_PROMPT = getMonthlyInsightPrompt();
 
 export function getProfileSuggestionPrompt(): string {
     if (getLanguage() === 'en') {
-        return `<task>User Profile Update Analysis</task>
+        return `<task>Update the user profile from recent evidence</task>
 
-You are a personal growth advisor who knows the user well. Based on the past two weeks of journals, analyze whether the user profile needs updating.
+You know the user through their notes, but you must stay evidence-bound. Use the current profile and recent journals to decide what should be preserved, corrected, or added.
 
 <current_profile>
 {CURRENT_PROFILE}
@@ -914,71 +892,43 @@ You are a personal growth advisor who knows the user well. Based on the past two
 {RECENT_JOURNALS}
 </recent_journals>
 
-<instructions>
+<method>
+1. Evidence: identify concrete dates, tasks, reviews, repeated words, and behavior changes.
+2. Judgment: decide whether each finding is stable, emerging, or only a weak signal.
+3. Rewrite: update the profile in plain language the user would recognize.
+</method>
 
-Please output in two parts:
-
-## Part 1: Profile Update Analysis
-
-Analyze the following dimensions in accessible language. Every finding must cite specific journal content as evidence.
-Use these markers for reliability:
-- ✅ Fairly certain (appears repeatedly across multiple journal entries)
-- 💡 Initial observation (appeared 2-3 times, worth noting)
-- 🔍 Worth watching (appeared only once, but interesting)
-
-Analyze each dimension:
-1. **Emotional Changes**: Any new emotional patterns recently? Different from what's recorded in the profile?
-2. **Work Style**: Any new effective methods discovered? What strategies proved useful?
-3. **Thinking Style**: Any new thinking habits? Did previous ones change?
-4. **Capability Boundaries**: Did anything that used to be hard start getting easier? Or any new areas being challenged?
-5. **Values**: Have priorities shifted?
-
-For dimensions with no changes, simply say "No significant changes observed."
-
-## Part 2: Updated Complete Profile
-
-After the analysis, output the updated complete user profile wrapped in <profile_update> tags.
-This content will be automatically saved as the user's new profile file, so please:
-- Preserve content from the original profile that is still accurate
-- Incorporate confirmed new findings from this analysis
-- Use Markdown format, maintaining the same structure as the original profile
-- Write it as a personal profile the user can understand, not an analysis report
-
-</instructions>
-
-<example>
+<output>
 ## Profile Update Analysis
+Analyze emotional pattern, work style, thinking style, capability boundary, and values. For each meaningful change, include the evidence. For dimensions without evidence, say "No clear change observed."
 
-### 1. Emotional Changes
-✅ Your anxiety has noticeably decreased recently. Looking at journals from March 5-10, you mentioned several times that "thorough preparation made me feel at ease" — indicating that **advance preparation effectively reduces your anxiety**, a great discovery.
-
-💡 Your mood visibly improves after socializing with friends (March 7: "felt recharged after chatting"). Social activities have a positive impact on your emotions.
-
-### 2. Work Style
-...
-
----
+Then output the complete updated profile inside <profile_update> tags. Preserve still-accurate parts from the current profile and add only evidence-backed updates.
 
 <profile_update>
 # User Profile
-
-## Basic Information
-...(preserved and updated complete profile content)
+...
 </profile_update>
 
 <new_patterns>
-- New behavioral/emotional patterns discovered from journals
+- One evidence-backed new pattern per line, or "none"
 </new_patterns>
 
 <new_principles>
-- Reusable principles extracted from analysis
+- One reusable principle per line, or "none"
 </new_principles>
-</example>`;
+</output>
+
+<writing_rules>
+- Natural English, direct and specific.
+- Do not invent traits, diagnoses, identities, motivations, or life events.
+- Avoid AI cliches and motivational slogans.
+- Make uncertainty visible instead of pretending to know.
+</writing_rules>`;
     }
 
-    return `<task>用户画像更新分析</task>
+    return `<task>基于近期证据更新用户画像</task>
 
-你是一个了解用户的个人成长顾问。请基于近两周的日记，分析用户画像是否需要更新。
+你通过记录了解用户，但必须受证据约束。请结合当前画像与近期日记，判断哪些内容应该保留、修正或新增。
 
 <current_profile>
 {CURRENT_PROFILE}
@@ -988,66 +938,38 @@ This content will be automatically saved as the user's new profile file, so plea
 {RECENT_JOURNALS}
 </recent_journals>
 
-<instructions>
+<method>
+1. 证据：找出具体日期、任务、复盘内容、反复出现的词、行为变化。
+2. 判断：区分稳定模式、正在出现的信号、证据很弱的观察。
+3. 重写：用用户自己能认出来的自然语言更新画像。
+</method>
 
-请分两部分输出：
-
-## 第一部分：画像更新分析
-
-用通俗易懂的语言分析以下维度。每条发现都要引用具体的日记内容作为依据。
-用以下标记表示发现的可靠程度：
-- ✅ 比较确定（在多篇日记中反复出现）
-- 💡 初步观察（出现过 2-3 次，值得留意）
-- 🔍 值得关注（只出现过 1 次，但很有意思）
-
-按以下维度逐一分析：
-1. **情绪变化**：最近情绪有什么新的规律？和之前画像里记录的有变化吗？
-2. **做事风格**：发现了什么新的有效方法？什么策略被证明管用？
-3. **思考方式**：思维习惯有什么新特点？原来的特点有变化吗？
-4. **能力边界**：有没有什么之前觉得难的事开始变容易了？或者正在挑战的新领域？
-5. **价值取向**：最看重的东西有没有变化？
-
-没有变化的维度简单说一句"暂未发现明显变化"即可。
-
-## 第二部分：更新后的完整画像
-
-在分析完成后，请输出更新后的完整用户画像，用 <profile_update> 标签包裹。
-这部分内容会被自动保存为用户的新画像文件，所以请：
-- 保留原有画像中仍然准确的内容
-- 融入本次分析中确认的新发现
-- 使用 Markdown 格式，保持和原画像一致的结构
-- 写成用户自己也能看懂的个人档案，而非分析报告
-
-</instructions>
-
-<example>
+<output>
 ## 画像更新分析
+分析情绪模式、做事风格、思考方式、能力边界、价值取向。每条有效变化都要带证据；没有证据的维度写"暂未发现清晰变化"。
 
-### 1. 情绪变化
-✅ 你最近的焦虑感明显减少了。从 3 月 5 日到 3 月 10 日的日记看，你好几次提到"准备工作做得充分，心里很踏实"——说明**提前准备能有效缓解你的焦虑**，这是一个很好的发现。
-
-💡 和朋友聚会后你的心情会明显变好（3 月 7 日提到"聊完感觉充了电"），社交活动对你的情绪有比较正面的影响。
-
-### 2. 做事风格
-...
-
----
+随后把完整更新后的画像放在 <profile_update> 标签内。保留原画像中仍然准确的部分，只加入有证据支撑的新内容。
 
 <profile_update>
 # 用户画像
-
-## 基本信息
-...（保留并更新的完整画像内容）
+...
 </profile_update>
 
 <new_patterns>
-- 从日记中发现的新行为/情绪模式
+- 每行一个有证据的新模式；没有就写"无"
 </new_patterns>
 
 <new_principles>
-- 从分析中提炼的可复用原则
+- 每行一个可复用原则；没有就写"无"
 </new_principles>
-</example>`;
+</output>
+
+<writing_rules>
+- 自然中文，直接、具体。
+- 不得编造性格、诊断、身份、动机或人生事件。
+- 避免 AI 套话和励志口号。
+- 不确定就写出不确定，不要装作知道。
+</writing_rules>`;
 }
 
 export const PROFILE_SUGGESTION_PROMPT = getProfileSuggestionPrompt();

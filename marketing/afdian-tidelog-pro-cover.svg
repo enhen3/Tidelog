@@ -14,15 +14,15 @@
     <text x="0" y="0" class="eyebrow">TIDELOG PRO</text>
     <text x="0" y="112" class="title">把 Daily Note</text>
     <text x="0" y="210" class="title">变成反馈系统</text>
-    <text x="0" y="294" class="sub">晨间计划 · 晚间复盘 · AI 洞察 · 行动视图</text>
-    <g transform="translate(0 378)"><rect width="608" height="74" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="30" y="47" class="pill">Plan → Review → Insight → Action</text></g>
+    <text x="0" y="294" class="sub">Plan 计划 · Review 复盘 · Insights 洞察</text>
+    <g transform="translate(0 378)"><rect width="608" height="74" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="30" y="47" class="pill">Plan → Review → Insights</text></g>
     <g transform="translate(0 514)"><rect width="284" height="96" rx="28" fill="url(#accent)"/><text x="34" y="62" class="price">¥49/年</text><rect x="310" width="332" height="96" rx="28" fill="#F5F3EA"/><text x="344" y="62" class="price">¥99 终身</text></g>
   </g>
   <g transform="translate(900 136)" filter="url(#shadow)">
     <rect width="560" height="628" rx="42" fill="#0B1417" stroke="#FFFFFF" stroke-opacity=".12"/>
     <rect x="40" y="42" width="480" height="104" rx="28" fill="#FFFFFF" fill-opacity=".055"/><text x="76" y="106" class="pill">TideLog / Pro</text>
-    <g transform="translate(46 194)"><rect width="468" height="88" rx="24" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/><circle cx="46" cy="44" r="12" fill="#3B8EA5"/><text x="78" y="53" class="small">完整 5+4 晚间复盘</text></g>
-    <g transform="translate(46 310)"><rect width="468" height="88" rx="24" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/><circle cx="46" cy="44" r="12" fill="#D4B978"/><text x="78" y="53" class="small">AI 周报 / 月报洞察</text></g>
-    <g transform="translate(46 426)"><rect width="468" height="88" rx="24" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/><circle cx="46" cy="44" r="12" fill="#F5F3EA"/><text x="78" y="53" class="small">Dashboard / Calendar / Kanban</text></g>
+    <g transform="translate(46 194)"><rect width="468" height="88" rx="24" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/><circle cx="46" cy="44" r="12" fill="#3B8EA5"/><text x="78" y="53" class="small">完整 Review 问题流</text></g>
+    <g transform="translate(46 310)"><rect width="468" height="88" rx="24" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/><circle cx="46" cy="44" r="12" fill="#D4B978"/><text x="78" y="53" class="small">周报 / 月报洞察</text></g>
+    <g transform="translate(46 426)"><rect width="468" height="88" rx="24" fill="#FFFFFF" fill-opacity=".045" stroke="#FFFFFF" stroke-opacity=".075"/><circle cx="46" cy="44" r="12" fill="#F5F3EA"/><text x="78" y="53" class="small">报告预览 / AI 眼中的你</text></g>
   </g>
 </svg>

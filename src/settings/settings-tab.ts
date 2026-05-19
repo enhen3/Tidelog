@@ -84,6 +84,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             );
 
         this.renderProviderSettings(containerEl);
+        containerEl.createDiv({ cls: 'tl-settings-section-note', text: t('settings.aiPrivacyNote') });
     }
 
     private renderFolderSettings(containerEl: HTMLElement): void {
@@ -207,8 +208,8 @@ export class TideLogSettingTab extends PluginSettingTab {
         logoEl.createSpan('tl-settings-logo-line');
         logoEl.createSpan('tl-settings-logo-dot');
         const lockupCopyEl = lockupEl.createDiv('tl-settings-lockup-copy');
-        lockupCopyEl.createDiv({ cls: 'tl-settings-eyebrow', text: 'TideLog · Obsidian feedback loop' });
-        lockupCopyEl.createDiv({ cls: 'tl-settings-lockup-subtitle', text: 'Markdown-first · Local by default · AI optional' });
+        lockupCopyEl.createDiv({ cls: 'tl-settings-eyebrow', text: t('settings.heroEyebrow') });
+        lockupCopyEl.createDiv({ cls: 'tl-settings-lockup-subtitle', text: t('settings.heroSubtitle') });
         copyEl.createDiv({
             cls: 'tl-settings-hero-title',
             text: t('settings.heroTitle'),
@@ -219,12 +220,12 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         const flowEl = copyEl.createDiv('tl-settings-flow');
-        ['Plan', 'Review', 'Insight', 'Action'].forEach((label) => {
+        [t('chat.tabPlan'), t('chat.tabReview'), t('chat.tabInsights')].forEach((label) => {
             flowEl.createSpan({ cls: 'tl-settings-flow-pill', text: label });
         });
 
         const proofEl = copyEl.createDiv('tl-settings-proof-row');
-        ['No telemetry', 'Vault-native', 'AI optional'].forEach((label) => {
+        [t('settings.proofNoTelemetry'), t('settings.proofVaultNative'), t('settings.proofUserTriggeredAI')].forEach((label) => {
             proofEl.createSpan({ cls: 'tl-settings-proof-pill', text: label });
         });
     }
@@ -257,6 +258,19 @@ export class TideLogSettingTab extends PluginSettingTab {
         const openBtn = actionEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('settings.openGettingStarted') });
         openBtn.addEventListener('click', () => {
             new OnboardingModal(this.app, this.plugin).open();
+        });
+
+        const workflowEl = containerEl.createDiv('tl-settings-workflow-card');
+        workflowEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.workflowKicker') });
+        workflowEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.workflowTitle') });
+        workflowEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.workflowDesc') });
+        const workflowItemsEl = workflowEl.createDiv('tl-settings-workflow-items');
+        [
+            t('settings.workflowPlan'),
+            t('settings.workflowReview'),
+            t('settings.workflowInsights'),
+        ].forEach((item) => {
+            workflowItemsEl.createDiv({ cls: 'tl-settings-workflow-item', text: item });
         });
     }
 
@@ -840,7 +854,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         const proFeaturesEl = mainEl.createDiv('tl-settings-pro-features');
-        [t('settings.proFeatureReview'), t('settings.proFeatureInsight'), t('settings.proFeatureDashboard')].forEach((feature) => {
+        [t('settings.proFeatureReview'), t('settings.proFeatureInsight'), t('settings.proFeatureReports')].forEach((feature) => {
             proFeaturesEl.createSpan({ cls: 'tl-settings-pro-feature', text: feature });
         });
 

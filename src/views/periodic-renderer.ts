@@ -3,14 +3,13 @@
  * Replaces the old kanban-renderer with a day/week/month period selector + content preview.
  */
 
-import { TFile, moment, setIcon, Platform } from 'obsidian';
+import { Menu, TFile, moment, setIcon, Platform } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
-import type { ChatMessage } from '../types';
+import type { PlanSuggestionScope } from '../services/plan-suggestion-service';
 import { t, getLanguage } from '../i18n';
-import { replaceFile } from '../utils/vault-write';
 
-export type PeriodicMode = 'day' | 'week' | 'month';
+export type PeriodicMode = 'day' | 'week' | 'month' | 'capture';
 
 /** Host view interface */
 export interface PeriodicHost {
@@ -19,10 +18,11 @@ export interface PeriodicHost {
     periodicMode: PeriodicMode;
     periodicSelectedDate: moment.Moment;
     periodicMonthOffset: number;
+    periodicSelectorOpen: boolean;
     parseMdTasks(content: string): { text: string; done: boolean; isTask: boolean; section: string; indent: number }[];
     toggleMdTask(file: TFile, taskText: string, wasDone: boolean): Promise<void>;
     addMdTask(file: TFile, taskText: string, indent?: number): Promise<void>;
-    addSubTask(file: TFile, parentText: string, subTaskText: string): Promise<void>;
+    addSubTask(file: TFile, parentText: string, subTaskText: string, parentIndent?: number): Promise<void>;
     editMdTask(file: TFile, oldText: string, newText: string): Promise<void>;
     deleteMdTask(file: TFile, taskText: string): Promise<void>;
     setTaskIndent(file: TFile, taskText: string, newIndent: number): Promise<void>;
@@ -35,14 +35,33 @@ export interface PeriodicHost {
 }
 
 export class PeriodicRenderer {
+    private periodPickerEl: HTMLElement | null = null;
+    private periodPickerCleanup: (() => void) | null = null;
+
     constructor(private host: PeriodicHost) { }
 
+    private createDetachedInput(): HTMLInputElement {
+        const input = activeDocument.body.createEl('input');
+        input.remove();
+        return input;
+    }
+
+    private createDetachedDiv(): HTMLDivElement {
+        const div = activeDocument.body.createDiv();
+        div.remove();
+        return div;
+    }
+
+    private createDetachedSpan(): HTMLSpanElement {
+        const span = activeDocument.body.createSpan();
+        span.remove();
+        return span;
+    }
+
     async render(panel: HTMLElement): Promise<void> {
+        this.closePeriodPicker();
         panel.addClass('tl-periodic');
         if (Platform.isMobile) panel.addClass('is-mobile');
-
-        // Sub-tab bar: 日 | 周 | 月
-        this.renderModeBar(panel);
 
         // Period selector + content preview
         const body = panel.createDiv('tl-periodic-body');
@@ -52,38 +71,40 @@ export class PeriodicRenderer {
             await this.renderDayMode(body);
         } else if (mode === 'week') {
             await this.renderWeekMode(body);
-        } else {
+        } else if (mode === 'month') {
             await this.renderMonthMode(body);
+        } else {
+            await this.renderCaptureMode(body);
         }
     }
 
-    // ──────────────────────────────────────────────────────
-    // Mode bar: 日 | 周 | 月
-    // ──────────────────────────────────────────────────────
-
-    private renderModeBar(panel: HTMLElement): void {
+    private renderPeriodHeader(body: HTMLElement, title: string, subtitle?: string): void {
         const h = this.host;
-        const bar = panel.createDiv('tl-periodic-mode-bar');
-        const modes: { id: PeriodicMode; icon: string; label: string }[] = [
-            { id: 'day', icon: 'sun', label: t('periodic.day') },
-            { id: 'week', icon: 'calendar-range', label: t('periodic.week') },
-            { id: 'month', icon: 'calendar', label: t('periodic.month') },
-        ];
-        for (const m of modes) {
-            const btn = bar.createEl('button', {
-                cls: `tl-periodic-mode-btn ${h.periodicMode === m.id ? 'tl-periodic-mode-btn-active' : ''}`,
-            });
-            setIcon(btn, m.icon);
-            btn.createSpan({ text: m.label });
-            btn.addEventListener('click', () => {
-                h.periodicMode = m.id;
-                // Reset to current period when switching
-                h.periodicSelectedDate = moment();
-                h.periodicMonthOffset = 0;
-                h.invalidateTabCache('kanban');
-                h.switchTab('kanban');
-            });
-        }
+        const header = body.createEl('button', {
+            cls: `tl-periodic-period-header ${h.periodicSelectorOpen ? 'tl-periodic-period-header-open' : ''}`,
+            attr: { type: 'button' },
+        });
+        const copy = header.createDiv('tl-periodic-period-copy');
+        copy.createDiv({ cls: 'tl-periodic-period-title', text: title });
+        if (subtitle) copy.createDiv({ cls: 'tl-periodic-period-subtitle', text: subtitle });
+        const icon = header.createSpan({ cls: 'tl-periodic-period-chevron' });
+        setIcon(icon, h.periodicSelectorOpen ? 'chevron-up' : 'chevron-down');
+        header.addEventListener('click', () => {
+            h.periodicSelectorOpen = !h.periodicSelectorOpen;
+            h.invalidateTabCache('kanban');
+            h.switchTab('kanban');
+        });
+    }
+
+    private getWeekOfMonth(date: moment.Moment): number {
+        const firstDay = moment(date).startOf('month');
+        const leadingDays = firstDay.isoWeekday() - 1;
+        return Math.floor((date.date() + leadingDays - 1) / 7) + 1;
+    }
+
+    private async renderCaptureMode(body: HTMLElement): Promise<void> {
+        const preview = body.createDiv('tl-periodic-preview tl-periodic-preview-plain tl-periodic-capture-preview');
+        await this.renderQuickCapture(preview);
     }
 
     // ──────────────────────────────────────────────────────
@@ -95,11 +116,21 @@ export class PeriodicRenderer {
         const sel = h.periodicSelectedDate;
         const calMonth = moment(sel).startOf('month').add(h.periodicMonthOffset, 'months');
 
+        const title = getLanguage() === 'en' ? sel.format('MMM D') : sel.format('M月D日');
+        const todayLabel = h.periodicSelectorOpen
+            ? undefined
+            : (sel.isSame(moment(), 'day') ? t('periodic.todayLabel') : sel.format('dddd'));
+        this.renderPeriodHeader(body, title, todayLabel);
+
+        if (h.periodicSelectorOpen) {
         // Calendar nav
         const calSection = body.createDiv('tl-periodic-selector');
         const calNav = calSection.createDiv('tl-periodic-cal-nav');
         const prevBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '‹' });
-        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? calMonth.format('MMMM YYYY') : calMonth.format('YYYY年 M月') });
+        const compactMonthTitle = getLanguage() === 'en'
+            ? (calMonth.year() === moment().year() ? calMonth.format('MMMM') : calMonth.format('MMMM YYYY'))
+            : (calMonth.year() === moment().year() ? calMonth.format('M月') : calMonth.format('YYYY年M月'));
+        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: compactMonthTitle });
         const nextBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '›' });
         prevBtn.addEventListener('click', () => { h.periodicMonthOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         nextBtn.addEventListener('click', () => { h.periodicMonthOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -133,8 +164,10 @@ export class PeriodicRenderer {
             const cell = grid.createDiv(`tl-periodic-cal-cell ${isToday ? 'tl-periodic-cal-cell-today' : ''} ${isSelected ? 'tl-periodic-cal-cell-selected' : ''} ${hasNote ? 'tl-periodic-cal-cell-has-note' : ''}`);
             cell.setText(`${d}`);
             cell.addEventListener('click', () => {
-                h.periodicSelectedDate = moment(calMonth).date(d);
+                const picked = moment(calMonth).date(d);
+                h.periodicSelectedDate = picked;
                 h.periodicMonthOffset = 0;
+                h.periodicSelectorOpen = !picked.isSame(moment(), 'day');
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
@@ -156,6 +189,7 @@ export class PeriodicRenderer {
                 })();
             }
         }
+        }
 
         // Preview area
         await this.renderDayPreview(body, sel);
@@ -164,30 +198,17 @@ export class PeriodicRenderer {
     private async renderDayPreview(body: HTMLElement, date: moment.Moment): Promise<void> {
         const h = this.host;
         const dateStr = date.format('YYYY-MM-DD');
-        const dayName = date.format('dddd');
         const path = `${h.plugin.settings.dailyFolder}/${dateStr}.md`;
         const file = h.app.vault.getAbstractFileByPath(path);
 
-        const preview = body.createDiv('tl-periodic-preview');
-        const previewHeader = preview.createDiv('tl-periodic-preview-header');
-        previewHeader.createSpan({ cls: 'tl-periodic-preview-date', text: `${dateStr} ${dayName}` });
+        const preview = body.createDiv('tl-periodic-preview tl-periodic-preview-plain');
 
         if (!file || !(file instanceof TFile)) {
             // Show task input even for future/empty dates — auto-create file
-            this.renderTaskInputForDate(preview, date);
-            // AI suggestion for today / future
-            if (date.isSameOrAfter(moment(), 'day')) {
-                void this.renderPlanSuggestion(preview, date);
-            }
-            const createBtn = preview.createEl('button', { cls: 'tl-periodic-open-btn', text: t('periodic.createDiary') });
-            createBtn.addEventListener('click', () => {
-                void (async () => {
-                    const f = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
-                    void h.app.workspace.getLeaf().openFile(f);
-                })();
-            });
-            // Quick Capture section (灵感收集) — cross-day persistent
-            await this.renderQuickCapture(body);
+            const taskSection = preview.createDiv('tl-periodic-task-section');
+            this.renderTaskInputForDate(taskSection, date);
+            await this.renderGoalContext(preview, date);
+            await this.renderPlanSuggestion(preview, 'day', date);
             return;
         }
 
@@ -196,195 +217,158 @@ export class PeriodicRenderer {
 
         // Tasks
         const tasks = h.parseMdTasks(content).filter(t => t.isTask);
+        const taskSection = preview.createDiv('tl-periodic-task-section');
         if (tasks.length > 0) {
-            const taskSection = preview.createDiv('tl-periodic-task-section');
-            const inProgress = tasks.filter(t => !t.done);
-            const completed = tasks.filter(t => t.done);
-
-            if (inProgress.length > 0) {
-                taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('kanban.inProgress', String(inProgress.length)) });
-                for (const task of inProgress) {
-                    this.renderTask(taskSection, task, file, 'day', date);
-                }
+            for (const task of tasks) {
+                this.renderTask(taskSection, task, file, 'day', date);
             }
-            if (completed.length > 0) {
-                const doneLabel = taskSection.createDiv({ cls: 'tl-periodic-task-group-label tl-periodic-task-group-done-label' });
-                const indicator = doneLabel.createSpan({ cls: 'tl-periodic-toggle-indicator', text: '▾' });
-                doneLabel.appendText(` ${t('kanban.completedSection', String(completed.length))}`);
-                const doneBody = taskSection.createDiv('tl-periodic-task-done-body');
-                doneLabel.addEventListener('click', () => {
-                    const collapsed = !doneBody.hasClass('tl-periodic-collapsed');
-                    doneBody.toggleClass('tl-periodic-collapsed', collapsed);
-                    indicator.setText(collapsed ? '▸' : '▾');
-                });
-                for (const task of completed) {
-                    this.renderTask(doneBody, task, file, 'day', date);
-                }
-            }
-        } else {
-            preview.createDiv({ cls: 'tl-periodic-preview-empty', text: t('kanban.noTasks') });
         }
 
         // Add task input
         if (file instanceof TFile) {
-            this.renderTaskInput(preview, file);
+            this.renderTaskInput(taskSection, file);
         }
 
-        // AI planning suggestion for today / future dates
-        const isCurrentOrFuture = date.isSameOrAfter(moment(), 'day');
-        if (isCurrentOrFuture) {
-            await this.renderPlanSuggestion(preview, date);
-        }
+        await this.renderGoalContext(preview, date);
+        await this.renderPlanSuggestion(preview, 'day', date);
 
-        // Open note button
-        const openBtn = preview.createDiv('tl-periodic-open-btn');
-        openBtn.setText(t('periodic.openDiary'));
-        openBtn.addEventListener('click', () => {
-            void h.app.workspace.getLeaf().openFile(file);
-        });
-
-        // Quick Capture section (灵感收集) — cross-day persistent
-        await this.renderQuickCapture(body);
     }
 
-    /**
-     * Show planning suggestions based on previous day's review content.
-     * Reads the daily note directly, extracts review section, and generates
-     * AI suggestions. Cached per-date to avoid redundant API calls.
-     */
-    private async renderPlanSuggestion(container: HTMLElement, date: moment.Moment): Promise<void> {
+    private async renderGoalContext(container: HTMLElement, date: moment.Moment): Promise<void> {
         const h = this.host;
-        const isToday = date.isSame(moment(), 'day');
-        const isTomorrow = date.isSame(moment().add(1, 'day'), 'day');
-        const section = container.createDiv('tl-plan-suggestion');
+        const weekStart = moment(date).startOf('isoWeek');
+        const weekLabel = `W${String(weekStart.isoWeek()).padStart(2, '0')}`;
+        const weeklyPath = `${h.plugin.settings.planFolder}/Weekly/${weekStart.isoWeekYear()}-${weekLabel}.md`;
+        const monthPath = `${h.plugin.settings.planFolder}/Monthly/${date.format('YYYY-MM')}.md`;
 
-        if (isToday || isTomorrow) {
-            // Read the previous day's daily note review content
-            const yesterday = moment(date).subtract(1, 'day');
-            const yesterdayPath = `${h.plugin.settings.dailyFolder}/${yesterday.format('YYYY-MM-DD')}.md`;
-            const yesterdayFile = h.app.vault.getAbstractFileByPath(yesterdayPath);
+        const [weeklyGoals, monthlyGoals] = await Promise.all([
+            this.extractWeeklyGoalLines(weeklyPath),
+            this.extractMonthlyGoalLines(monthPath),
+        ]);
 
-            if (!yesterdayFile || !(yesterdayFile instanceof TFile)) {
-                this.showFallbackTip(section, date);
-                return;
-            }
+        if (weeklyGoals.length === 0 && monthlyGoals.length === 0) return;
 
-            const content = await h.app.vault.read(yesterdayFile);
+        const section = container.createDiv('tl-periodic-goal-context');
+        const summary = section.createEl('button', {
+            cls: 'tl-periodic-goal-summary',
+            attr: { type: 'button' },
+        });
+        const chips = summary.createSpan({ cls: 'tl-periodic-goal-summary-chips' });
+        this.renderGoalChip(chips, t('periodic.weekGoalChip'), weeklyGoals.length);
+        this.renderGoalChip(chips, t('periodic.monthGoalChip'), monthlyGoals.length);
+        const toggle = summary.createSpan({ cls: 'tl-periodic-goal-summary-toggle' });
+        setIcon(toggle, 'chevron-down');
+        const detail = section.createDiv('tl-periodic-goal-detail tl-periodic-collapsed');
 
-            // Extract review section
-            let reviewIdx = content.indexOf('## 复盘');
-            if (reviewIdx < 0) reviewIdx = content.indexOf('## Review');
-            if (reviewIdx < 0) {
-                this.showFallbackTip(section, date);
-                return;
-            }
-            const reviewLabel = content.indexOf('## 复盘') >= 0 ? '## 复盘' : '## Review';
-            let reviewContent = content.substring(reviewIdx + reviewLabel.length);
-            // Cut at next "---" or "## " header
-            const endIdx = reviewContent.indexOf('\n---');
-            if (endIdx > 0) reviewContent = reviewContent.substring(0, endIdx);
-
-            // Remove HTML comments
-            reviewContent = reviewContent.replace(/<!--[\s\S]*?-->/g, '').trim();
-            if (!reviewContent) {
-                this.showFallbackTip(section, date);
-                return;
-            }
-
-            // Check cache: only regenerate if date changed
-            const cacheKey = date.format('YYYY-MM-DD');
-            const cachePath = `${h.plugin.settings.archiveFolder}/plan_suggestions.md`;
-            const cacheFile = h.app.vault.getAbstractFileByPath(cachePath);
-
-            if (cacheFile && cacheFile instanceof TFile) {
-                const cached = await h.app.vault.read(cacheFile);
-                // Check if cache is for today's suggestions
-                if (cached.includes(`date: ${cacheKey}`)) {
-                    // Use cached suggestions
-                    let body = cached;
-                    if (body.startsWith('---')) {
-                        const end = body.indexOf('---', 3);
-                        if (end > 0) body = body.substring(end + 3);
-                    }
-                    const lines = body.trim().split('\n').filter(l => l.trim());
-                    if (lines.length > 0) {
-                        section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.aiSuggestionToday') : t('periodic.aiSuggestionGeneral') });
-                        for (const line of lines) {
-                            section.createDiv({ cls: 'tl-plan-suggestion-line', text: line.trim() });
-                        }
-                        return;
-                    }
+        const renderGroup = (kind: 'week' | 'month', title: string, lines: string[]) => {
+            const group = detail.createDiv(`tl-periodic-goal-group tl-periodic-goal-group-${kind}`);
+            const header = group.createDiv('tl-periodic-goal-group-header');
+            header.createSpan({ cls: 'tl-periodic-goal-group-title', text: title });
+            if (lines.length === 0) {
+                group.createDiv({ cls: 'tl-periodic-goal-empty', text: t('periodic.noGoals') });
+            } else {
+                const list = group.createDiv('tl-periodic-goal-list');
+                for (const [index, line] of lines.entries()) {
+                    const item = list.createDiv('tl-periodic-goal-item');
+                    item.createSpan({ cls: 'tl-periodic-goal-index', text: String(index + 1) });
+                    item.createSpan({ cls: 'tl-periodic-goal-text', text: line });
                 }
             }
+        };
 
-            // Generate fresh suggestions via AI
-            section.createDiv({ cls: 'tl-plan-suggestion-header', text: isToday ? t('periodic.aiSuggestionToday') : t('periodic.aiSuggestionGeneral') });
-            const loadingEl = section.createDiv({ cls: 'tl-plan-suggestion-line', text: t('periodic.generatingSuggestion') });
+        renderGroup('week', t('periodic.weekGoalChip'), weeklyGoals);
+        renderGroup('month', t('periodic.monthGoalChip'), monthlyGoals);
 
-            try {
-                const provider = h.plugin.getAIProvider();
-                if (!provider) {
-                    loadingEl.remove();
-                    this.showFallbackTip(section, date);
-                    return;
-                }
+        summary.addEventListener('click', () => {
+            const collapsed = detail.hasClass('tl-periodic-collapsed');
+            detail.toggleClass('tl-periodic-collapsed', !collapsed);
+            toggle.empty();
+            setIcon(toggle, collapsed ? 'chevron-up' : 'chevron-down');
+        });
+    }
 
-                const systemPrompt = `基于用户昨日的复盘内容，提炼出3条今天可以行动的建议。
+    private renderGoalChip(container: HTMLElement, label: string, count: number): void {
+        const chip = container.createSpan({ cls: 'tl-periodic-goal-chip' });
+        chip.createSpan({ cls: 'tl-periodic-goal-chip-label', text: label });
+        chip.createSpan({ cls: 'tl-periodic-goal-chip-count', text: String(count) });
+    }
 
-严格规则：
-- 每条建议必须直接来源于用户复盘中提到的事情、想法或反思，不得凭空编造
-- 绝对禁止建议用户没有提到过的活动、方法或习惯
-- 建议应该是用户自己说过的计划、反思到的改进方向、或未完成事项的延续
-- 每条以"💡"开头，不超过30字
-- 直接输出建议，不要加前言`;
-
-                const messages: ChatMessage[] = [
-                    { role: 'user', content: `我的昨日复盘：\n${reviewContent}`, timestamp: Date.now() }
-                ];
-
-                const suggestions = await provider.sendMessage(messages, systemPrompt, () => { /* no-op */ });
-
-                loadingEl.remove();
-
-                if (suggestions && suggestions.trim()) {
-                    const lines = suggestions.trim().split('\n').filter((l: string) => l.trim());
-                    for (const line of lines) {
-                        section.createDiv({ cls: 'tl-plan-suggestion-line', text: line.trim() });
-                    }
-                    // Save to cache
-                    const cacheContent = `---\ndate: ${cacheKey}\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
-                    if (cacheFile && cacheFile instanceof TFile) {
-                        await replaceFile(h.app, cacheFile, cacheContent);
-                    } else {
-                        const folder = cachePath.substring(0, cachePath.lastIndexOf('/'));
-                        if (!h.app.vault.getAbstractFileByPath(folder)) {
-                            await h.app.vault.createFolder(folder);
-                        }
-                        await h.app.vault.create(cachePath, cacheContent);
-                    }
-                } else {
-                    this.showFallbackTip(section, date);
-                }
-            } catch {
-                loadingEl.remove();
-                this.showFallbackTip(section, date);
-            }
-        } else {
-            // Future dates: show a planning tip
-            section.createDiv({ cls: 'tl-plan-suggestion-header', text: t('periodic.planTip') });
-            this.showFallbackTip(section, date);
+    private async readVaultFile(path: string): Promise<string | null> {
+        const h = this.host;
+        const file = h.app.vault.getAbstractFileByPath(path);
+        if (!(file instanceof TFile)) return null;
+        try {
+            return await h.app.vault.cachedRead(file);
+        } catch {
+            return null;
         }
     }
 
-    private showFallbackTip(section: HTMLElement, date: moment.Moment): void {
-        const tips = [
-            t('tip.0'), t('tip.1'), t('tip.2'), t('tip.3'),
-            t('tip.4'), t('tip.5'), t('tip.6'), t('tip.7'),
-            t('tip.8'), t('tip.9'), t('tip.10'), t('tip.11'),
+    private async extractWeeklyGoalLines(path: string): Promise<string[]> {
+        const content = await this.readVaultFile(path);
+        if (!content) return [];
+        return this.host.parseMdTasks(content)
+            .filter(item => item.isTask && !item.done)
+            .map(item => item.text)
+            .filter(Boolean)
+            .slice(0, 8);
+    }
+
+    private async extractMonthlyGoalLines(path: string): Promise<string[]> {
+        const content = await this.readVaultFile(path);
+        if (!content) return [];
+        const goalSections = [
+            t('kanban.monthlyGoals'),
+            t('kanban.milestones'),
+            '月度目标',
+            '关键里程碑',
+            'Monthly goals',
+            'Key milestones',
         ];
-        const dayOfYear = date.dayOfYear();
-        const tip = tips[dayOfYear % tips.length];
-        section.createDiv({ cls: 'tl-plan-suggestion-line', text: tip });
+        return this.host.parseMdTasks(content)
+            .filter(item => goalSections.some(section => item.section.includes(section)))
+            .map(item => item.text)
+            .filter(Boolean)
+            .slice(0, 8);
+    }
+
+    private async renderPlanSuggestion(container: HTMLElement, scope: PlanSuggestionScope, date: moment.Moment): Promise<void> {
+        const h = this.host;
+        const service = h.plugin.planSuggestionService;
+        if (!service) return;
+
+        const cached = await service.getCachedSuggestions(scope, date);
+        const hasSuggestions = !!cached && cached.length > 0;
+        const section = container.createDiv(
+            `tl-plan-suggestion tl-plan-suggestion-${scope} ${hasSuggestions ? '' : 'tl-plan-suggestion-pending'}`.trim(),
+        );
+        const header = section.createDiv('tl-plan-suggestion-header');
+        const mark = header.createSpan({ cls: 'tl-plan-suggestion-mark' });
+        setIcon(mark, hasSuggestions ? 'sparkles' : 'clock-3');
+        const copy = header.createDiv('tl-plan-suggestion-copy');
+        copy.createDiv({
+            cls: 'tl-plan-suggestion-title',
+            text: scope === 'day'
+                ? t('periodic.aiSuggestionDay')
+                : scope === 'week'
+                    ? t('periodic.aiSuggestionWeek')
+                    : t('periodic.aiSuggestionMonth'),
+        });
+        if (!hasSuggestions) {
+            copy.createDiv({
+                cls: 'tl-plan-suggestion-meta',
+                text: t('periodic.suggestionPending'),
+            });
+        }
+
+        if (!hasSuggestions) return;
+
+        const linesWrap = section.createDiv('tl-plan-suggestion-lines');
+        cached.forEach((line, index) => {
+            const item = linesWrap.createDiv('tl-plan-suggestion-item');
+            item.createSpan({ cls: 'tl-plan-suggestion-index', text: String(index + 1) });
+            item.createDiv({ cls: 'tl-plan-suggestion-text', text: line.replace(/^💡\s*/, '').trim() });
+        });
     }
 
     // ──────────────────────────────────────────────────────
@@ -401,11 +385,6 @@ export class PeriodicRenderer {
 
         const section = container.createDiv('tl-capture-section');
 
-        // Header
-        const header = section.createDiv('tl-capture-header');
-        header.createSpan({ cls: 'tl-capture-title', text: t('capture.title') });
-
-        // Items list
         const list = section.createDiv('tl-capture-list');
 
         if (items.length === 0) {
@@ -416,7 +395,6 @@ export class PeriodicRenderer {
             }
         }
 
-        // Input row
         const inputRow = section.createDiv('tl-capture-input-row');
         const input = inputRow.createEl('input', {
             type: 'text',
@@ -456,7 +434,7 @@ export class PeriodicRenderer {
         // Label — edit trigger: dblclick on desktop, single tap on mobile
         const label = row.createSpan({ cls: 'tl-capture-text', text });
         const startEdit = (target: HTMLElement) => {
-            const input = activeDocument.createEl('input');
+            const input = this.createDetachedInput();
             input.type = 'text';
             input.value = text;
             input.className = 'tl-capture-edit-input';
@@ -485,9 +463,27 @@ export class PeriodicRenderer {
             label.addEventListener('dblclick', () => startEdit(label));
         }
 
-        // Delete button
-        const delBtn = row.createSpan({ cls: 'tl-capture-del-btn', text: '×' });
+        const actions = row.createSpan({ cls: 'tl-capture-actions' });
+
+        const schedBtn = actions.createEl('button', {
+            cls: 'tl-task-action-btn tl-capture-schedule-btn',
+            attr: { type: 'button', title: t('capture.addToDate') },
+        });
+        setIcon(schedBtn, 'calendar-clock');
+        const openSchedulePopup = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.showCapturePromoteMenu(text, row, schedBtn);
+        };
+        schedBtn.addEventListener('click', openSchedulePopup);
+
+        const delBtn = actions.createEl('button', {
+            cls: 'tl-task-action-btn tl-capture-del-btn',
+            attr: { type: 'button', title: t('task.delete') },
+        });
+        setIcon(delBtn, 'trash-2');
         delBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             void (async () => {
                 await h.plugin.vaultManager.removeQuickCaptureItem(text);
@@ -499,153 +495,336 @@ export class PeriodicRenderer {
                 }
             })();
         });
+    }
 
-        // Date-promote popup — right-click (desktop) / long-press (mobile)
-        const showPromotePopup = (clientX: number, clientY: number) => {
-            // Remove any existing popup
-            activeDocument.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
+    private showCapturePromoteMenu(text: string, row: HTMLElement, anchorEl: HTMLElement): void {
+        const menu = new Menu();
+        menu.addItem((item) => {
+            item.setTitle(t('capture.dayGoal'))
+                .setIcon('sun')
+                .onClick(() => {
+                    this.openPeriodPicker('day', moment(), picked => {
+                        void this.promoteCaptureToDay(text, picked, row);
+                    }, anchorEl);
+                });
+        });
+        menu.addItem((item) => {
+            item.setTitle(t('capture.weekGoal'))
+                .setIcon('calendar-range')
+                .onClick(() => {
+                    this.openPeriodPicker('week', moment(), picked => {
+                        void this.promoteCaptureToWeek(text, picked, row);
+                    }, anchorEl);
+                });
+        });
+        menu.addItem((item) => {
+            item.setTitle(t('capture.monthGoal'))
+                .setIcon('calendar-days')
+                .onClick(() => {
+                    this.openPeriodPicker('month', moment(), picked => {
+                        void this.promoteCaptureToMonth(text, picked, row);
+                    }, anchorEl);
+                });
+        });
+        const rect = anchorEl.getBoundingClientRect();
+        menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 });
+    }
 
-            const popup = activeDocument.createDiv();
-            popup.className = 'tl-task-date-popup';
+    private openPeriodPicker(
+        kind: 'day' | 'week' | 'month',
+        defaultDate: moment.Moment,
+        onPick: (picked: moment.Moment) => void,
+        anchorEl?: HTMLElement,
+    ): void {
+        this.closePeriodPicker();
 
-            // Header
-            popup.createDiv({ cls: 'tl-task-date-popup-header', text: t('capture.addToDate') });
+        const popup = activeDocument.body.createDiv(`tl-period-picker-popup tl-period-picker-popup-${kind}`);
+        this.periodPickerEl = popup;
 
-            // Buttons
-            const btnRow = popup.createDiv('tl-task-date-popup-buttons');
-
-            const todayDate = moment();
-            const tomorrowDate = moment().add(1, 'day');
-            const nextWeekDate = moment().startOf('isoWeek').add(1, 'week');
-
-            // Today
-            const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
-            const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(todayIcon, 'sun');
-            todayBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.today') });
-            todayBtn.addEventListener('click', () => {
-                popup.remove();
-                void this.promoteCapture(text, todayDate.toDate(), row);
-            });
-
-            // Tomorrow
-            const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
-            const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(tmrIcon, 'sunrise');
-            tmrBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.tomorrow') });
-            tmrBtn.addEventListener('click', () => {
-                popup.remove();
-                void this.promoteCapture(text, tomorrowDate.toDate(), row);
-            });
-
-            // Next week
-            const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
-            const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(weekIcon, 'calendar-plus');
-            weekBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.nextWeek') });
-            weekBtn.addEventListener('click', () => {
-                popup.remove();
-                void this.promoteCapture(text, nextWeekDate.toDate(), row);
-            });
-
-            // Custom date picker
-            const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn' });
-            const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
-            setIcon(customIcon, 'calendar-search');
-            customBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('capture.custom') });
-            const hiddenInput = activeDocument.createEl('input');
-            hiddenInput.type = 'date';
-            hiddenInput.className = 'tl-task-date-hidden-input';
-            popup.appendChild(hiddenInput);
-            hiddenInput.addEventListener('change', () => {
-                popup.remove();
-                if (!hiddenInput.value) return;
-                const picked = new Date(hiddenInput.value + 'T00:00:00');
-                void this.promoteCapture(text, picked, row);
-            });
-            customBtn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                hiddenInput.showPicker();
-            });
-
-            activeDocument.body.appendChild(popup);
-
-            if (!Platform.isMobile) {
-                const popupWidth = 220;
-                const popupHeight = 100;
-                let left = clientX;
-                let top = clientY;
-                if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 8;
-                if (top + popupHeight > window.innerHeight) top = clientY - popupHeight;
-                popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
-            }
-
-            // Dismiss on outside click/tap
-            const dismiss = (ev: MouseEvent | TouchEvent) => {
-                const target = ev instanceof TouchEvent ? activeDocument.elementFromPoint((ev).changedTouches[0].clientX, (ev).changedTouches[0].clientY) : ev.target;
-                if (!popup.contains(target as Node)) {
-                    popup.remove();
-                    activeDocument.removeEventListener('click', dismiss, true);
-                    activeDocument.removeEventListener('touchend', dismiss, true);
-                }
-            };
-            window.setTimeout(() => {
-                activeDocument.addEventListener('click', dismiss, true);
-                activeDocument.addEventListener('touchend', dismiss, true);
-            }, 0);
+        const finish = (picked: moment.Moment) => {
+            this.closePeriodPicker();
+            onPick(moment(picked));
         };
 
-        // Schedule button — clickable icon to promote to a dated task
-        const schedBtn = row.createSpan({ cls: 'tl-capture-schedule-btn' });
-        setIcon(schedBtn, 'calendar-clock');
-        schedBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const rect = schedBtn.getBoundingClientRect();
-            showPromotePopup(rect.left, rect.bottom + 4);
-        });
-        // Insert before delete button in DOM order
-        row.insertBefore(schedBtn, delBtn);
-
-        // Desktop: right-click
-        row.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            showPromotePopup(e.clientX, e.clientY);
-        });
-
-        // Mobile: long-press (500ms)
-        if (Platform.isMobile) {
-            let longPressTimer: number | null = null;
-            row.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
-                longPressTimer = window.setTimeout(() => {
-                    showPromotePopup(touch.clientX, touch.clientY);
-                }, 500);
-            }, { passive: true });
-            row.addEventListener('touchmove', () => {
-                if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
-            }, { passive: true });
-            row.addEventListener('touchend', () => {
-                if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
-            }, { passive: true });
+        if (kind === 'month') {
+            this.renderMonthPeriodPicker(popup, defaultDate, finish);
+        } else {
+            this.renderDayWeekPeriodPicker(popup, kind, defaultDate, finish);
         }
+
+        this.positionPeriodPicker(popup, anchorEl);
+
+        const onPointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (!target) return;
+            if (popup.contains(target) || anchorEl?.contains(target)) return;
+            this.closePeriodPicker();
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') this.closePeriodPicker();
+        };
+        window.setTimeout(() => {
+            activeDocument.addEventListener('pointerdown', onPointerDown);
+            activeDocument.addEventListener('keydown', onKeyDown);
+        }, 0);
+        this.periodPickerCleanup = () => {
+            activeDocument.removeEventListener('pointerdown', onPointerDown);
+            activeDocument.removeEventListener('keydown', onKeyDown);
+        };
+    }
+
+    private closePeriodPicker(): void {
+        this.periodPickerCleanup?.();
+        this.periodPickerCleanup = null;
+        this.periodPickerEl?.remove();
+        this.periodPickerEl = null;
+    }
+
+    private positionPeriodPicker(popup: HTMLElement, anchorEl?: HTMLElement): void {
+        const width = popup.getBoundingClientRect().width || 312;
+        const height = popup.getBoundingClientRect().height || 340;
+        const pad = 12;
+        const viewportWidth = window.innerWidth || 1024;
+        const viewportHeight = window.innerHeight || 768;
+
+        if (!anchorEl) {
+            popup.style.left = `${Math.max(pad, (viewportWidth - width) / 2)}px`;
+            popup.style.top = `${Math.max(pad, (viewportHeight - height) / 2)}px`;
+            return;
+        }
+
+        const rect = anchorEl.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.bottom + 8;
+        if (left + width > viewportWidth - pad) left = viewportWidth - width - pad;
+        if (left < pad) left = pad;
+        if (top + height > viewportHeight - pad) top = rect.top - height - 8;
+        if (top < pad) top = pad;
+        popup.style.left = `${left}px`;
+        popup.style.top = `${top}px`;
+    }
+
+    private renderPickerHeader(container: HTMLElement, title: string, onPrev: () => void, onNext: () => void): void {
+        const header = container.createDiv('tl-period-picker-header');
+        const prev = header.createEl('button', { cls: 'tl-period-picker-nav-btn', attr: { type: 'button' } });
+        setIcon(prev, 'chevron-left');
+        header.createDiv({ cls: 'tl-period-picker-title', text: title });
+        const next = header.createEl('button', { cls: 'tl-period-picker-nav-btn', attr: { type: 'button' } });
+        setIcon(next, 'chevron-right');
+        prev.addEventListener('click', onPrev);
+        next.addEventListener('click', onNext);
+    }
+
+    private renderDayWeekPeriodPicker(
+        root: HTMLElement,
+        kind: 'day' | 'week',
+        defaultDate: moment.Moment,
+        onPick: (picked: moment.Moment) => void,
+    ): void {
+        const selected = moment(defaultDate);
+        let viewMonth = moment(defaultDate).startOf('month');
+
+        const render = () => {
+            root.empty();
+            root.createDiv({
+                cls: 'tl-period-picker-kicker',
+                text: kind === 'day' ? t('periodic.pickDay') : t('periodic.pickWeek'),
+            });
+            const title = getLanguage() === 'en'
+                ? viewMonth.format(viewMonth.year() === moment().year() ? 'MMMM' : 'MMMM YYYY')
+                : viewMonth.format(viewMonth.year() === moment().year() ? 'M月' : 'YYYY年M月');
+            this.renderPickerHeader(root, title, () => {
+                viewMonth = moment(viewMonth).subtract(1, 'month');
+                render();
+            }, () => {
+                viewMonth = moment(viewMonth).add(1, 'month');
+                render();
+            });
+
+            const selectedWeekStart = moment(selected).startOf('isoWeek').format('YYYY-MM-DD');
+
+            if (kind === 'week') {
+                const list = root.createDiv('tl-period-picker-week-list');
+                const firstWeek = moment(viewMonth).startOf('month').startOf('isoWeek');
+                const lastWeek = moment(viewMonth).endOf('month').startOf('isoWeek');
+                for (let week = moment(firstWeek); week.isSameOrBefore(lastWeek, 'day'); week.add(1, 'week')) {
+                    const weekStart = moment(week);
+                    const weekEnd = moment(weekStart).add(6, 'days');
+                    const isSelected = weekStart.format('YYYY-MM-DD') === selectedWeekStart;
+                    const isCurrent = weekStart.isSame(moment().startOf('isoWeek'), 'day');
+                    const option = list.createEl('button', {
+                        cls: [
+                            'tl-period-picker-week-option',
+                            isSelected ? 'tl-period-picker-week-option-selected' : '',
+                            isCurrent ? 'tl-period-picker-week-option-current' : '',
+                        ].filter(Boolean).join(' '),
+                        attr: { type: 'button' },
+                    });
+                    const weekLabel = getLanguage() === 'en'
+                        ? `Week ${weekStart.isoWeek()}`
+                        : `${weekStart.format('M月')}第${this.getWeekOfMonth(weekStart)}周`;
+                    option.createSpan({ cls: 'tl-period-picker-week-option-title', text: weekLabel });
+                    option.createSpan({
+                        cls: 'tl-period-picker-week-option-range',
+                        text: `${weekStart.format('M/D')} - ${weekEnd.format('M/D')}`,
+                    });
+                    option.addEventListener('click', () => onPick(weekStart));
+                }
+            } else {
+                const grid = root.createDiv('tl-period-picker-calendar');
+                for (const wd of t('cal.weekdays').split(',')) {
+                    grid.createDiv({ cls: 'tl-period-picker-weekday', text: wd });
+                }
+
+                const cursor = moment(viewMonth).startOf('month').startOf('isoWeek');
+                for (let i = 0; i < 42; i++) {
+                    const day = moment(cursor).add(i, 'days');
+                    const isOtherMonth = !day.isSame(viewMonth, 'month');
+                    const isToday = day.isSame(moment(), 'day');
+                    const isSelected = day.isSame(selected, 'day');
+                    const cell = grid.createEl('button', {
+                        cls: [
+                            'tl-period-picker-cell',
+                            isOtherMonth ? 'tl-period-picker-cell-muted' : '',
+                            isToday ? 'tl-period-picker-cell-today' : '',
+                            isSelected ? 'tl-period-picker-cell-selected' : '',
+                        ].filter(Boolean).join(' '),
+                        text: String(day.date()),
+                        attr: { type: 'button' },
+                    });
+                    cell.addEventListener('click', () => {
+                        onPick(moment(day).startOf('day'));
+                    });
+                }
+            }
+
+            const shortcut = root.createEl('button', {
+                cls: 'tl-period-picker-shortcut',
+                text: kind === 'day' ? t('periodic.todayLabel') : t('periodic.thisWeek'),
+                attr: { type: 'button' },
+            });
+            shortcut.addEventListener('click', () => {
+                onPick(kind === 'week' ? moment().startOf('isoWeek') : moment().startOf('day'));
+            });
+        };
+
+        render();
+    }
+
+    private renderMonthPeriodPicker(
+        root: HTMLElement,
+        defaultDate: moment.Moment,
+        onPick: (picked: moment.Moment) => void,
+    ): void {
+        const selected = moment(defaultDate).startOf('month');
+        let viewYear = selected.year();
+
+        const render = () => {
+            root.empty();
+            root.createDiv({ cls: 'tl-period-picker-kicker', text: t('periodic.pickMonth') });
+            this.renderPickerHeader(root, getLanguage() === 'en' ? String(viewYear) : `${viewYear}年`, () => {
+                viewYear -= 1;
+                render();
+            }, () => {
+                viewYear += 1;
+                render();
+            });
+
+            const grid = root.createDiv('tl-period-picker-month-grid');
+            for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+                const picked = moment({ year: viewYear, month: monthIndex, date: 1 }).startOf('month');
+                const isSelected = picked.isSame(selected, 'month');
+                const isCurrent = picked.isSame(moment(), 'month');
+                const cell = grid.createEl('button', {
+                    cls: [
+                        'tl-period-picker-month-cell',
+                        isSelected ? 'tl-period-picker-month-cell-selected' : '',
+                        isCurrent ? 'tl-period-picker-month-cell-current' : '',
+                    ].filter(Boolean).join(' '),
+                    text: getLanguage() === 'en' ? picked.format('MMM') : `${monthIndex + 1}月`,
+                    attr: { type: 'button' },
+                });
+                cell.addEventListener('click', () => onPick(picked));
+            }
+
+            const shortcut = root.createEl('button', {
+                cls: 'tl-period-picker-shortcut',
+                text: t('periodic.thisMonth'),
+                attr: { type: 'button' },
+            });
+            shortcut.addEventListener('click', () => onPick(moment().startOf('month')));
+        };
+
+        render();
+    }
+
+    private async moveRenderedTaskToDay(file: TFile, taskText: string, date: moment.Moment, row: HTMLElement): Promise<void> {
+        const h = this.host;
+        const target = await h.plugin.vaultManager.getOrCreateDailyNote(date.toDate());
+        if (target.path === file.path) return;
+        await h.moveTaskToDate(file, taskText, date.toDate());
+        row.remove();
+    }
+
+    private async moveRenderedTaskToWeek(file: TFile, taskText: string, weekStart: moment.Moment, row: HTMLElement): Promise<void> {
+        const h = this.host;
+        const weekLabel = `W${String(weekStart.isoWeek()).padStart(2, '0')}`;
+        const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
+        const target = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
+        if (target.path === file.path) return;
+        await h.moveTaskToPlan(file, taskText, target.path);
+        row.remove();
+    }
+
+    private async moveRenderedTaskToMonth(file: TFile, taskText: string, month: moment.Moment, row: HTMLElement): Promise<void> {
+        const h = this.host;
+        const monthStart = moment(month).startOf('month');
+        const monthStr = monthStart.format('YYYY-MM');
+        const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(monthStr);
+        const target = await h.plugin.vaultManager.getOrCreateMonthlyPlan(monthStart.toDate(), tmpl);
+        if (target.path === file.path) return;
+        await h.moveTaskToPlan(file, taskText, target.path);
+        row.remove();
+    }
+
+    private async finishCapturePromotion(text: string, rowEl: HTMLElement): Promise<void> {
+        const h = this.host;
+        await h.plugin.vaultManager.removeQuickCaptureItem(text);
+        rowEl.remove();
+        h.invalidateTabCache('kanban');
+        h.switchTab('kanban');
     }
 
     /**
-     * Promote a quick capture item to a task on a specific date.
+     * Promote a quick capture item to a task on a specific day.
      * Removes from capture file and adds as - [ ] task to that day's daily note.
      */
-    private async promoteCapture(text: string, date: Date, rowEl: HTMLElement): Promise<void> {
+    private async promoteCaptureToDay(text: string, date: moment.Moment, rowEl: HTMLElement): Promise<void> {
         const h = this.host;
-        // 1. Remove from quick capture
-        await h.plugin.vaultManager.removeQuickCaptureItem(text);
-        // 2. Add as task to the target date
-        await h.plugin.vaultManager.addTaskToDaily(text, date);
-        // 3. Animate out the row
-        rowEl.remove();
-        // 4. Refresh if the target is the currently selected date
-        h.invalidateTabCache('kanban');
-        h.switchTab('kanban');
+        await h.plugin.vaultManager.addTaskToDaily(text, date.toDate());
+        await this.finishCapturePromotion(text, rowEl);
+    }
+
+    /** Promote a quick capture item into the selected week's plan file. */
+    private async promoteCaptureToWeek(text: string, date: moment.Moment, rowEl: HTMLElement): Promise<void> {
+        const h = this.host;
+        const weekStart = moment(date).startOf('isoWeek');
+        const weekLabel = `W${String(weekStart.isoWeek()).padStart(2, '0')}`;
+        const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
+        const file = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
+        await h.addMdTask(file, text);
+        await this.finishCapturePromotion(text, rowEl);
+    }
+
+    /** Promote a quick capture item into the selected month's plan file. */
+    private async promoteCaptureToMonth(text: string, date: moment.Moment, rowEl: HTMLElement): Promise<void> {
+        const h = this.host;
+        const month = moment(date).startOf('month');
+        const monthStr = month.format('YYYY-MM');
+        const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(monthStr);
+        const file = await h.plugin.vaultManager.getOrCreateMonthlyPlan(month.toDate(), tmpl);
+        await h.addMdTask(file, text);
+        await this.finishCapturePromotion(text, rowEl);
     }
 
 
@@ -705,12 +884,21 @@ export class PeriodicRenderer {
         const h = this.host;
         const sel = h.periodicSelectedDate;
         const calMonth = moment(sel).startOf('month').add(h.periodicMonthOffset, 'months');
+        const weekStart = moment(sel).startOf('isoWeek');
+        const weekTitle = getLanguage() === 'en'
+            ? `Week ${weekStart.isoWeek()}`
+            : `${sel.format('M月')}第${this.getWeekOfMonth(sel)}周`;
+        this.renderPeriodHeader(body, weekTitle);
 
+        if (h.periodicSelectorOpen) {
         // Calendar nav
         const calSection = body.createDiv('tl-periodic-selector');
         const calNav = calSection.createDiv('tl-periodic-cal-nav');
         const prevBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '‹' });
-        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? calMonth.format('MMMM YYYY') : calMonth.format('YYYY年 M月') });
+        const compactMonthTitle = getLanguage() === 'en'
+            ? (calMonth.year() === moment().year() ? calMonth.format('MMMM') : calMonth.format('MMMM YYYY'))
+            : (calMonth.year() === moment().year() ? calMonth.format('M月') : calMonth.format('YYYY年M月'));
+        calNav.createSpan({ cls: 'tl-periodic-cal-title', text: compactMonthTitle });
         const nextBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '›' });
         prevBtn.addEventListener('click', () => { h.periodicMonthOffset--; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
         nextBtn.addEventListener('click', () => { h.periodicMonthOffset++; h.invalidateTabCache('kanban'); h.switchTab('kanban'); });
@@ -736,11 +924,12 @@ export class PeriodicRenderer {
             const isInSelectedWeek = weekStartStr === selWeekStart;
             const isToday = dateStr === todayStr;
 
-            const cell = grid.createDiv(`tl-periodic-cal-cell ${isInSelectedWeek ? 'tl-periodic-cal-cell-week-highlight' : ''} ${isToday ? 'tl-periodic-cal-cell-today' : ''}`);
+            const cell = grid.createDiv(`tl-periodic-cal-cell ${isInSelectedWeek ? 'tl-periodic-cal-cell-selected tl-periodic-cal-cell-week-highlight' : ''} ${isToday ? 'tl-periodic-cal-cell-today' : ''}`);
             cell.setText(`${d}`);
             cell.addEventListener('click', () => {
                 h.periodicSelectedDate = moment(dayMoment);
                 h.periodicMonthOffset = 0;
+                h.periodicSelectorOpen = !dayMoment.isSame(moment(), 'day');
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
@@ -754,18 +943,19 @@ export class PeriodicRenderer {
             const weekStartStr = moment(nextMonthDay).startOf('isoWeek').format('YYYY-MM-DD');
             const isInSelectedWeek = weekStartStr === selWeekStart;
 
-            const cell = grid.createDiv(`tl-periodic-cal-cell tl-periodic-cal-cell-other-month ${isInSelectedWeek ? 'tl-periodic-cal-cell-week-highlight' : ''}`);
+            const cell = grid.createDiv(`tl-periodic-cal-cell tl-periodic-cal-cell-other-month ${isInSelectedWeek ? 'tl-periodic-cal-cell-selected tl-periodic-cal-cell-week-highlight' : ''}`);
             cell.setText(`${nextMonthDay.date()}`);
             cell.addEventListener('click', () => {
                 h.periodicSelectedDate = moment(nextMonthDay);
                 h.periodicMonthOffset = 0;
+                h.periodicSelectorOpen = !nextMonthDay.isSame(moment(), 'day');
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
         }
+        }
 
         // Preview area: Week plan
-        const weekStart = moment(sel).startOf('isoWeek');
         await this.renderWeekPreview(body, weekStart);
     }
 
@@ -774,12 +964,7 @@ export class PeriodicRenderer {
         const isoWeek = weekStart.isoWeek();
         const weekLabel = `W${String(isoWeek).padStart(2, '0')}`;
 
-        const preview = body.createDiv('tl-periodic-preview');
-        const previewHeader = preview.createDiv('tl-periodic-preview-header');
-        previewHeader.createSpan({
-            cls: 'tl-periodic-preview-date',
-            text: `${weekStart.isoWeekYear()}-${weekLabel} (${weekStart.format('M/D')}—${moment(weekStart).add(6, 'days').format('M/D')})`,
-        });
+        const preview = body.createDiv('tl-periodic-preview tl-periodic-preview-plain');
 
         // Try load weekly plan file — use consistent path
         const weeklyPath = `${h.plugin.settings.planFolder}/Weekly/${weekStart.isoWeekYear()}-${weekLabel}.md`;
@@ -792,80 +977,22 @@ export class PeriodicRenderer {
             const tasks = h.parseMdTasks(content).filter(t => t.isTask);
             const taskSection = preview.createDiv('tl-periodic-task-section');
             if (tasks.length > 0) {
-                taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.weekTasks', String(tasks.length)) });
                 for (const task of tasks) {
                     this.renderTask(taskSection, task, weekFile, 'week');
                 }
             }
             this.renderTaskInput(taskSection, weekFile);
+            await this.renderPlanSuggestion(taskSection, 'week', weekStart);
         } else {
             // No weekly file — show task input that auto-creates file
             const taskSection = preview.createDiv('tl-periodic-task-section');
             this.renderTaskInputForWeek(taskSection, weekStart, weekLabel);
-        }
-
-        // Aggregate daily tasks for this week
-        const dailyTasks: { text: string; done: boolean; date: string }[] = [];
-        for (let i = 0; i < 7; i++) {
-            const d = moment(weekStart).add(i, 'days');
-            const dateStr = d.format('YYYY-MM-DD');
-            const dayPath = `${h.plugin.settings.dailyFolder}/${dateStr}.md`;
-            const dayFile = h.app.vault.getAbstractFileByPath(dayPath);
-            if (dayFile && dayFile instanceof TFile) {
-                try {
-                    const content = await h.app.vault.read(dayFile);
-                    const tasks = h.parseMdTasks(content).filter(t => t.isTask);
-                    for (const t of tasks) {
-                        dailyTasks.push({ text: t.text, done: t.done, date: dateStr.substring(5) });
-                    }
-                } catch { /* skip */ }
-            }
-        }
-
-        if (dailyTasks.length > 0) {
-            const aggSection = preview.createDiv('tl-periodic-task-section');
-            const undone = dailyTasks.filter(t => !t.done);
-            const done = dailyTasks.filter(t => t.done);
-
-            aggSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.weekDiaryTasks', String(undone.length), String(done.length)) });
-            for (const t of undone.slice(0, 10)) {
-                const row = aggSection.createDiv('tl-periodic-task-row');
-                row.createSpan({ cls: 'tl-periodic-task-check', text: '○' });
-                row.createSpan({ cls: 'tl-periodic-task-text', text: t.text });
-                row.createSpan({ cls: 'tl-periodic-task-date-badge', text: t.date });
-            }
-            if (undone.length > 10) {
-                aggSection.createSpan({ cls: 'tl-periodic-task-more', text: t('periodic.moreItems', String(undone.length - 10)) });
-            }
-        }
-
-        if (!weekFile && dailyTasks.length === 0) {
-            preview.createDiv({ cls: 'tl-periodic-preview-empty', text: t('kanban.noWeekPlan') });
+            await this.renderPlanSuggestion(taskSection, 'week', weekStart);
         }
 
         // AI Insight summary for this week
         await this.renderWeeklyInsight(preview, weekStart);
 
-        // Open / Create button
-        const openBtn = preview.createDiv('tl-periodic-open-btn');
-        if (weekFile) {
-            openBtn.setText(t('periodic.openWeekPlan'));
-            openBtn.addEventListener('click', () => {
-                if (weekFile instanceof TFile) void h.app.workspace.getLeaf().openFile(weekFile);
-            });
-        } else {
-            openBtn.setText(t('periodic.createWeekPlan'));
-            openBtn.addEventListener('click', () => {
-                void (async () => {
-                    const tmpl = h.plugin.templateManager.getWeeklyPlanTemplate(weekLabel, weekStart.format('YYYY-MM'));
-                    const f = await h.plugin.vaultManager.getOrCreateWeeklyPlan(weekStart.toDate(), tmpl);
-                    void h.app.workspace.getLeaf().openFile(f);
-                })();
-            });
-        }
-
-        // Quick Capture section (灵感收集) — persistent across modes
-        await this.renderQuickCapture(body);
     }
 
     /** Load and render the AI weekly insight report summary */
@@ -931,7 +1058,10 @@ export class PeriodicRenderer {
         const h = this.host;
         const sel = h.periodicSelectedDate;
         const year = sel.year();
+        const title = getLanguage() === 'en' ? sel.format('MMMM YYYY') : sel.format('YYYY年M月');
+        this.renderPeriodHeader(body, title);
 
+        if (h.periodicSelectorOpen) {
         // Year nav
         const calSection = body.createDiv('tl-periodic-selector');
         const calNav = calSection.createDiv('tl-periodic-cal-nav');
@@ -939,15 +1069,17 @@ export class PeriodicRenderer {
         calNav.createSpan({ cls: 'tl-periodic-cal-title', text: getLanguage() === 'en' ? String(year) : `${year}年` });
         const nextBtn = calNav.createEl('button', { cls: 'tl-periodic-nav-btn', text: '›' });
         prevBtn.addEventListener('click', () => {
-            h.periodicSelectedDate = moment(sel).subtract(1, 'year');
-            h.invalidateTabCache('kanban');
-            h.switchTab('kanban');
-        });
+                h.periodicSelectedDate = moment(sel).subtract(1, 'year');
+                h.periodicSelectorOpen = true;
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            });
         nextBtn.addEventListener('click', () => {
-            h.periodicSelectedDate = moment(sel).add(1, 'year');
-            h.invalidateTabCache('kanban');
-            h.switchTab('kanban');
-        });
+                h.periodicSelectedDate = moment(sel).add(1, 'year');
+                h.periodicSelectorOpen = true;
+                h.invalidateTabCache('kanban');
+                h.switchTab('kanban');
+            });
 
         // 3×4 month grid
         const grid = calSection.createDiv('tl-periodic-month-grid');
@@ -966,10 +1098,13 @@ export class PeriodicRenderer {
             const cell = grid.createDiv(`tl-periodic-month-cell ${isSelected ? 'tl-periodic-month-cell-selected' : ''} ${isCurrent ? 'tl-periodic-month-cell-current' : ''} ${hasNote ? 'tl-periodic-month-cell-has-note' : ''}`);
             cell.setText(getLanguage() === 'en' ? moment().month(m - 1).format('MMM') : `${m}月`);
             cell.addEventListener('click', () => {
-                h.periodicSelectedDate = moment(`${year}-${String(m).padStart(2, '0')}-01`);
+                const picked = moment(`${year}-${String(m).padStart(2, '0')}-01`);
+                h.periodicSelectedDate = picked;
+                h.periodicSelectorOpen = !picked.isSame(moment(), 'month');
                 h.invalidateTabCache('kanban');
                 h.switchTab('kanban');
             });
+        }
         }
 
         // Preview area
@@ -980,9 +1115,7 @@ export class PeriodicRenderer {
         const h = this.host;
         const monthStr = date.format('YYYY-MM');
 
-        const preview = body.createDiv('tl-periodic-preview');
-        const previewHeader = preview.createDiv('tl-periodic-preview-header');
-        previewHeader.createSpan({ cls: 'tl-periodic-preview-date', text: t('periodic.monthPlan', monthStr) });
+        const preview = body.createDiv('tl-periodic-preview tl-periodic-preview-plain');
 
         // Load monthly plan
         const monthPath = `${h.plugin.settings.planFolder}/Monthly/${monthStr}.md`;
@@ -1006,6 +1139,15 @@ export class PeriodicRenderer {
                 }
             }
 
+            // Tasks from monthly plan
+            const tasks = h.parseMdTasks(content).filter(t => t.isTask);
+            const taskSection = preview.createDiv('tl-periodic-task-section');
+            if (tasks.length > 0) {
+                for (const task of tasks) {
+                    this.renderTask(taskSection, task, monthFile, 'month');
+                }
+            }
+            this.renderTaskInput(taskSection, monthFile);
             if (goalLines.length > 0) {
                 const goalsDiv = preview.createDiv('tl-periodic-goals');
                 goalsDiv.createDiv({ cls: 'tl-periodic-goals-label', text: t('periodic.monthGoals') });
@@ -1013,55 +1155,14 @@ export class PeriodicRenderer {
                     goalsDiv.createDiv({ cls: 'tl-periodic-goal-line', text: g.replace(/^[-*]\s*/, '') });
                 }
             }
-
-            // Tasks from monthly plan
-            const tasks = h.parseMdTasks(content).filter(t => t.isTask);
-            const taskSection = preview.createDiv('tl-periodic-task-section');
-            if (tasks.length > 0) {
-                taskSection.createDiv({ cls: 'tl-periodic-task-group-label', text: t('periodic.monthTasks', String(tasks.length)) });
-                for (const task of tasks) {
-                    this.renderTask(taskSection, task, monthFile, 'month');
-                }
-            }
-            this.renderTaskInput(taskSection, monthFile);
+            await this.renderPlanSuggestion(preview, 'month', date);
         } else {
             // No monthly file — show task input that auto-creates file
             const taskSection = preview.createDiv('tl-periodic-task-section');
             this.renderTaskInputForMonth(taskSection, date);
+            await this.renderPlanSuggestion(preview, 'month', date);
         }
 
-        // Monthly stats: count daily notes + tasks in this month
-        const dailyFolder = h.plugin.settings.dailyFolder;
-        const allFiles = h.app.vault.getFiles().filter(f => f.path.startsWith(dailyFolder + '/') && f.name.startsWith(monthStr));
-        if (allFiles.length > 0) {
-            const statsDiv = preview.createDiv('tl-periodic-stats');
-            statsDiv.createSpan({ text: t('periodic.diaryCount', String(allFiles.length)) });
-        }
-
-        if (!monthFile && allFiles.length === 0) {
-            preview.createDiv({ cls: 'tl-periodic-preview-empty', text: t('kanban.noMonthPlan') });
-        }
-
-        // Open / Create button
-        const openBtn = preview.createDiv('tl-periodic-open-btn');
-        if (monthFile) {
-            openBtn.setText(t('periodic.openMonthPlan'));
-            openBtn.addEventListener('click', () => {
-                if (monthFile instanceof TFile) void h.app.workspace.getLeaf().openFile(monthFile);
-            });
-        } else {
-            openBtn.setText(t('periodic.createMonthPlan'));
-            openBtn.addEventListener('click', () => {
-                void (async () => {
-                    const tmpl = h.plugin.templateManager.getMonthlyPlanTemplate(monthStr);
-                    const f = await h.plugin.vaultManager.getOrCreateMonthlyPlan(date.toDate(), tmpl);
-                    void h.app.workspace.getLeaf().openFile(f);
-                })();
-            });
-        }
-
-        // Quick Capture section (灵感收集) — persistent across modes
-        await this.renderQuickCapture(body);
     }
 
     // ──────────────────────────────────────────────────────
@@ -1091,6 +1192,8 @@ export class PeriodicRenderer {
                 cb.checked = task.done;
                 row.toggleClass('tl-periodic-task-row-done', task.done);
                 label.toggleClass('tl-text-done', task.done);
+                h.invalidateTabCache('kanban');
+                void h.switchTab('kanban');
             })();
         });
 
@@ -1100,7 +1203,7 @@ export class PeriodicRenderer {
             label.addClass('tl-text-done');
         }
         const startEdit = (target: HTMLElement) => {
-            const input = activeDocument.createEl('input');
+            const input = this.createDetachedInput();
             input.type = 'text';
             input.value = task.text;
             input.className = 'tl-task-edit-input';
@@ -1114,7 +1217,7 @@ export class PeriodicRenderer {
                         await h.editMdTask(file, task.text, newText);
                         task.text = newText;
                     }
-                    const newLabel = activeDocument.createSpan();
+                    const newLabel = this.createDetachedSpan();
                     newLabel.className = 'tl-periodic-task-text';
                     newLabel.textContent = task.text;
                     input.replaceWith(newLabel);
@@ -1138,25 +1241,61 @@ export class PeriodicRenderer {
             label.addEventListener('dblclick', () => startEdit(label));
         }
 
-        // Delete button
-        const delBtn = row.createSpan({ cls: 'tl-task-delete-btn', text: '×' });
-        delBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            void (async () => {
-                await h.deleteMdTask(file, task.text);
-                row.remove();
-            })();
-        });
+        const actions = row.createSpan({ cls: 'tl-task-actions' });
+
+        const createDeleteButton = () => {
+            const delBtn = actions.createEl('button', {
+                cls: 'tl-task-action-btn tl-task-delete-btn',
+                attr: { type: 'button', title: t('task.delete') },
+            });
+            setIcon(delBtn, 'trash-2');
+            delBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void (async () => {
+                    await h.deleteMdTask(file, task.text);
+                    row.remove();
+                })();
+            });
+        };
+
+        if (task.done) {
+            createDeleteButton();
+            return;
+        }
+
+        let dateBtn: HTMLButtonElement;
+        const openReschedulePicker = () => {
+            if (scope === 'day') {
+                const defaultDate = sourceDate ? moment(sourceDate) : moment(h.periodicSelectedDate);
+                this.openPeriodPicker('day', defaultDate, picked => {
+                    void this.moveRenderedTaskToDay(file, task.text, picked, row);
+                }, dateBtn);
+            } else if (scope === 'week') {
+                this.openPeriodPicker('week', moment(h.periodicSelectedDate).startOf('isoWeek'), picked => {
+                    void this.moveRenderedTaskToWeek(file, task.text, picked.startOf('isoWeek'), row);
+                }, dateBtn);
+            } else {
+                this.openPeriodPicker('month', moment(h.periodicSelectedDate).startOf('month'), picked => {
+                    void this.moveRenderedTaskToMonth(file, task.text, picked.startOf('month'), row);
+                }, dateBtn);
+            }
+        };
 
         // Add sub-task button
-        const subBtn = row.createSpan({ cls: 'tl-task-sub-btn', text: '+' });
-        subBtn.setAttribute('title', t('task.addSubtask'));
+        const subBtn = actions.createEl('button', {
+            cls: 'tl-task-action-btn tl-task-sub-btn',
+            attr: { type: 'button', title: t('task.addSubtask') },
+        });
+        setIcon(subBtn, 'plus');
         subBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            if (row.nextElementSibling?.hasClass('tl-subtask-input-row')) return;
-            const subRow = activeDocument.createDiv();
+            const next = row.nextElementSibling;
+            if (next instanceof HTMLElement && next.classList.contains('tl-subtask-input-row')) return;
+            const subRow = this.createDetachedDiv();
             subRow.className = 'tl-subtask-input-row';
-            const subInput = activeDocument.createEl('input');
+            const subInput = subRow.createEl('input');
             subInput.type = 'text';
             subInput.className = 'tl-periodic-task-input tl-subtask-input';
             subInput.placeholder = t('task.subtaskPlaceholder');
@@ -1164,26 +1303,53 @@ export class PeriodicRenderer {
             row.after(subRow);
             subInput.focus();
 
-            const doAddSub = () => {
+            let subInputClosed = false;
+            const closeSubInput = (commit: boolean) => {
+                if (subInputClosed) return;
+                subInputClosed = true;
                 void (async () => {
                     const text = subInput.value.trim();
                     subRow.remove();
-                    if (!text) return;
-                    await h.addSubTask(file, task.text, text);
+                    if (!commit || !text) return;
+                    await h.addSubTask(file, task.text, text, task.indent);
                     h.invalidateTabCache('kanban');
                     h.switchTab('kanban');
                 })();
             };
-            subInput.addEventListener('blur', doAddSub);
+            subInput.addEventListener('blur', () => closeSubInput(true));
             subInput.addEventListener('keydown', (ke: KeyboardEvent) => {
-                if (ke.key === 'Enter') { ke.preventDefault(); subInput.blur(); }
-                if (ke.key === 'Escape') { subInput.value = ''; subInput.blur(); }
+                if (ke.key === 'Enter') {
+                    ke.preventDefault();
+                    closeSubInput(true);
+                }
+                if (ke.key === 'Escape') {
+                    ke.preventDefault();
+                    closeSubInput(false);
+                }
             });
         });
 
+        // Date button — explicit reschedule affordance, aligned with quick capture.
+        dateBtn = actions.createEl('button', {
+            cls: 'tl-task-action-btn tl-task-date-inline-btn',
+            attr: { type: 'button', title: t('periodic.dateLabel') },
+        });
+        setIcon(dateBtn, 'calendar-clock');
+        dateBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openReschedulePicker();
+        });
+
         // Drag handle — right side, after action buttons
-        const handle = row.createSpan({ cls: 'tl-task-drag-handle', text: '☰' });
-        handle.setAttribute('title', t('periodic.dragToReorder'));
+        const handle = actions.createEl('button', {
+            cls: 'tl-task-action-btn tl-task-drag-handle',
+            attr: { type: 'button', title: t('periodic.dragToReorder') },
+        });
+        setIcon(handle, 'grip-vertical');
+
+        // Delete button — destructive action stays last.
+        createDeleteButton();
         if (Platform.isMobile) {
             // Touch drag-and-drop for mobile
             let touchStartY = 0;
@@ -1286,190 +1452,19 @@ export class PeriodicRenderer {
             });
         }
 
-        // Date quick-change popup — scope-aware (day/week/month)
-        const showDatePopup = (clientX: number, clientY: number) => {
-            // Remove any existing popup
-            activeDocument.querySelectorAll('.tl-task-date-popup').forEach(el => el.remove());
-
-            const popup = activeDocument.createDiv();
-            popup.className = 'tl-task-date-popup';
-
-            // Header
-            popup.createDiv({ cls: 'tl-task-date-popup-header', text: t('periodic.dateLabel') });
-
-            // Button row
-            const btnRow = popup.createDiv('tl-task-date-popup-buttons');
-
-            if (scope === 'day') {
-                // Daily tasks: today / tomorrow / next week / custom date
-                const todayDate = moment();
-                const tomorrowDate = moment().add(1, 'day');
-                const nextWeekDate = moment().startOf('isoWeek').add(1, 'week');
-
-                // Today
-                const todayBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('kanban.today') } });
-                const todayIcon = todayBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(todayIcon, 'sun');
-                todayBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('kanban.today') });
-                todayBtn.addEventListener('click', () => {
-                    popup.remove();
-                    void (async () => {
-                        await h.moveTaskToDate(file, task.text, todayDate.toDate());
-                        row.remove();
-                    })();
-                });
-
-                // Tomorrow
-                const tmrBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.tomorrow') } });
-                const tmrIcon = tmrBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(tmrIcon, 'sunrise');
-                tmrBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.tomorrow') });
-                tmrBtn.addEventListener('click', () => {
-                    popup.remove();
-                    void (async () => {
-                        await h.moveTaskToDate(file, task.text, tomorrowDate.toDate());
-                        row.remove();
-                    })();
-                });
-
-                // Next week
-                const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeek') } });
-                const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(weekIcon, 'calendar-plus');
-                weekBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextWeek') });
-                weekBtn.addEventListener('click', () => {
-                    popup.remove();
-                    void (async () => {
-                        await h.moveTaskToDate(file, task.text, nextWeekDate.toDate());
-                        row.remove();
-                    })();
-                });
-
-                // Custom date picker
-                const customBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.customDate') } });
-                const customIcon = customBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(customIcon, 'calendar-search');
-                customBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.custom') });
-                const hiddenInput = activeDocument.createEl('input');
-                hiddenInput.type = 'date';
-                hiddenInput.className = 'tl-task-date-hidden-input';
-                popup.appendChild(hiddenInput);
-                hiddenInput.addEventListener('change', () => {
-                    popup.remove();
-                    if (!hiddenInput.value) return;
-                    const picked = new Date(hiddenInput.value + 'T00:00:00');
-                    void (async () => {
-                        await h.moveTaskToDate(file, task.text, picked);
-                        row.remove();
-                    })();
-                });
-                customBtn.addEventListener('click', (ev) => {
-                    ev.stopPropagation();
-                    hiddenInput.showPicker();
-                });
-
-            } else if (scope === 'week') {
-                // Weekly tasks: next week / next month (stay as plan tasks)
-                const nextWeekStart = moment().startOf('isoWeek').add(1, 'week');
-                const nextWeekLabel = `W${nextWeekStart.format('ww')}`;
-                const nextWeekPath = `${h.plugin.settings.planFolder}/Weekly/${nextWeekStart.isoWeekYear()}-${nextWeekLabel}.md`;
-
-                const nextMonthDate = moment().add(1, 'month').startOf('month');
-                const nextMonthPath = `${h.plugin.settings.planFolder}/Monthly/${nextMonthDate.format('YYYY-MM')}.md`;
-
-                // Next week
-                const weekBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextWeekLabel') } });
-                const weekIcon = weekBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(weekIcon, 'calendar-plus');
-                weekBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextWeekLabel') });
-                weekBtn.addEventListener('click', () => {
-                    popup.remove();
-                    void (async () => {
-                        await h.moveTaskToPlan(file, task.text, nextWeekPath);
-                        row.remove();
-                        h.invalidateTabCache('kanban');
-                        h.switchTab('kanban');
-                    })();
-                });
-
-                // Next month
-                const monthBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextMonthLabel') } });
-                const monthIcon = monthBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(monthIcon, 'calendar-range');
-                monthBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
-                monthBtn.addEventListener('click', () => {
-                    popup.remove();
-                    void (async () => {
-                        await h.moveTaskToPlan(file, task.text, nextMonthPath);
-                        row.remove();
-                        h.invalidateTabCache('kanban');
-                        h.switchTab('kanban');
-                    })();
-                });
-
-            } else {
-                // Monthly tasks: next month (stay as plan tasks)
-                const nextMonthDate = moment().add(1, 'month').startOf('month');
-                const nextMonthPath = `${h.plugin.settings.planFolder}/Monthly/${nextMonthDate.format('YYYY-MM')}.md`;
-
-                // Next month
-                const monthBtn = btnRow.createEl('button', { cls: 'tl-task-date-btn', attr: { title: t('periodic.nextMonthLabel') } });
-                const monthIcon = monthBtn.createDiv('tl-task-date-btn-icon');
-                setIcon(monthIcon, 'calendar-range');
-                monthBtn.createSpan({ cls: 'tl-task-date-btn-label', text: t('periodic.nextMonthLabel') });
-                monthBtn.addEventListener('click', () => {
-                    popup.remove();
-                    void (async () => {
-                        await h.moveTaskToPlan(file, task.text, nextMonthPath);
-                        row.remove();
-                        h.invalidateTabCache('kanban');
-                        h.switchTab('kanban');
-                    })();
-                });
-            }
-
-            activeDocument.body.appendChild(popup);
-
-            if (!Platform.isMobile) {
-                // Desktop: position near the click
-                const popupWidth = 220;
-                const popupHeight = 100;
-                let left = clientX;
-                let top = clientY;
-                if (left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 8;
-                if (top + popupHeight > window.innerHeight) top = clientY - popupHeight;
-                popup.setCssProps({ '--tl-pop-left': `${left}px`, '--tl-pop-top': `${top}px` });
-            }
-
-            // Dismiss on outside click/tap
-            const dismiss = (ev: MouseEvent | TouchEvent) => {
-                const target = ev instanceof TouchEvent ? activeDocument.elementFromPoint((ev).changedTouches[0].clientX, (ev).changedTouches[0].clientY) : ev.target;
-                if (!popup.contains(target as Node)) {
-                    popup.remove();
-                    activeDocument.removeEventListener('click', dismiss, true);
-                    activeDocument.removeEventListener('touchend', dismiss, true);
-                }
-            };
-            window.setTimeout(() => {
-                activeDocument.addEventListener('click', dismiss, true);
-                activeDocument.addEventListener('touchend', dismiss, true);
-            }, 0);
-        };
-
-        // Right-click / long-press context menu with date quick-change
+        // Right-click / long-press mirrors the visible date button.
         row.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            showDatePopup(e.clientX, e.clientY);
+            openReschedulePicker();
         });
 
         // Mobile: long-press (500ms) to open date popup
         if (Platform.isMobile) {
             let longPressTimer: number | null = null;
-            row.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
+            row.addEventListener('touchstart', () => {
                 longPressTimer = window.setTimeout(() => {
-                    showDatePopup(touch.clientX, touch.clientY);
+                    openReschedulePicker();
                 }, 500);
             }, { passive: true });
             row.addEventListener('touchmove', () => {
@@ -1538,7 +1533,7 @@ export class PeriodicRenderer {
                 if (wasNest) {
                     // Nest: make sub-task
                     await h.deleteMdTask(file, draggedText);
-                    await h.addSubTask(file, task.text, draggedText);
+                    await h.addSubTask(file, task.text, draggedText, task.indent);
                     h.invalidateTabCache('kanban');
                     h.switchTab('kanban');
                 } else {

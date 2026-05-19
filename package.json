@@ -1,6 +1,6 @@
 {
 	"name": "tidelog",
-	"version": "1.1.37",
+	"version": "1.1.38",
 	"description": "TideLog — AI-guided daily planning, review, and insight system for Obsidian",
 	"main": "main.js",
 	"type": "module",
@@ -10,7 +10,7 @@
 		"typecheck": "tsc --noEmit --skipLibCheck",
 		"typecheck:api": "tsc --noEmit -p api/tsconfig.json",
 		"lint:obsidian": "eslint -c eslint.config.review.mjs src/**/*.ts",
-		"test": "node test-bug-repro.mjs && node test-evening-sop.mjs && node test-save-load.mjs && node test-settings-ui.mjs && node test-onboarding-flow.mjs && node test-commercial-flow.mjs",
+		"test": "node test-bug-repro.mjs && node test-evening-sop.mjs && node test-save-load.mjs && node test-settings-ui.mjs && node test-onboarding-flow.mjs && node test-commercial-flow.mjs && node test-plan-suggestions.mjs && node test-periodic-actions.mjs",
 		"build": "npm run typecheck && node esbuild.config.mjs production",
 		"deploy": "cp main.js styles.css manifest.json \"${OBSIDIAN_VAULT:?Set OBSIDIAN_VAULT to your vault path}/.obsidian/plugins/tidelog/\" && echo '✅ Deployed to vault'",
 		"release:check": "node scripts/check-release-assets.mjs",

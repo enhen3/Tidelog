@@ -1,6 +1,6 @@
 <svg width="1400" height="520" viewBox="0 0 1400 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">TideLog feedback loop</title>
-  <desc id="desc">The TideLog loop: Plan, Review, Insight, Action.</desc>
+  <desc id="desc">The TideLog loop: Plan, Review, Insights, Action.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="520" gradientUnits="userSpaceOnUse">
       <stop stop-color="#060506"/><stop offset="0.58" stop-color="#0B1417"/><stop offset="1" stop-color="#10252C"/>
@@ -25,6 +25,6 @@
   <path d="M190 314C350 178 516 176 682 296C842 412 1014 390 1216 206" stroke="#F5F3EA" stroke-opacity=".36" stroke-width="4" stroke-linecap="round"/>
   <g transform="translate(94 250)" filter="url(#shadow)"><rect width="210" height="126" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="28" y="52" class="label">Plan</text><text x="28" y="86" class="body">clarify the day</text></g>
   <g transform="translate(420 166)" filter="url(#shadow)"><rect width="210" height="126" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="28" y="52" class="label">Review</text><text x="28" y="86" class="body">compare with reality</text></g>
-  <g transform="translate(746 282)" filter="url(#shadow)"><rect width="210" height="126" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="28" y="52" class="label">Insight</text><text x="28" y="86" class="body">see the pattern</text></g>
+  <g transform="translate(746 282)" filter="url(#shadow)"><rect width="210" height="126" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="28" y="52" class="label">Insights</text><text x="28" y="86" class="body">see the pattern</text></g>
   <g transform="translate(1072 144)" filter="url(#shadow)"><rect width="210" height="126" rx="24" fill="url(#accent)"/><text x="28" y="52" class="label" fill="#061113">Action</text><text x="28" y="86" class="body" fill="#061113">change tomorrow</text></g>
 </svg>

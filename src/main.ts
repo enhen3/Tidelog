@@ -22,6 +22,7 @@ import { OnboardingModal } from './views/onboarding-modal';
 import { VaultManager } from './services/vault-manager';
 import { TemplateManager } from './services/template-manager';
 import { InsightService } from './services/insight-service';
+import { PlanSuggestionService } from './services/plan-suggestion-service';
 import { createAIProvider } from './ai/ai-provider';
 import { TaskRegistryService } from './services/task-registry';
 import { KanbanService } from './services/kanban-service';
@@ -46,6 +47,7 @@ export default class TideLogPlugin extends Plugin {
     vaultManager!: VaultManager;
     templateManager!: TemplateManager;
     insightService!: InsightService;
+    planSuggestionService!: PlanSuggestionService;
     taskRegistry!: TaskRegistryService;
     kanbanService!: KanbanService;
     fileLinkService!: FileLinkService;
@@ -77,6 +79,7 @@ export default class TideLogPlugin extends Plugin {
         this.vaultManager = new VaultManager(this.app, this.settings);
         this.templateManager = new TemplateManager(this.app, this.settings);
         this.insightService = new InsightService(this);
+        this.planSuggestionService = new PlanSuggestionService(this);
         this.taskRegistry = new TaskRegistryService(this.app, this.settings);
         this.kanbanService = new KanbanService(this.app, this.settings, this.taskRegistry, this.vaultManager);
         this.fileLinkService = new FileLinkService(this.app, this.settings, this.kanbanService);
@@ -458,12 +461,13 @@ export default class TideLogPlugin extends Plugin {
         // Open chat view first
         await this.activateChatView();
 
-        // Find the chat view and trigger insight
+        // Find the chat view and open the gated Insights screen.
+        // Generation must remain a user-initiated click inside the current-cycle gate.
         const leaves = this.app.workspace.getLeavesOfType(CHAT_VIEW_TYPE);
         if (leaves.length > 0) {
             const view = leaves[0].view;
-            if (view && 'triggerInsight' in view) {
-                (view as ChatView).triggerInsight(type);
+            if (view && 'openInsights' in view) {
+                (view as ChatView).openInsights(type);
             }
         }
     }

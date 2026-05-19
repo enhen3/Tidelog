@@ -3,7 +3,7 @@
  * Extracted from chat-view.ts for maintainability.
  */
 
-import { MarkdownRenderer } from 'obsidian';
+import { MarkdownRenderer, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
 import type { App, Component } from 'obsidian';
 import type { ChatMessage, SOPContext } from '../types';
@@ -35,6 +35,7 @@ export interface ChatControllerHost extends Component {
     hideThinkingIndicator(): void;
     updateProgressBar(): void;
     hideProgressBar(): void;
+    markDailyReviewCompleted(): void;
     morningSOP: MorningSOP;
     eveningSOP: EveningSOP;
 }
@@ -152,6 +153,7 @@ export class ChatController {
             });
         } else if (h.sopContext.type === 'evening') {
             h.showThinkingIndicator();
+            const wasEveningReview = h.sopContext.type === 'evening';
             await h.eveningSOP.handleResponse(content, h.sopContext, (message: string) => {
                 h.hideThinkingIndicator();
                 h.streamAIMessage(message);
@@ -161,6 +163,9 @@ export class ChatController {
                 h.updateProgressBar();
             } else {
                 h.hideProgressBar();
+                const targetDate = h.sopContext.reviewTargetDate;
+                const targetIsToday = !targetDate || moment(targetDate, 'YYYY-MM-DD').isSame(moment(), 'day');
+                if (wasEveningReview && targetIsToday) h.markDailyReviewCompleted();
             }
         } else {
             // Free chat
@@ -274,86 +279,4 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
         h.sendButton.disabled = false;
     }
 
-
-
-    /**
-     * Trigger insight generation (public, called from main.ts)
-     */
-    triggerInsight(type: 'weekly' | 'monthly'): void {
-        const h = this.host;
-        const label = type === 'weekly' ? t('chat.thisWeek') : t('chat.thisMonth');
-        h.addAIMessage(t('chat.generatingInsight', label));
-
-        const messageEl = h.createMessageElement('ai');
-        const insightService = h.plugin.insightService;
-
-        const handler = (
-            onChunk: (chunk: string) => void,
-            onComplete: (fullReport: string) => void,
-        ): Promise<void> => type === 'weekly'
-            ? insightService.generateWeeklyInsight(onChunk, onComplete)
-            : insightService.generateMonthlyInsight(onChunk, onComplete);
-
-        void handler(
-            (chunk: string) => {
-                // Append chunk to the message element
-                messageEl.empty();
-                // Accumulate content
-                const existing = messageEl.getAttribute('data-content') || '';
-                const newContent = existing + chunk;
-                messageEl.setAttribute('data-content', newContent);
-                void MarkdownRenderer.render(h.app, newContent, messageEl, '', h);
-                h.scrollToBottom();
-            },
-            (fullReport: string) => {
-                if (fullReport) {
-                    // Final render — strip extraction tags
-                    messageEl.empty();
-                    const cleanReport = fullReport
-                        .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
-                        .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
-                        .trim();
-                    void MarkdownRenderer.render(h.app, cleanReport, messageEl, '', h);
-                    h.addAIMessage(t('chat.reportSaved'));
-                }
-                h.scrollToBottom();
-            }
-        );
-    }
-
-    /**
-     * Trigger profile suggestion generation
-     */
-    triggerProfileSuggestion(): void {
-        const h = this.host;
-        h.addAIMessage(t('chat.analyzingProfile'));
-
-        const messageEl = h.createMessageElement('ai');
-        const insightService = h.plugin.insightService;
-        let fullContent = '';
-
-        void insightService.generateProfileSuggestions(
-            (chunk: string) => {
-                fullContent += chunk;
-                messageEl.empty();
-                // Hide <profile_update> and extraction tags from display
-                const displayContent = fullContent
-                    .replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '')
-                    .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
-                    .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
-                    .trim();
-                void MarkdownRenderer.render(h.app, displayContent, messageEl, '', h);
-                h.scrollToBottom();
-            },
-            (fullResponse: string) => {
-                if (fullResponse) {
-                    // Show save confirmation
-                    const hasUpdate = /<profile_update>/.test(fullResponse);
-                    if (hasUpdate) {
-                        h.addAIMessage(t('chat.profileUpdated'));
-                    }
-                }
-            }
-        );
-    }
 }

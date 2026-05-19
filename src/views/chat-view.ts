@@ -18,13 +18,14 @@ import { ChatMessage, SOPContext, SOPType } from '../types';
 import { MorningSOP } from '../sop/morning-sop';
 import { EveningSOP } from '../sop/evening-sop';
 import { PeriodicRenderer, PeriodicMode } from './periodic-renderer';
-import { ReviewRenderer } from './review-renderer';
+import { InsightsMode, InsightsRenderer } from './insights-renderer';
+import { loadDayLoopData } from './loop-utils';
 
 import { ChatController } from './chat-controller';
-import { ProModal } from './pro-modal';
 import { replaceFile } from '../utils/vault-write';
 
 type SidebarTab = 'chat' | 'kanban' | 'review';
+type ReviewMode = 'home' | 'dialogue';
 
 export const CHAT_VIEW_TYPE = 'tl-chat-view';
 
@@ -49,16 +50,16 @@ export class ChatView extends ItemView {
     public isTaskInputMode = false;
     public quickUpdateMode = false;
 
-    // Chat sub-mode: track which Review sub-tab is active
-    private chatMode: 'daily' | 'insight' = 'daily';
-    private chatModeButtonsEl: HTMLElement | null = null;
-
     // SOP progress bar
     private progressBarEl: HTMLElement | null = null;
+    private reviewHomeEl: HTMLElement | null = null;
+    private reviewHintEl: HTMLElement | null = null;
+    private reviewMode: ReviewMode = 'home';
 
     // Tab system
-    private activeTab: SidebarTab = 'chat';
+    private activeTab: SidebarTab = 'kanban';
     private tabContentEl!: HTMLElement;
+    private navWrapEl: HTMLElement | null = null;
     private tabBarEl!: HTMLElement;
     private chatPanel!: HTMLElement;
     public kanbanWeekOffset = 0;
@@ -72,6 +73,11 @@ export class ChatView extends ItemView {
     public periodicMode: PeriodicMode = 'day';
     public periodicSelectedDate: moment.Moment = moment();
     public periodicMonthOffset = 0;
+    public periodicSelectorOpen = false;
+    public insightsMode: InsightsMode = 'weekly';
+    public reviewSelectedMonth: moment.Moment = moment();
+    public reviewSelectedDate: moment.Moment = moment();
+    private planDefaultDateAfterReview: moment.Moment | null = null;
 
     // Live refresh
     private vaultModifyRef: ReturnType<typeof this.app.vault.on> | null = null;
@@ -81,7 +87,7 @@ export class ChatView extends ItemView {
     public morningSOP!: MorningSOP;
     public eveningSOP!: EveningSOP;
     private periodicRenderer!: PeriodicRenderer;
-    private reviewRenderer!: ReviewRenderer;
+    private insightsRenderer!: InsightsRenderer;
 
     private chatController!: ChatController;
 
@@ -91,7 +97,7 @@ export class ChatView extends ItemView {
         this.morningSOP = new MorningSOP(plugin);
         this.eveningSOP = new EveningSOP(plugin);
         this.periodicRenderer = new PeriodicRenderer(this);
-        this.reviewRenderer = new ReviewRenderer(this);
+        this.insightsRenderer = new InsightsRenderer(this);
 
         this.chatController = new ChatController(this);
     }
@@ -123,15 +129,15 @@ export class ChatView extends ItemView {
 
         // Chat panel (SOP buttons + messages + input)
         this.chatPanel = this.tabContentEl.createDiv('tl-tab-panel tl-tab-panel-chat');
-        this.renderSOPButtons(this.chatPanel);
+        this.reviewHomeEl = this.chatPanel.createDiv('tl-review-home');
         this.progressBarEl = this.chatPanel.createDiv('tl-sop-progress');
         this.progressBarEl.addClass('tl-hidden');
         this.messagesContainer = this.chatPanel.createDiv('tl-messages');
+        this.reviewHintEl = this.chatPanel.createDiv('tl-review-input-hint');
         this.renderInputArea(this.chatPanel);
-        this.showWelcomeMessage();
 
         // Switch to Plan tab by default
-        this.switchTab('kanban');
+        await this.switchTab('kanban');
 
         // Live refresh: re-render kanban when vault files change
         this.vaultModifyRef = this.app.vault.on('modify', (file) => {
@@ -141,7 +147,7 @@ export class ChatView extends ItemView {
             // Debounce to avoid re-render storm
             if (this.refreshTimer) window.clearTimeout(this.refreshTimer);
             this.refreshTimer = window.setTimeout(() => {
-                this.switchTab(this.activeTab, false);
+                void this.switchTab(this.activeTab, false);
             }, 500);
         });
         this.registerEvent(this.vaultModifyRef);
@@ -152,127 +158,154 @@ export class ChatView extends ItemView {
         if (this.refreshTimer) window.clearTimeout(this.refreshTimer);
     }
 
-    /**
-     * Render the header with SOP mode buttons
-     */
-    private renderHeader(container: HTMLElement): void {
-        const header = container.createDiv('tl-header');
-        const title = header.createDiv('tl-title');
-        const iconSpan = title.createSpan('tl-title-icon');
-        setIcon(iconSpan, 'tidelog-wave');
-        title.createSpan({ text: 'TideLog' });
-    }
-
-    /**
-     * Render SOP buttons inside the chat panel only
-     */
-    private renderSOPButtons(container: HTMLElement): void {
-        const buttons = container.createDiv('tl-header-buttons');
-        this.chatModeButtonsEl = buttons;
-
-        const eveningBtn = buttons.createEl('button', {
-            cls: 'tl-mode-btn tl-mode-btn-review',
-            attr: { 'data-chat-mode': 'daily' },
-        });
-        setIcon(eveningBtn, 'moon');
-        eveningBtn.createSpan({ text: 'Daily' });
-        eveningBtn.addEventListener('click', () => {
-            this.setChatMode('daily');
-            this.startSOP('evening');
-        });
-
-        const insightBtn = buttons.createEl('button', {
-            cls: 'tl-mode-btn tl-mode-btn-insight',
-            attr: { 'data-chat-mode': 'insight' },
-        });
-        setIcon(insightBtn, 'lightbulb');
-        insightBtn.createSpan({ text: 'Insight' });
-        insightBtn.addEventListener('click', () => {
-            this.setChatMode('insight');
-            this.startFreeChat();
-        });
-
-        // Apply initial active state
-        this.updateChatModeButtons();
-    }
-
-    /** Update visual active state on Daily / Insight sub-tab buttons */
-    private setChatMode(mode: 'daily' | 'insight'): void {
-        this.chatMode = mode;
-        this.updateChatModeButtons();
-    }
-
-    private updateChatModeButtons(): void {
-        if (!this.chatModeButtonsEl) return;
-        this.chatModeButtonsEl.querySelectorAll('.tl-mode-btn').forEach(btn => {
-            btn.removeClass('tl-mode-btn-active');
-            if (btn.getAttribute('data-chat-mode') === this.chatMode) {
-                btn.addClass('tl-mode-btn-active');
-            }
-        });
-    }
-
     // =========================================================================
     // Tab bar
     // =========================================================================
 
     private renderTabBar(container: HTMLElement): void {
-        const tabBarWrap = container.createDiv('tl-tab-bar-wrap');
-        this.tabBarEl = tabBarWrap.createDiv('tl-tab-bar');
+        this.navWrapEl = container.createDiv('tl-tab-bar-wrap');
+        this.renderNavigation();
+    }
 
-        const tabs: { id: SidebarTab; emoji: string; label: string }[] = [
-            { id: 'kanban', emoji: '☀️', label: 'Plan' },
-            { id: 'chat', emoji: '🌙', label: 'Review' },
-            { id: 'review', emoji: '🌓', label: 'Trends' },
+    private renderNavigation(): void {
+        if (!this.navWrapEl) return;
+
+        this.navWrapEl.empty();
+        this.navWrapEl.setAttr('data-active-tab', this.activeTab);
+        this.navWrapEl.setAttr(
+            'data-has-subnav',
+            this.activeTab === 'kanban' || this.activeTab === 'review' ? 'true' : 'false',
+        );
+        this.tabBarEl = this.navWrapEl.createDiv('tl-tab-bar');
+
+        const tabs: { id: SidebarTab; icon: string; label: string }[] = [
+            { id: 'kanban', icon: 'list-todo', label: t('chat.tabPlan') },
+            { id: 'chat', icon: 'circle-check-big', label: t('chat.tabReview') },
+            { id: 'review', icon: 'sparkles', label: t('chat.tabInsights') },
         ];
 
         for (const tab of tabs) {
             const btn = this.tabBarEl.createEl('button', {
                 cls: `tl-tab-btn ${tab.id === this.activeTab ? 'tl-tab-btn-active' : ''}`,
-                attr: { 'data-tab': tab.id },
+                attr: { 'data-tab': tab.id, type: 'button' },
             });
-            btn.createSpan({ cls: 'tl-tab-btn-icon', text: tab.emoji });
+            const icon = btn.createSpan({ cls: 'tl-tab-btn-icon' });
+            setIcon(icon, tab.icon);
             btn.createSpan({ cls: 'tl-tab-btn-label', text: tab.label });
-            btn.addEventListener('click', () => this.switchTab(tab.id, true));
+            btn.addEventListener('click', () => { void this.switchTab(tab.id, true); });
+        }
+
+        if (this.activeTab === 'kanban') {
+            this.renderPlanSubnav(this.navWrapEl);
+        } else if (this.activeTab === 'review') {
+            this.renderInsightsSubnav(this.navWrapEl);
         }
     }
 
-    public switchTab(tab: SidebarTab, animate = false): void {
+    private renderPlanSubnav(container: HTMLElement): void {
+        const row = container.createDiv('tl-subnav-row tl-subnav-row-plan');
+        const modes: { id: PeriodicMode; icon: string; label: string }[] = [
+            { id: 'day', icon: 'sun', label: t('periodic.day') },
+            { id: 'week', icon: 'calendar-range', label: t('periodic.week') },
+            { id: 'month', icon: 'calendar-days', label: t('periodic.month') },
+            { id: 'capture', icon: 'inbox', label: t('periodic.capture') },
+        ];
+
+        for (const mode of modes) {
+            const isCapture = mode.id === 'capture';
+            const btn = row.createEl('button', {
+                cls: `tl-subnav-btn ${isCapture ? 'tl-subnav-btn-icon-only' : ''} ${this.periodicMode === mode.id ? 'tl-subnav-btn-active' : ''}`,
+                attr: { type: 'button', 'data-mode': mode.id, title: mode.label, 'aria-label': mode.label },
+            });
+            const icon = btn.createSpan({ cls: 'tl-subnav-icon' });
+            setIcon(icon, mode.icon);
+            if (!isCapture) {
+                btn.createSpan({ cls: 'tl-subnav-label', text: mode.label });
+            }
+            btn.addEventListener('click', () => {
+                void (async () => {
+                    this.periodicMode = mode.id;
+                    this.periodicSelectedDate = mode.id === 'day'
+                        ? await this.getDefaultPlanDate()
+                        : moment();
+                    this.periodicMonthOffset = 0;
+                    this.periodicSelectorOpen = false;
+                    this.invalidateTabCache('kanban');
+                    void this.switchTab('kanban');
+                })();
+            });
+        }
+    }
+
+    private renderInsightsSubnav(container: HTMLElement): void {
+        const row = container.createDiv('tl-subnav-row tl-subnav-row-insights');
+        const tabs: { id: InsightsMode; icon: string; label: string }[] = [
+            { id: 'weekly', icon: 'bar-chart-3', label: t('insights.weeklyTab') },
+            { id: 'monthly', icon: 'calendar-days', label: t('insights.monthlyTab') },
+            { id: 'profile', icon: 'user-round-search', label: t('insights.profileTab') },
+        ];
+
+        for (const tab of tabs) {
+            const btn = row.createEl('button', {
+                cls: `tl-subnav-btn ${this.insightsMode === tab.id ? 'tl-subnav-btn-active' : ''}`,
+                attr: { type: 'button', 'data-mode': tab.id },
+            });
+            const icon = btn.createSpan({ cls: 'tl-subnav-icon' });
+            setIcon(icon, tab.icon);
+            btn.createSpan({ cls: 'tl-subnav-label', text: tab.label });
+            btn.addEventListener('click', () => {
+                this.insightsMode = tab.id;
+                this.invalidateTabCache('review');
+                void this.switchTab('review');
+            });
+        }
+    }
+
+    public async switchTab(tab: SidebarTab, animate = false): Promise<void> {
         this.activeTab = tab;
         // Cancel any pending debounced refresh to prevent queued re-renders
         if (this.refreshTimer) { window.clearTimeout(this.refreshTimer); this.refreshTimer = null; }
 
+        const isInitialPlanRender = tab === 'kanban'
+            && !this.tabContentEl.querySelector('.tl-tab-panel:not(.tl-tab-panel-chat)');
+
         // When the user actively clicks a tab (animate=true), reset state to
-        // "today / current month" so each tab always opens fresh.
-        if (animate) {
-            if (tab === 'kanban') {
-                // Plan tab: reset periodic navigator to today
-                this.periodicMode = 'day';
-                this.periodicSelectedDate = moment();
-                this.periodicMonthOffset = 0;
-            } else if (tab === 'review') {
-                // Trends tab: reset calendar to the current month
-                this.calendarMonth = moment();
-                this.calendarViewMode = 'month';
-                this.calendarWeekOffset = 0;
+        // the natural entry point for that tab. Plan also resolves its initial
+        // date on first open so a completed review survives an Obsidian restart.
+        if ((animate || isInitialPlanRender) && tab === 'kanban') {
+            this.periodicMode = 'day';
+            this.periodicSelectedDate = await this.getDefaultPlanDate();
+            this.periodicMonthOffset = 0;
+            this.periodicSelectorOpen = false;
+        } else if (animate) {
+            if (tab === 'review') {
+                // Insights tab: reset to weekly report
+                this.insightsMode = 'weekly';
+            } else if (tab === 'chat') {
+                this.reviewSelectedMonth = moment();
+                this.reviewSelectedDate = moment();
             }
-            // Review (chat) tab has no persistent navigation state to reset
+            // Review tab has no persistent navigation state to reset
         }
 
-        // Update tab bar active state
-        this.tabBarEl.querySelectorAll('.tl-tab-btn').forEach(btn => {
-            btn.removeClass('tl-tab-btn-active');
-            if (btn.getAttribute('data-tab') === tab) {
-                btn.addClass('tl-tab-btn-active');
-            }
-        });
+        this.renderNavigation();
 
         if (tab === 'chat') {
             this.chatPanel.removeClass('tl-hidden');
             // Remove non-chat panels
             this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => el.remove());
+            if (animate) {
+                this.reviewMode = 'home';
+                this.sopContext = {
+                    type: 'none',
+                    currentStep: 0,
+                    responses: {},
+                };
+            }
+            this.renderReviewPanel();
         } else {
             this.chatPanel.addClass('tl-hidden');
+            if (this.reviewHintEl) this.reviewHintEl.addClass('tl-hidden');
             // Remove stale panels immediately to prevent double-calendar flash
             this.tabContentEl.querySelectorAll('.tl-tab-panel:not(.tl-tab-panel-chat)').forEach(el => el.remove());
             // Build new panel
@@ -282,7 +315,7 @@ export class ChatView extends ItemView {
             this._suppressRefresh = true;
             const render = (tab === 'kanban')
                 ? this.renderKanbanTab(panel)
-                : this.renderReviewTab(panel);
+                : this.renderInsightsTab(panel);
             void render.finally(() => {
                 this._suppressRefresh = false;
             });
@@ -354,23 +387,29 @@ export class ChatView extends ItemView {
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const oldMark = wasDone ? 'x' : ' ';
             const newMark = wasDone ? ' ' : 'x';
-            // Support indented tasks (leading whitespace)
-            const pat = new RegExp(`^(\\s*)- \\[${oldMark}\\] ${escaped}$`, 'm');
+            // Support indented markdown task lines and numbered checkbox lines.
+            const pat = new RegExp(`^(\\s*- \\[)${oldMark}(\\]\\s+)${escaped}$`, 'm');
             const match = content.match(pat);
             if (match) {
-                content = content.replace(pat, `${match[1]}- [${newMark}] ${taskText}`);
+                content = content.replace(pat, `${match[1]}${newMark}${match[2]}${taskText}`);
             } else {
-                // Try matching numbered list item and convert to checkbox
-                const numPat = new RegExp(`^(\\s*)\\d+\\.\\s+${escaped}$`, 'm');
-                const numMatch = content.match(numPat);
-                if (numMatch) {
-                    content = content.replace(numPat, `${numMatch[1]}- [${newMark}] ${taskText}`);
+                const numberedCheckboxPat = new RegExp(`^(\\s*\\d+\\.\\s+\\[)${oldMark}(\\]\\s+)${escaped}$`, 'm');
+                const numberedCheckboxMatch = content.match(numberedCheckboxPat);
+                if (numberedCheckboxMatch) {
+                    content = content.replace(numberedCheckboxPat, `${numberedCheckboxMatch[1]}${newMark}${numberedCheckboxMatch[2]}${taskText}`);
                 } else {
-                    // Try matching plain bullet and convert to checkbox
-                    const bulletPat = new RegExp(`^(\\s*)- ${escaped}$`, 'm');
-                    const bulletMatch = content.match(bulletPat);
-                    if (bulletMatch) {
-                        content = content.replace(bulletPat, `${bulletMatch[1]}- [${newMark}] ${taskText}`);
+                    // Try matching numbered list item and convert to checkbox.
+                    const numPat = new RegExp(`^(\\s*)\\d+\\.\\s+${escaped}$`, 'm');
+                    const numMatch = content.match(numPat);
+                    if (numMatch) {
+                        content = content.replace(numPat, `${numMatch[1]}- [${newMark}] ${taskText}`);
+                    } else {
+                        // Try matching plain bullet and convert to checkbox.
+                        const bulletPat = new RegExp(`^(\\s*)- ${escaped}$`, 'm');
+                        const bulletMatch = content.match(bulletPat);
+                        if (bulletMatch) {
+                            content = content.replace(bulletPat, `${bulletMatch[1]}- [${newMark}] ${taskText}`);
+                        }
                     }
                 }
             }
@@ -463,21 +502,48 @@ export class ChatView extends ItemView {
     }
 
     /** Insert a sub-task (indented) directly after a parent task */
-    public async addSubTask(file: TFile, parentText: string, subTaskText: string): Promise<void> {
+    public async addSubTask(file: TFile, parentText: string, subTaskText: string, parentIndentLevel?: number): Promise<void> {
         this._suppressRefresh = true;
         try {
             const content = await this.app.vault.read(file);
             const lines = content.split('\n');
-            const escaped = parentText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^(\\s*- \\[[ x]\\] )${escaped}$`);
+            const readTaskLine = (line: string): { indentText: string; indentWidth: number; text: string } | null => {
+                const match = line.match(/^(\s*)(?:- \[[ x]\]|\d+\.\s+\[[ x]\])\s+(.+)$/);
+                if (!match) return null;
+                const indentText = match[1] ?? '';
+                return {
+                    indentText,
+                    indentWidth: indentText.replace(/\t/g, '  ').length,
+                    text: match[2].trim(),
+                };
+            };
             let parentIdx = -1;
+            let parentIndentText = '';
+            let parentIndentWidth = 0;
             for (let i = 0; i < lines.length; i++) {
-                if (pat.test(lines[i])) { parentIdx = i; break; }
+                const task = readTaskLine(lines[i]);
+                if (!task || task.text !== parentText) continue;
+                const indentLevel = Math.floor(task.indentWidth / 2);
+                if (parentIndentLevel !== undefined && indentLevel !== parentIndentLevel) continue;
+                parentIdx = i;
+                parentIndentText = task.indentText;
+                parentIndentWidth = task.indentWidth;
+                break;
             }
-            if (parentIdx >= 0) {
-                lines.splice(parentIdx + 1, 0, `  - [ ] ${subTaskText}`);
-                await replaceFile(this.app, file, lines.join('\n'));
+            if (parentIdx < 0) {
+                throw new Error(`Parent task not found: ${parentText}`);
             }
+
+            let insertIdx = parentIdx + 1;
+            while (insertIdx < lines.length) {
+                const line = lines[insertIdx];
+                if (!line.trim() || line.startsWith('#')) break;
+                const indent = (line.match(/^(\s*)/)?.[1] ?? '').replace(/\t/g, '  ').length;
+                if (indent <= parentIndentWidth && readTaskLine(line)) break;
+                insertIdx++;
+            }
+            lines.splice(insertIdx, 0, `${parentIndentText}  - [ ] ${subTaskText}`);
+            await replaceFile(this.app, file, lines.join('\n'));
         } finally {
             window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -489,7 +555,7 @@ export class ChatView extends ItemView {
         try {
             let content = await this.app.vault.read(file);
             const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^(\\s*- \\[[ x]\\] )${escaped}$`, 'm');
+            const pat = new RegExp(`^(\\s*(?:- \\[[ x]\\]|\\d+\\.\\s+\\[[ x]\\])\\s+)${escaped}$`, 'm');
             content = content.replace(pat, `$1${newText}`);
             await replaceFile(this.app, file, content);
         } finally {
@@ -503,7 +569,7 @@ export class ChatView extends ItemView {
         try {
             let content = await this.app.vault.read(file);
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            const pat = new RegExp(`^\\s*(?:- \\[[ x]\\]|\\d+\\.\\s+\\[[ x]\\])\\s+${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
             await replaceFile(this.app, file, content);
         } finally {
@@ -524,13 +590,13 @@ export class ChatView extends ItemView {
             // Remove from source file
             let content = await this.app.vault.read(sourceFile);
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            const pat = new RegExp(`^\\s*(?:- \\[[ x]\\]|\\d+\\.\\s+\\[[ x]\\])\\s+${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
             await replaceFile(this.app, sourceFile, content);
 
             // Refresh the view
             this.invalidateTabCache('kanban');
-            this.switchTab('kanban');
+            void this.switchTab('kanban');
         } finally {
             window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -550,12 +616,12 @@ export class ChatView extends ItemView {
             // Remove from source file
             let content = await this.app.vault.read(sourceFile);
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            const pat = new RegExp(`^\\s*(?:- \\[[ x]\\]|\\d+\\.\\s+\\[[ x]\\])\\s+${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
             await replaceFile(this.app, sourceFile, content);
 
             this.invalidateTabCache('kanban');
-            this.switchTab('kanban');
+            void this.switchTab('kanban');
         } finally {
             window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -589,12 +655,12 @@ export class ChatView extends ItemView {
             // Remove from source file
             let content = await this.app.vault.read(sourceFile);
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^\\s*- \\[[ x]\\] ${escaped}\\n?`, 'm');
+            const pat = new RegExp(`^\\s*(?:- \\[[ x]\\]|\\d+\\.\\s+\\[[ x]\\])\\s+${escaped}\\n?`, 'm');
             content = content.replace(pat, '');
             await replaceFile(this.app, sourceFile, content);
 
             this.invalidateTabCache('kanban');
-            this.switchTab('kanban');
+            void this.switchTab('kanban');
         } finally {
             window.setTimeout(() => { this._suppressRefresh = false; }, 200);
         }
@@ -607,7 +673,7 @@ export class ChatView extends ItemView {
             const content = await this.app.vault.read(file);
             const lines = content.split('\n');
             const escaped = taskText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pat = new RegExp(`^(\\s*)- (\\[[ x]\\] )${escaped}$`);
+            const pat = new RegExp(`^(\\s*)(?:- |\\d+\\.\\s+)(\\[[ x]\\]\\s+)${escaped}$`);
             const indent = Math.max(0, newIndent);
             const prefix = '  '.repeat(indent);
             for (let i = 0; i < lines.length; i++) {
@@ -699,6 +765,234 @@ export class ChatView extends ItemView {
     }
 
     // =========================================================================
+    // Review home — monthly closed loop + Daily Review
+    // =========================================================================
+
+    private async renderReviewHome(): Promise<void> {
+        if (!this.reviewHomeEl) return;
+
+        const container = this.reviewHomeEl;
+        container.empty();
+
+        const selectedMonth = this.reviewSelectedMonth.clone();
+        const monthStart = selectedMonth.clone().startOf('month');
+        const monthEnd = selectedMonth.clone().endOf('month');
+        if (!this.reviewSelectedDate.isSame(selectedMonth, 'month')) {
+            this.reviewSelectedDate = selectedMonth.isSame(moment(), 'month')
+                ? moment()
+                : monthStart.clone();
+        }
+        const selectedDate = this.reviewSelectedDate.clone();
+        const header = container.createDiv('tl-review-home-header');
+        const title = getLanguage() === 'en'
+            ? selectedMonth.format('MMMM loops')
+            : `${selectedMonth.format('M')}月份闭环`;
+        header.createDiv({ cls: 'tl-review-home-title', text: title });
+        const nav = header.createDiv('tl-review-month-nav');
+        const prevBtn = nav.createEl('button', {
+            cls: 'tl-review-month-nav-btn',
+            attr: { type: 'button', title: getLanguage() === 'en' ? 'Previous month' : '上个月' },
+        });
+        setIcon(prevBtn, 'chevron-left');
+        const nextBtn = nav.createEl('button', {
+            cls: 'tl-review-month-nav-btn',
+            attr: { type: 'button', title: getLanguage() === 'en' ? 'Next month' : '下个月' },
+        });
+        setIcon(nextBtn, 'chevron-right');
+        prevBtn.addEventListener('click', () => {
+            this.reviewSelectedMonth = this.reviewSelectedMonth.clone().subtract(1, 'month');
+            this.reviewSelectedDate = this.reviewSelectedMonth.isSame(moment(), 'month')
+                ? moment()
+                : this.reviewSelectedMonth.clone().startOf('month');
+            void this.renderReviewHome();
+        });
+        nextBtn.addEventListener('click', () => {
+            this.reviewSelectedMonth = this.reviewSelectedMonth.clone().add(1, 'month');
+            this.reviewSelectedDate = this.reviewSelectedMonth.isSame(moment(), 'month')
+                ? moment()
+                : this.reviewSelectedMonth.clone().startOf('month');
+            void this.renderReviewHome();
+        });
+
+        let fullLoops = 0;
+        let anyRecord = false;
+        const today = moment();
+        const todayData = await loadDayLoopData(this.app, this.plugin.settings, today.format('YYYY-MM-DD'));
+        const todayHasPlan = todayData?.hasPlan ?? false;
+        const selectedData = await loadDayLoopData(this.app, this.plugin.settings, selectedDate.format('YYYY-MM-DD'));
+        const selectedHasPlan = selectedData?.hasPlan ?? false;
+        const selectedHasReview = selectedData?.hasReview ?? false;
+        const selectedIsToday = selectedDate.isSame(today, 'day');
+        const selectedIsPast = selectedDate.isBefore(today, 'day');
+        const selectedIsFuture = selectedDate.isAfter(today, 'day');
+        const dayEntries: Array<{
+            day: moment.Moment;
+            filePath?: string;
+            hasPlan: boolean;
+            hasReview: boolean;
+        }> = [];
+        const leadingDays = monthStart.isoWeekday() - 1;
+
+        for (let i = 0; i < monthEnd.date(); i++) {
+            const day = monthStart.clone().add(i, 'days');
+            const dateStr = day.format('YYYY-MM-DD');
+            const data = await loadDayLoopData(this.app, this.plugin.settings, dateStr);
+            const hasPlan = data?.hasPlan ?? false;
+            const hasReview = data?.hasReview ?? false;
+            if (hasPlan || hasReview) anyRecord = true;
+            if (hasPlan && hasReview) fullLoops++;
+            dayEntries.push({ day, filePath: data?.filePath, hasPlan, hasReview });
+        }
+
+        const daysInMonth = monthEnd.date();
+        const monthlyLoopTarget = Math.min(8, daysInMonth);
+        const progress = Math.min(100, Math.round((fullLoops / Math.max(1, monthlyLoopTarget)) * 100));
+        const progressAngle = Math.round((progress / 100) * 360);
+        const hero = container.createDiv('tl-review-loop-hero');
+        if (fullLoops > 0) hero.addClass('tl-review-loop-hero-lit');
+        const orbit = hero.createDiv('tl-review-loop-orbit');
+        orbit.style.setProperty('--tl-review-progress-angle', `${progressAngle}deg`);
+        orbit.style.setProperty('--tl-review-progress-plan-angle', `${Math.round(progressAngle * 0.5)}deg`);
+        orbit.createSpan({ cls: 'tl-review-loop-orbit-value', text: String(fullLoops) });
+        const heroCopy = hero.createDiv('tl-review-loop-hero-copy');
+        heroCopy.createDiv({ cls: 'tl-review-loop-hero-label', text: t('review.fullLoops', String(fullLoops)) });
+        heroCopy.createDiv({
+            cls: 'tl-review-loop-hero-subtitle',
+            text: t('review.badgeProgress', String(Math.min(fullLoops, monthlyLoopTarget)), String(monthlyLoopTarget)),
+        });
+        const track = heroCopy.createDiv('tl-review-loop-progress-track');
+        const fill = track.createDiv('tl-review-loop-progress-fill');
+        fill.style.setProperty('--tl-review-progress', `${progress}%`);
+
+        const grid = container.createDiv('tl-review-loop-grid');
+        const weekdays = t('cal.weekdays').split(',');
+        for (const wd of weekdays) {
+            grid.createDiv({ cls: 'tl-review-loop-weekday-head', text: wd });
+        }
+
+        for (let i = 0; i < leadingDays; i++) {
+            grid.createDiv('tl-review-loop-blank');
+        }
+
+        for (const entry of dayEntries) {
+            const { day, hasPlan, hasReview } = entry;
+            let stateClass = 'tl-review-loop-day-empty';
+            if (hasPlan && hasReview) {
+                stateClass = 'tl-review-loop-day-complete';
+            } else if (hasPlan) {
+                stateClass = 'tl-review-loop-day-plan';
+            } else if (hasReview) {
+                stateClass = 'tl-review-loop-day-review';
+            }
+
+            const card = grid.createDiv(`tl-review-loop-day ${day.isSame(today, 'day') ? 'tl-review-loop-day-today' : ''} ${day.isSame(selectedDate, 'day') ? 'tl-review-loop-day-selected' : ''}`);
+            card.addClass(stateClass);
+            if (day.isSame(today, 'day')) {
+                card.setAttr('aria-label', getLanguage() === 'en' ? `${day.date()}, today` : `${day.date()}号，今天`);
+                card.setAttr('title', getLanguage() === 'en' ? 'Today' : '今天');
+            }
+            this.renderLoopRing(card, hasPlan, hasReview, String(day.date()));
+            card.addEventListener('click', () => {
+                this.reviewSelectedDate = day.clone();
+                this.reviewSelectedMonth = day.clone();
+                void this.renderReviewHome();
+            });
+        }
+
+        if (!anyRecord) {
+            const empty = container.createDiv('tl-review-empty-week');
+            empty.createDiv({ text: t('review.emptyWeek') });
+        }
+
+        const action = container.createDiv('tl-review-action-row');
+        if (selectedHasReview) {
+            const done = action.createDiv('tl-review-complete-state');
+            const icon = done.createSpan({ cls: 'tl-review-complete-state-icon' });
+            setIcon(icon, selectedHasPlan ? 'badge-check' : 'thumbs-up');
+            done.createSpan({
+                text: selectedIsToday
+                    ? (todayHasPlan ? t('review.todayLoopComplete') : t('review.reviewDoneToday'))
+                    : (selectedHasPlan ? t('review.selectedLoopComplete') : t('review.selectedReviewDone')),
+            });
+        } else if (selectedIsToday || selectedIsPast) {
+            const startBtn = action.createEl('button', {
+                cls: 'tl-review-start-btn',
+                attr: { type: 'button' },
+            });
+            const icon = startBtn.createSpan({ cls: 'tl-review-start-btn-icon' });
+            setIcon(icon, selectedIsToday ? 'moon-star' : 'history');
+            startBtn.createSpan({ text: selectedIsToday ? t('review.startDailyReview') : t('review.backfillReview') });
+            startBtn.addEventListener('click', () => this.startSOP('evening', selectedDate));
+        } else {
+            const empty = action.createDiv('tl-review-selected-state');
+            const icon = empty.createSpan({ cls: 'tl-review-selected-state-icon' });
+            setIcon(icon, selectedIsFuture ? 'calendar-clock' : 'calendar-minus');
+            empty.createSpan({
+                text: selectedIsFuture ? t('review.futureDateHint') : t('review.noPlanOnSelectedDate'),
+            });
+        }
+    }
+
+    private renderReviewPanel(): void {
+        if (!this.reviewHomeEl || !this.messagesContainer || !this.inputContainer) return;
+
+        if (this.reviewMode === 'home') {
+            this.reviewHomeEl.removeClass('tl-hidden');
+            this.messagesContainer.addClass('tl-hidden');
+            this.inputContainer.addClass('tl-hidden');
+            if (this.reviewHintEl) this.reviewHintEl.addClass('tl-hidden');
+            this.hideProgressBar();
+            this.messages = [];
+            this.messagesContainer.empty();
+            void this.renderReviewHome();
+            return;
+        }
+
+        this.reviewHomeEl.addClass('tl-hidden');
+        this.messagesContainer.removeClass('tl-hidden');
+        this.inputContainer.removeClass('tl-hidden');
+        void this.updateReviewInputHint();
+        this.updateProgressBar();
+    }
+
+    private renderLoopRing(container: HTMLElement, hasPlan: boolean, hasReview: boolean, label: string): void {
+        const ring = container.createDiv(`tl-review-loop-ring ${hasPlan && hasReview ? 'tl-review-loop-ring-complete' : ''}`);
+        ring.style.setProperty('--tl-loop-plan-color', hasPlan ? 'var(--tl-plan)' : 'color-mix(in srgb, var(--tl-plan) 16%, var(--tl-surface-card))');
+        ring.style.setProperty('--tl-loop-review-color', hasReview ? 'var(--tl-review)' : 'color-mix(in srgb, var(--tl-review) 18%, var(--tl-surface-card))');
+        ring.createSpan({ cls: 'tl-review-loop-ring-label', text: label });
+    }
+
+    private async updateReviewInputHint(): Promise<void> {
+        if (!this.reviewHintEl) return;
+        if (this.reviewMode !== 'dialogue') {
+            this.reviewHintEl.addClass('tl-hidden');
+            return;
+        }
+
+        const completedReviews = await this.countCompletedReviews();
+        if (completedReviews >= 3) {
+            this.reviewHintEl.addClass('tl-hidden');
+            this.reviewHintEl.empty();
+            return;
+        }
+
+        this.reviewHintEl.removeClass('tl-hidden');
+        this.reviewHintEl.empty();
+        this.reviewHintEl.setText(t('review.dailyHint'));
+    }
+
+    private async countCompletedReviews(): Promise<number> {
+        const files = this.app.vault.getFiles()
+            .filter((file) => file.path.startsWith(`${this.plugin.settings.dailyFolder}/`) && /^\d{4}-\d{2}-\d{2}\.md$/.test(file.name));
+        let count = 0;
+        for (const file of files) {
+            const data = await loadDayLoopData(this.app, this.plugin.settings, file.basename);
+            if (data?.hasReview) count++;
+        }
+        return count;
+    }
+
+    // =========================================================================
     // Kanban tab — delegated to PeriodicRenderer
     // =========================================================================
 
@@ -715,12 +1009,43 @@ export class ChatView extends ItemView {
         // The tab content is always re-created by switchTab
     }
 
+    private async getDefaultPlanDate(): Promise<moment.Moment> {
+        if (this.planDefaultDateAfterReview) {
+            return this.planDefaultDateAfterReview.clone();
+        }
+
+        const today = moment();
+        try {
+            const loop = await loadDayLoopData(this.app, this.plugin.settings, today.format('YYYY-MM-DD'));
+            if (loop?.hasReview) {
+                return today.clone().add(1, 'day');
+            }
+        } catch {
+            // If loop detection fails, keep the conservative default: today.
+        }
+
+        return today;
+    }
+
+    public markDailyReviewCompleted(): void {
+        this.planDefaultDateAfterReview = moment().add(1, 'day');
+        this.periodicSelectedDate = this.planDefaultDateAfterReview.clone();
+        this.periodicMode = 'day';
+        this.periodicMonthOffset = 0;
+        this.periodicSelectorOpen = false;
+        this.reviewSelectedMonth = moment();
+        this.reviewSelectedDate = moment();
+        if (this.reviewMode === 'home') {
+            void this.renderReviewHome();
+        }
+    }
+
     // =========================================================================
-    // Review tab — delegated to ReviewRenderer
+    // Insights tab — delegated to InsightsRenderer
     // =========================================================================
 
-    private async renderReviewTab(panel: HTMLElement): Promise<void> {
-        await this.reviewRenderer.render(panel);
+    private async renderInsightsTab(panel: HTMLElement): Promise<void> {
+        await this.insightsRenderer.render(panel);
     }
 
     /**
@@ -761,36 +1086,20 @@ export class ChatView extends ItemView {
     }
 
     /**
-     * Show welcome message
-     */
-    private showWelcomeMessage(): void {
-        this.addAIMessage(getLanguage() === 'en'
-            ? `Hello 👋
-
-Here, record every rise and fall of your daily tides.
-
-🌙 Daily — Review today's stories & emotions
-💡 Insight — Discover your rhythms & patterns
-
-Tap a button above, or just chat anytime ✨`
-            : `你好 👋
-
-在这里，记录每天的潮汐涨落。
-
-🌙 Daily — 回顾今天的故事与心情
-💡 Insight — 发现你的节奏与模式
-
-点击上方按钮，或随时聊聊 ✨`);
-    }
-
-    /**
      * Start SOP workflow
      */
-    startSOP(type: SOPType): void {
+    startSOP(type: SOPType, targetDate?: moment.Moment): void {
+        if (type === 'evening') {
+            this.reviewMode = 'dialogue';
+            void this.switchTab('chat', false);
+            this.renderReviewPanel();
+        }
+
         this.sopContext = {
             type,
             currentStep: 0,
             responses: {},
+            reviewTargetDate: targetDate ? moment(targetDate).format('YYYY-MM-DD') : undefined,
         };
 
         // Clear messages and hide task input if visible
@@ -833,7 +1142,6 @@ Tap a button above, or just chat anytime ✨`
      * Start evening SOP
      */
     async startEveningSOP(): Promise<void> {
-        this.addAIMessage(t('chat.startEvening'));
         await this.eveningSOP.start(this.sopContext, (message) => {
             this.addAIMessage(message);
         });
@@ -844,7 +1152,9 @@ Tap a button above, or just chat anytime ✨`
      * Start chat with pre-filled context (called from dashboard)
      */
     public startChatWithContext(context: string): void {
-        this.switchTab('chat', true);
+        this.reviewMode = 'dialogue';
+        void this.switchTab('chat', false);
+        this.renderReviewPanel();
         this.sopContext = {
             type: 'none',
             currentStep: 0,
@@ -861,84 +1171,6 @@ Tap a button above, or just chat anytime ✨`
                 : `以下是用户仪表盘上的摘要数据，请基于这些数据回答用户的问题：\n\n${context}`,
             timestamp: Date.now(),
         });
-    }
-
-    /**
-     * Start free chat mode
-     */
-    private startFreeChat(): void {
-        this.sopContext = {
-            type: 'none',
-            currentStep: 0,
-            responses: {},
-        };
-
-        this.messages = [];
-        this.messagesContainer.empty();
-        this.hideProgressBar();
-
-        const messageEl = this.createMessageElement('ai');
-        const contentDiv = messageEl.createDiv();
-        void MarkdownRenderer.render(
-            this.app,
-            getLanguage() === 'en'
-                ? `Free Chat Mode 💬
-
-Talk about anything — problems you're facing, ideas to organize, topics to discuss.
-
-You can also use the buttons below to generate insight reports:`
-                : `自由对话模式 💬
-
-聊什么都可以 — 遇到的问题、想梳理的想法、想讨论的话题。
-
-也可以用下方按钮生成洞察报告：`,
-            contentDiv,
-            '',
-            this
-        );
-
-        // Insight generation buttons
-        const btnGroup = messageEl.createDiv('tl-insight-buttons');
-
-        const isPro = this.plugin.licenseManager.isPro();
-
-        const weeklyBtn = btnGroup.createEl('button', {
-            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
-            text: `📊 ${t('chat.weeklyInsight')}${!isPro ? ' 🔒' : ''}`,
-        });
-        weeklyBtn.addEventListener('click', () => {
-            if (!isPro) {
-                new ProModal(this.app, t('chat.weeklyInsight'), this.plugin.licenseManager).open();
-                return;
-            }
-            this.triggerInsight('weekly');
-        });
-
-        const monthlyBtn = btnGroup.createEl('button', {
-            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
-            text: `📈 ${t('chat.monthlyInsight')}${!isPro ? ' 🔒' : ''}`,
-        });
-        monthlyBtn.addEventListener('click', () => {
-            if (!isPro) {
-                new ProModal(this.app, t('chat.monthlyInsight'), this.plugin.licenseManager).open();
-                return;
-            }
-            this.triggerInsight('monthly');
-        });
-
-        const profileBtn = btnGroup.createEl('button', {
-            cls: `tl-insight-btn ${!isPro ? 'tl-pro-locked-btn' : ''}`,
-            text: `👤 ${t('chat.profileSuggestion')}${!isPro ? ' 🔒' : ''}`,
-        });
-        profileBtn.addEventListener('click', () => {
-            if (!isPro) {
-                new ProModal(this.app, t('chat.profileSuggestion'), this.plugin.licenseManager).open();
-                return;
-            }
-            this.triggerProfileSuggestion();
-        });
-
-        this.scrollToBottom();
     }
 
     // =========================================================================
@@ -1089,22 +1321,20 @@ You can also use the buttons below to generate insight reports:`
         this.messagesContainer.querySelectorAll('.tl-thinking-indicator').forEach(el => el.remove());
     }
 
-    // =========================================================================
-    // Insight Generation — delegated to ChatController
-    // =========================================================================
-
     /**
      * Trigger insight generation (public, called from main.ts)
      */
     triggerInsight(type: 'weekly' | 'monthly'): void {
-        this.chatController.triggerInsight(type);
+        this.openInsights(type);
     }
 
     /**
-     * Trigger profile suggestion generation
+     * Open the Insights tab without auto-generating a report.
+     * Report generation stays behind the explicit Insights button gate.
      */
-    private triggerProfileSuggestion(): void {
-        this.chatController.triggerProfileSuggestion();
+    openInsights(type: InsightsMode = 'weekly'): void {
+        this.insightsMode = type;
+        void this.switchTab('review', false);
     }
 
 }

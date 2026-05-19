@@ -3,7 +3,6 @@
  */
 
 import TideLogPlugin from '../main';
-import { TFile } from 'obsidian';
 import { SOPContext, ChatMessage, EveningQuestionType, EveningQuestionConfig } from '../types';
 import {
     getBaseContextPrompt,
@@ -18,8 +17,8 @@ import {
     getFreeWritingPrompt,
 } from './prompts';
 import { formatAPIError } from '../utils/error-formatter';
-import { replaceFile } from '../utils/vault-write';
 import { t, getLanguage } from '../i18n';
+import { moment } from 'obsidian';
 
 interface QuestionConfig {
     type: EveningQuestionType;
@@ -111,13 +110,13 @@ export class EveningSOP {
 
         // Load context data
         const userProfile = await this.plugin.vaultManager.getUserProfileContent();
-        const todayPlanContent = await this.getTodayPlanContent();
+        const todayPlanContent = await this.getPlanContent(context);
 
         context.userProfileContent = userProfile || undefined;
         context.todayPlanContent = todayPlanContent || undefined;
 
         // Get or create today's daily note
-        await this.plugin.vaultManager.getOrCreateDailyNote();
+        await this.plugin.vaultManager.getOrCreateDailyNote(this.getTargetDate(context));
 
         // Guard: if no questions are enabled
         if (this.questionFlow.length === 0) {
@@ -131,9 +130,11 @@ export class EveningSOP {
 
 
         // Send initial message
+        const target = this.getTargetMoment(context);
+        const isToday = typeof target.isSame === 'function' ? target.isSame(moment(), 'day') : true;
         const welcomePrefix = getLanguage() === 'en'
-            ? `🌙 Great work today! Let's review your day together.`
-            : `🌙 辛苦了，一起来回顾一下今天吧。`;
+            ? (isToday ? `Great work today. Let's review your day together.` : `Let's catch up the review for ${target.format('MMM D')}.`)
+            : (isToday ? `辛苦了，一起来回顾一下今天吧。` : `一起来补上 ${target.format('M月D日')} 的复盘。`);
 
         const welcomeMessage = `${welcomePrefix}\n\n${this.questionFlow[0].initialMessage}`;
 
@@ -145,9 +146,9 @@ export class EveningSOP {
     /**
      * Get today's plan content
      */
-    private async getTodayPlanContent(): Promise<string | null> {
+    private async getPlanContent(context: SOPContext): Promise<string | null> {
         try {
-            const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();
+            const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote(this.getTargetDate(context));
             const content = await this.plugin.app.vault.cachedRead(dailyNote);
 
             // Extract morning plan section
@@ -371,7 +372,7 @@ ${emotionQ}`
         content: string,
         context: SOPContext
     ): Promise<void> {
-        const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();
+        const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote(this.getTargetDate(context));
 
         // Check if this is a follow-up response (user already answered this section before)
         const isFollowUp = context.responses[question.type] !== undefined
@@ -429,7 +430,7 @@ ${emotionQ}`
 
         // Write YAML metadata to daily note
         try {
-            const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote();
+            const dailyNote = await this.plugin.vaultManager.getOrCreateDailyNote(this.getTargetDate(context));
             const yamlFields: Record<string, unknown> = {
                 status: 'completed',
             };
@@ -516,6 +517,16 @@ ${emotionQ}`
             }
         }
 
+        // Refresh day/week/month planning suggestions before announcing completion,
+        // so the next Plan view opens with fresh guidance instead of a stale empty card.
+        try {
+            if (this.isTargetToday(context)) {
+                await this.plugin.planSuggestionService?.refreshAfterDailyReview(context);
+            }
+        } catch (err) {
+            console.error('[Evening SOP] Failed to refresh plan suggestions:', err);
+        }
+
         onMessage(summary);
 
         // Sync to kanban board if service available
@@ -527,73 +538,26 @@ ${emotionQ}`
             console.error('[Evening SOP] Failed to sync kanban:', error);
         }
 
-        // Generate AI planning suggestions for tomorrow (runs in background)
-        this.generatePlanSuggestions(context).catch(err => {
-            console.error('[Evening SOP] Failed to generate plan suggestions:', err);
-        });
-
         // Reset context
         context.type = 'none';
         context.currentStep = 0;
     }
 
-    /**
-     * Generate AI-based planning suggestions from evening review and save to file
-     */
-    private async generatePlanSuggestions(context: SOPContext): Promise<void> {
-        try {
-            const provider = this.plugin.getAIProvider();
-            if (!provider) return;
+    private getTargetMoment(context: SOPContext): moment.Moment {
+        const raw = context.reviewTargetDate;
+        if (!raw) return moment();
+        const parsed = moment(raw, 'YYYY-MM-DD');
+        return typeof parsed.isValid === 'function' && !parsed.isValid() ? moment() : parsed;
+    }
 
-            // Gather review responses
-            const responses = context.responses || {};
-            let reviewSummary = '';
-            for (const [key, val] of Object.entries(responses)) {
-                if (val && typeof val === 'string' && val.trim()) {
-                    reviewSummary += `【${key}】${val.trim()}\n`;
-                }
-            }
-            if (!reviewSummary) return;
+    private getTargetDate(context: SOPContext): Date | undefined {
+        const target = this.getTargetMoment(context);
+        return context.reviewTargetDate && typeof target.toDate === 'function' ? target.toDate() : undefined;
+    }
 
-            const systemPrompt = getLanguage() === 'en'
-                ? `Based on the user's review content, extract 3 actionable suggestions for tomorrow.
-
-Strict rules:
-- Each suggestion must directly come from things, thoughts, or reflections mentioned in the review — do not fabricate
-- Absolutely do not suggest activities, methods, or habits the user hasn't mentioned
-- Suggestions should be plans the user stated, improvement directions they reflected on, or continuations of unfinished items
-- Each starts with "💡", no more than 30 words
-- Output suggestions directly, no preamble`
-                : `基于用户的复盘内容，提炼出3条明天可以行动的建议。
-
-严格规则：
-- 每条建议必须直接来源于用户复盘中提到的事情、想法或反思，不得凭空编造
-- 绝对禁止建议用户没有提到过的活动、方法或习惯
-- 建议应该是用户自己说过的计划、反思到的改进方向、或未完成事项的延续
-- 每条以"💡"开头，不超过30字
-- 直接输出建议，不要加前言`;
-
-            const messages: ChatMessage[] = [
-                { role: 'user', content: getLanguage() === 'en' ? `My today's review:\n${reviewSummary}` : `我的今日复盘：\n${reviewSummary}`, timestamp: Date.now() }
-            ];
-
-            const suggestions = await provider.sendMessage(messages, systemPrompt, () => {});
-
-            if (suggestions && suggestions.trim()) {
-                const path = `${this.plugin.settings.archiveFolder}/plan_suggestions.md`;
-                const file = this.plugin.app.vault.getAbstractFileByPath(path);
-                const content = `---\nupdated: ${new Date().toISOString()}\n---\n${suggestions.trim()}`;
-                if (file) {
-                    if (file instanceof TFile) {
-                        await replaceFile(this.plugin.app, file, content);
-                    }
-                } else {
-                    await this.plugin.app.vault.create(path, content);
-                }
-            }
-        } catch (e) {
-            console.error('[Evening SOP] Plan suggestion generation failed:', e);
-        }
+    private isTargetToday(context: SOPContext): boolean {
+        const target = this.getTargetMoment(context);
+        return typeof target.isSame === 'function' ? target.isSame(moment(), 'day') : true;
     }
 
     /**

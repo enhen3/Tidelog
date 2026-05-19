@@ -1,6 +1,6 @@
 <svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">TideLog product hero</title>
-  <desc id="desc">A light TideLog hero showing Obsidian daily notes becoming a feedback loop from planning to review to insight and action.</desc>
+  <desc id="desc">A light TideLog hero showing Obsidian daily notes becoming a Plan, Review, and Insights feedback loop.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="900" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F8F7F1"/>
@@ -44,11 +44,11 @@
     <text x="0" y="0" class="label">TIDELOG · OBSIDIAN FEEDBACK LOOP</text>
     <text x="0" y="100" class="title">把 Daily Notes</text>
     <text x="0" y="188" class="title">变成行动反馈系统</text>
-    <text x="0" y="264" class="sub">计划今天，复盘今晚。</text>
-    <text x="0" y="308" class="sub">看见模式，再改变下一步。</text>
+    <text x="0" y="264" class="sub">先计划任务，再完成复盘。</text>
+    <text x="0" y="308" class="sub">洞察模式，更新下一步。</text>
     <g transform="translate(0 388)">
       <rect width="604" height="78" rx="24" fill="#FFFFFF" fill-opacity=".72" stroke="#3B8EA5" stroke-opacity=".15"/>
-      <text x="28" y="48" class="mono">Plan → Review → Insight → Action</text>
+      <text x="28" y="48" class="mono">Plan → Review → Insights</text>
     </g>
     <g transform="translate(0 506)">
       <rect width="198" height="48" rx="24" fill="#071417"/>
@@ -66,27 +66,27 @@
     <text x="166" y="67" class="small">TideLog / Today</text>
     <g transform="translate(44 132)">
       <rect width="516" height="112" rx="26" fill="#F8FBFC" stroke="#3B8EA5" stroke-opacity=".14"/>
-      <text x="28" y="42" class="cardTitle">Morning Plan</text>
-      <text x="28" y="78" class="body">Energy · Priority · Carry-over tasks</text>
+      <text x="28" y="42" class="cardTitle">Plan</text>
+      <text x="28" y="78" class="body">Day · Week · Month · Ideas</text>
       <path d="M408 58C434 28 468 30 492 58" stroke="url(#accent)" stroke-width="12" stroke-linecap="round"/>
     </g>
     <g transform="translate(44 276)">
       <rect width="246" height="148" rx="26" fill="#F8FBFC" stroke="#D4B978" stroke-opacity=".26"/>
-      <text x="26" y="42" class="cardTitle">Evening Review</text>
-      <text x="26" y="80" class="body">Goal · Mood</text>
-      <text x="26" y="112" class="body">Lesson · Tomorrow</text>
+      <text x="26" y="42" class="cardTitle">Review</text>
+      <text x="26" y="80" class="body">Monthly loop</text>
+      <text x="26" y="112" class="body">Catch up review</text>
     </g>
     <g transform="translate(314 276)">
       <rect width="246" height="148" rx="26" fill="#F8FBFC" stroke="#3B8EA5" stroke-opacity=".18"/>
-      <text x="26" y="42" class="cardTitle">AI Insight</text>
-      <text x="26" y="80" class="body">Patterns, principles</text>
-      <text x="26" y="112" class="body">and next actions</text>
+      <text x="26" y="42" class="cardTitle">Insights</text>
+      <text x="26" y="80" class="body">Report preview</text>
+      <text x="26" y="112" class="body">AI view of you</text>
     </g>
     <g transform="translate(44 456)">
       <rect width="516" height="154" rx="26" fill="url(#accent)" opacity=".96"/>
-      <text x="30" y="50" class="cardTitle" fill="#061113">This week’s pattern</text>
-      <text x="30" y="90" class="body" fill="#061113">Notes become useful when they return</text>
-      <text x="30" y="122" class="body" fill="#061113">as priorities, decisions, and next actions.</text>
+      <text x="30" y="50" class="cardTitle" fill="#061113">Unlocked insight</text>
+      <text x="30" y="90" class="body" fill="#061113">Preview the report in TideLog, then open</text>
+      <text x="30" y="122" class="body" fill="#061113">the full Markdown note when you need depth.</text>
     </g>
   </g>
 </svg>
