@@ -225,7 +225,12 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         const proofEl = copyEl.createDiv('tl-settings-proof-row');
-        [t('settings.proofNoTelemetry'), t('settings.proofVaultNative'), t('settings.proofUserTriggeredAI')].forEach((label) => {
+        [
+            t('settings.proofNoTelemetry'),
+            t('settings.proofVaultNative'),
+            t('settings.proofScopedReads'),
+            t('settings.proofUserTriggeredAI'),
+        ].forEach((label) => {
             proofEl.createSpan({ cls: 'tl-settings-proof-pill', text: label });
         });
     }
@@ -248,6 +253,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             t('settings.guideStepAI'),
             t('settings.guideStepPlan'),
             t('settings.guideStepReview'),
+            t('settings.guideStepInsights'),
         ].forEach((step, index) => {
             const stepEl = stepsEl.createDiv('tl-settings-guide-step');
             stepEl.createSpan({ cls: 'tl-settings-guide-step-number', text: String(index + 1) });
@@ -854,7 +860,12 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
 
         const proFeaturesEl = mainEl.createDiv('tl-settings-pro-features');
-        [t('settings.proFeatureReview'), t('settings.proFeatureInsight'), t('settings.proFeatureReports')].forEach((feature) => {
+        [
+            t('settings.proFeatureReview'),
+            t('settings.proFeatureInsight'),
+            t('settings.proFeatureReports'),
+            t('settings.proFeatureSuggestions'),
+        ].forEach((feature) => {
             proFeaturesEl.createSpan({ cls: 'tl-settings-pro-feature', text: feature });
         });
 
