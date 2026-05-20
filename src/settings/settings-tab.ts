@@ -266,18 +266,6 @@ export class TideLogSettingTab extends PluginSettingTab {
             new OnboardingModal(this.app, this.plugin).open();
         });
 
-        const workflowEl = containerEl.createDiv('tl-settings-workflow-card');
-        workflowEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.workflowKicker') });
-        workflowEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.workflowTitle') });
-        workflowEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.workflowDesc') });
-        const workflowItemsEl = workflowEl.createDiv('tl-settings-workflow-items');
-        [
-            t('settings.workflowPlan'),
-            t('settings.workflowReview'),
-            t('settings.workflowInsights'),
-        ].forEach((item) => {
-            workflowItemsEl.createDiv({ cls: 'tl-settings-workflow-item', text: item });
-        });
     }
 
     /**

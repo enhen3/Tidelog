@@ -89,12 +89,12 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
     proLicense: { key: '', activated: false },
     language: 'zh',
     onboardingCompleted: false,
-    activeProvider: 'openrouter',
+    activeProvider: 'siliconflow',
     providers: {
         openrouter: {
             apiKey: '',
             model: 'anthropic/claude-sonnet-4',
-            enabled: true,
+            enabled: false,
         },
         anthropic: {
             apiKey: '',
@@ -113,8 +113,8 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
         },
         siliconflow: {
             apiKey: '',
-            model: 'deepseek-ai/DeepSeek-V3.2',
-            enabled: false,
+            model: 'deepseek-ai/DeepSeek-V3.2-Exp',
+            enabled: true,
             baseUrl: 'https://api.siliconflow.cn/v1',
         },
         custom: {

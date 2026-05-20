@@ -24,8 +24,8 @@ export class OnboardingModal extends Modal {
         markEl.createSpan('tl-onboarding-mark-line');
         markEl.createSpan('tl-onboarding-mark-dot');
         const brandCopyEl = brandEl.createDiv('tl-onboarding-brand-copy');
-        brandCopyEl.createDiv({ cls: 'tl-onboarding-eyebrow', text: 'TideLog for Obsidian' });
-        brandCopyEl.createDiv({ cls: 'tl-onboarding-brand-subtitle', text: 'Plan · Review · Insights' });
+        brandCopyEl.createDiv({ cls: 'tl-onboarding-eyebrow', text: t('onboarding.brandEyebrow') });
+        brandCopyEl.createDiv({ cls: 'tl-onboarding-brand-subtitle', text: t('onboarding.brandSubtitle') });
 
         heroEl.createEl('h2', {
             cls: 'tl-onboarding-title',
@@ -41,9 +41,9 @@ export class OnboardingModal extends Modal {
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-plan' });
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-review' });
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-action' });
-        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-label', text: 'Plan to insight loop' });
+        productHeaderEl.createSpan({ cls: 'tl-onboarding-product-label', text: t('onboarding.productLabel') });
         const loopEl = productEl.createDiv('tl-onboarding-loop');
-        ['Plan', 'Review', 'Insights'].forEach((label) => {
+        [t('onboarding.loopPlan'), t('onboarding.loopReview'), t('onboarding.loopInsights'), t('onboarding.loopNextAction')].forEach((label) => {
             loopEl.createSpan({ cls: 'tl-onboarding-loop-pill', text: label });
         });
         productEl.createDiv({ cls: 'tl-onboarding-product-caption', text: t('onboarding.productCaption') });
@@ -63,6 +63,24 @@ export class OnboardingModal extends Modal {
             methodEl,
             t('onboarding.methodProTitle'),
             t('onboarding.methodProDesc'),
+        );
+
+        const detailsEl = contentEl.createDiv('tl-onboarding-detail-list');
+        detailsEl.createDiv({ cls: 'tl-onboarding-section-kicker', text: t('onboarding.detailKicker') });
+        this.renderDetail(
+            detailsEl,
+            t('onboarding.detailPlanTitle'),
+            t('onboarding.detailPlanDesc'),
+        );
+        this.renderDetail(
+            detailsEl,
+            t('onboarding.detailReviewTitle'),
+            t('onboarding.detailReviewDesc'),
+        );
+        this.renderDetail(
+            detailsEl,
+            t('onboarding.detailInsightsTitle'),
+            t('onboarding.detailInsightsDesc'),
         );
 
         const stepsEl = contentEl.createDiv('tl-onboarding-steps');
@@ -144,6 +162,14 @@ export class OnboardingModal extends Modal {
         const cardEl = containerEl.createDiv('tl-onboarding-method-card');
         cardEl.createDiv({ cls: 'tl-onboarding-method-title', text: title });
         cardEl.createDiv({ cls: 'tl-onboarding-method-desc', text: desc });
+    }
+
+    private renderDetail(containerEl: HTMLElement, title: string, desc: string): void {
+        const detailEl = containerEl.createDiv('tl-onboarding-detail-item');
+        detailEl.createDiv('tl-onboarding-detail-rail');
+        const copyEl = detailEl.createDiv('tl-onboarding-detail-copy');
+        copyEl.createDiv({ cls: 'tl-onboarding-detail-title', text: title });
+        copyEl.createDiv({ cls: 'tl-onboarding-detail-desc', text: desc });
     }
 
     private openSettings(): void {

@@ -29,7 +29,7 @@ TideLog 是一个 Obsidian 插件，用来把你的 Daily Notes 从「记录存�
 
 昨天的计划、晚上的复盘、偶尔出现的洞察，常常散落在 vault 深处。写过了，但没有回来提醒你、校正你、推动你。
 
-TideLog 补上的就是这个闭环：
+TideLog 帮你建立的是这个闭环：
 
 ```text
 Plan 任务 → Review 闭环 → Insights 洞察 → 更新下一步
@@ -37,7 +37,7 @@ Plan 任务 → Review 闭环 → Insights 洞察 → 更新下一步
 
 ![TideLog 工作流闭环](assets/tidelog-loop.svg)
 
-## 新版核心体验
+## 核心功能
 
 ![TideLog 功能总览](assets/tidelog-preview.svg)
 
@@ -62,7 +62,7 @@ Review 先显示本月闭环徽章：
 
 免费版会使用前 2 个已启用问题；Pro 会使用完整问题流。
 
-### 🧭 Insights：在足够多闭环后看见长期模式
+### 🧭 Insights：从足够多闭环里看见长期模式
 
 Insights 不是随时乱读整个 vault 的总结按钮，而是基于足够多的 Plan / Review 闭环生成报告：
 
@@ -92,11 +92,11 @@ TideLog 适合已经在 Obsidian 里生活，并且希望记录真的影响行�
 ## 安装与新手开始
 
 1. 在 Obsidian 里打开 **Settings → Community plugins**，搜索 `TideLog`，安装并启用。
-2. 打开 **Settings → TideLog**。先不要调太多参数，先跑通一个最小闭环。
+2. 打开 **Settings → TideLog**。先不要调太多参数，先完成一次 Plan → Review。
 3. 如果需要 AI 功能，选择 AI provider，填入你自己的 API Key 和模型名，然后点击 **测试连接**。
 4. 到 TideLog 主界面的 **Plan**，添加今天的 1–3 个任务，也可以把临时想法放进「灵感」。
 5. 晚上到 **Review**，完成今日复盘；如果漏掉某天，可以点击历史日期补复盘。
-6. 积累足够闭环后，到 **Insights** 生成、预览或更新本周报告、本月报告和 AI 眼中的你。
+6. 积累足够闭环后，再到 **Insights** 生成、预览或更新本周报告、本月报告和 AI 眼中的你。
 
 最小使用节奏：
 
@@ -182,11 +182,11 @@ Plan tasks → Review loops → Insights → Update the next action
 ### Install and start
 
 1. Install TideLog from **Obsidian Community plugins**: search for `TideLog`, install, then enable it.
-2. Open **Settings → TideLog**. Do not tune every setting first; run one minimal loop.
+2. Open **Settings → TideLog**. Do not tune every setting first; complete one Plan → Review first.
 3. If you want AI features, choose an AI provider, enter your own API key/model, and test the connection.
 4. Use **Plan** to add 1–3 tasks for today and capture ideas.
 5. Use **Review** for today’s review, or select a past date to catch up.
-6. When enough loops unlock, open **Insights** to generate, preview, or update weekly reports, monthly reports, and AI view of you.
+6. After enough loops unlock, open **Insights** to generate, preview, or update weekly reports, monthly reports, and AI view of you.
 
 ### Privacy
 

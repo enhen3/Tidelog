@@ -178,6 +178,30 @@ console.log('\nTest 2: English CTA is also review-oriented');
     check(!modal.contentEl.textContent.includes('Start morning plan'), 'English onboarding copy has no morning-plan CTA');
 }
 
+console.log('\nTest 3: onboarding is a scrollable long guide, not a dead one-screen card');
+{
+    setLanguage('zh');
+    const plugin = makePlugin();
+    const modal = new OnboardingModal(plugin.app, plugin);
+    modal.onOpen();
+
+    check(!modal.contentEl.querySelector('.tl-onboarding-scroll-hint'), 'clumsy text scroll hint is not rendered');
+    check(!modal.contentEl.textContent.includes('继续下滑'), 'onboarding does not use direct scroll-instruction copy');
+    check(modal.contentEl.querySelectorAll('.tl-onboarding-detail-item').length === 3, 'detailed plan/review/insights usage sections render');
+    check(modal.contentEl.textContent.includes('记录很多，行动没变'), 'onboarding names the concrete pain, not only features');
+    check(modal.contentEl.textContent.includes('计划') && modal.contentEl.textContent.includes('复盘') && modal.contentEl.textContent.includes('洞察'), 'Chinese onboarding uses Chinese surface names');
+    check(!modal.contentEl.textContent.includes('Plan') && !modal.contentEl.textContent.includes('Review') && !modal.contentEl.textContent.includes('Insights'), 'Chinese onboarding avoids English surface names');
+}
+
+console.log('\nTest 4: onboarding CSS enables internal scrolling with a visible scrollbar');
+{
+    const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+    check(css.includes('max-height: min(760px, calc(100vh - 96px));'), 'onboarding modal has viewport max-height');
+    check(css.includes('overflow-y: scroll;'), 'onboarding modal reserves a visible vertical scrollbar');
+    check(css.includes('::-webkit-scrollbar-thumb'), 'onboarding modal styles a visible scrollbar thumb');
+    check(!css.includes('.tl-onboarding-modal:not(.tl-unused-scope) {\n\tposition: relative;\n\tpadding: 28px 30px 24px;\n\ttext-align: left;\n\toverflow: hidden;'), 'old overflow-hidden onboarding rule is gone');
+}
+
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===\n`);
 try { fs.unlinkSync(mockPath); } catch {}
 try { fs.unlinkSync(entryPath); } catch {}

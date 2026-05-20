@@ -6730,13 +6730,40 @@ button.tl-periodic-open-btn {
 /* Onboarding now behaves like a small launch page instead of a plain dialog. */
 .tl-onboarding-modal:not(.tl-unused-scope) {
 	position: relative;
+	max-height: min(760px, calc(100vh - 96px));
 	padding: 28px 30px 24px;
 	text-align: left;
-	overflow: hidden;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in srgb, var(--tl-brand-teal) 58%, var(--background-modifier-border)) transparent;
 	border-radius: 24px;
 	background:
 		radial-gradient(circle at 78% 8%, rgba(212, 185, 120, 0.20), transparent 32%),
 		radial-gradient(circle at 8% 92%, rgba(59, 142, 165, 0.22), transparent 34%);
+}
+
+.tl-onboarding-modal:not(.tl-unused-scope)::-webkit-scrollbar {
+	width: 10px;
+}
+
+.tl-onboarding-modal:not(.tl-unused-scope)::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.tl-onboarding-modal:not(.tl-unused-scope)::-webkit-scrollbar-thumb {
+	min-height: 56px;
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--tl-brand-teal) 58%, var(--background-modifier-border));
+	background-clip: padding-box;
+}
+
+.tl-onboarding-modal:not(.tl-unused-scope)::-webkit-scrollbar-thumb:hover {
+	background: color-mix(in srgb, var(--tl-brand-teal) 76%, var(--background-modifier-border));
+	background-clip: padding-box;
 }
 
 .tl-onboarding-hero {
@@ -6801,6 +6828,49 @@ button.tl-periodic-open-btn {
 	color: var(--text-muted);
 	font-size: 13px;
 	line-height: 1.65;
+}
+
+.tl-onboarding-detail-list {
+	display: grid;
+	gap: 10px;
+	margin: 16px 0 18px;
+}
+
+.tl-onboarding-section-kicker {
+	color: var(--tl-brand-teal-2);
+	font-size: 11px;
+	font-weight: 750;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.tl-onboarding-detail-item {
+	display: grid;
+	grid-template-columns: 4px minmax(0, 1fr);
+	gap: 12px;
+	padding: 13px 14px;
+	border-radius: 15px;
+	background: color-mix(in srgb, var(--background-secondary) 78%, transparent);
+	border: 1px solid color-mix(in srgb, var(--tl-brand-teal) 14%, var(--background-modifier-border));
+}
+
+.tl-onboarding-detail-rail {
+	border-radius: 999px;
+	background: linear-gradient(180deg, var(--tl-brand-teal-2), var(--tl-brand-gold));
+}
+
+.tl-onboarding-detail-title {
+	color: var(--text-normal);
+	font-size: 13px;
+	font-weight: 720;
+	line-height: 1.4;
+}
+
+.tl-onboarding-detail-desc {
+	margin-top: 4px;
+	color: var(--text-muted);
+	font-size: 12px;
+	line-height: 1.6;
 }
 
 .tl-onboarding-loop {
