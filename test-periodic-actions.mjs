@@ -185,6 +185,15 @@ function flush() {
     return new Promise(resolve => window.setTimeout(resolve, 20));
 }
 
+function readSourceFiles(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) return readSourceFiles(fullPath);
+        if (!entry.name.endsWith('.ts')) return [];
+        return [{ file: fullPath, content: fs.readFileSync(fullPath, 'utf8') }];
+    });
+}
+
 function createHarness() {
     const files = new Map();
     const captures = [];
@@ -398,6 +407,7 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     const insightSource = fs.readFileSync(path.join(__dirname, 'src/services/insight-service.ts'), 'utf8');
     const insightRendererSource = fs.readFileSync(path.join(__dirname, 'src/views/insights-renderer.ts'), 'utf8');
     const zhSource = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
+    const sourceFiles = readSourceFiles(path.join(__dirname, 'src'));
     const actionBlocks = [...css.matchAll(/^\.tl-task-actions\s*\{[\s\S]*?\n\}/gm)].map(match => match[0]);
     const actionsBlock = actionBlocks.at(-1) ?? '';
     const actionsHoverBlock = css.match(/\.tl-periodic-task-row:hover \.tl-task-actions\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
@@ -469,6 +479,10 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     check(promptSource.includes('不得编造') && promptSource.includes('Do not invent'), 'Insight prompts include no-fabrication constraints');
     check(promptSource.includes('证据') && promptSource.includes('Evidence'), 'Insight prompts require evidence-led analysis');
     check(promptSource.includes('避免套话') && promptSource.includes('Avoid cliches'), 'Insight prompts explicitly reject obvious AI/cliche wording');
+    check(
+        !sourceFiles.some(({ content }) => /\.vault\.getFiles\s*\(/.test(content) || /getMarkdownFiles\s*\(/.test(content)),
+        'production code avoids full vault enumeration APIs',
+    );
 }
 
 {

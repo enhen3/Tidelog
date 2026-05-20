@@ -982,8 +982,10 @@ export class ChatView extends ItemView {
     }
 
     private async countCompletedReviews(): Promise<number> {
-        const files = this.app.vault.getFiles()
-            .filter((file) => file.path.startsWith(`${this.plugin.settings.dailyFolder}/`) && /^\d{4}-\d{2}-\d{2}\.md$/.test(file.name));
+        const files = this.plugin.vaultManager.getDailyNotesInRange(
+            moment('1970-01-01', 'YYYY-MM-DD'),
+            moment('2999-12-31', 'YYYY-MM-DD')
+        );
         let count = 0;
         for (const file of files) {
             const data = await loadDayLoopData(this.app, this.plugin.settings, file.basename);

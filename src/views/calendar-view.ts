@@ -189,16 +189,9 @@ export class CalendarView extends ItemView {
 
     private async getMonthData(): Promise<Map<string, DayCellData>> {
         const map = new Map<string, DayCellData>();
-        const folder = this.plugin.settings.dailyFolder;
-        const yearMonth = this.currentMonth.format('YYYY-MM');
-
-        // List all files in the daily folder
-        const dailyFolder = this.app.vault.getAbstractFileByPath(folder);
-        if (!dailyFolder) return map;
-
-        const files = this.app.vault.getFiles().filter(f =>
-            f.path.startsWith(folder + '/') && f.name.startsWith(yearMonth)
-        );
+        const monthStart = this.currentMonth.clone().startOf('month');
+        const monthEnd = this.currentMonth.clone().endOf('month');
+        const files = this.plugin.vaultManager.getDailyNotesInRange(monthStart, monthEnd);
 
         for (const file of files) {
             try {
