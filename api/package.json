@@ -10,7 +10,9 @@
     "db:init:remote": "wrangler d1 execute tidelog-license-db --remote --file=schema.sql",
     "db:migrate:v2": "wrangler d1 execute tidelog-license-db --remote --file=migration-v2.sql",
     "db:migrate:v3": "wrangler d1 execute tidelog-license-db --remote --file=migration-v3.sql",
+    "db:migrate:v4": "wrangler d1 execute tidelog-license-db --remote --file=migration-v4.sql",
     "test:portal": "node test-portal.mjs",
+    "test:xhs": "node test-xhs-fulfillment.mjs",
     "generate-keys": "node scripts/generate-keys.mjs"
   },
   "devDependencies": {

@@ -129,12 +129,14 @@ TideLog 可以免费安装和试用。Pro 解锁完整的长期复盘系统。
 
 购买后，在 **Settings → TideLog → Pro** 输入 TideLog License 即可激活。
 
+如果通过小红书个人售卖购买，自动私信会发送 TideLog 的领取页链接。用户在领取页填写小红书订单号和邮箱后，系统会显示激活码并发送邮件备份；订单号和邮箱只用于发码、找回、售后和防滥用。
+
 ## 隐私
 
 TideLog 的原则很简单：**你的日常记录默认留在你的 vault 里。**
 
 - 🔐 AI API Key 和 Pro License key 使用 Obsidian SecretStorage 保存。
-- 🌐 只有当你主动对话、测试连接、生成/更新报告、完成复盘后刷新计划建议、激活 License 或打开购买/License portal 时，才会发起网络请求。
+- 🌐 只有当你主动对话、测试连接、生成/更新报告、完成复盘后刷新计划建议、激活 License、打开购买/License portal，或通过售卖领取页领取激活码时，才会发起网络请求。
 - 📝 AI 功能会把必要提示词和相关笔记内容发送给你自己配置的 AI 服务商。
 - 📁 计划建议和洞察读取相关周期/文件范围，而不是无提示地扫描整个 vault。
 - 🚫 TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。
@@ -190,9 +192,9 @@ Plan tasks → Review loops → Insights → Update the next action
 
 ### Privacy
 
-Your daily records stay in your vault by default. TideLog only sends network requests when you explicitly chat with AI, test a connection, generate/update reports, refresh planning suggestions after a review, activate a license, or open purchase/license links.
+Your daily records stay in your vault by default. TideLog only sends network requests when you explicitly chat with AI, test a connection, generate/update reports, refresh planning suggestions after a review, activate a license, open purchase/license links, or claim a license through a purchase fulfilment page.
 
-TideLog stores AI API keys and Pro license keys with Obsidian SecretStorage. Suggestions and insights read the relevant period/file scope. TideLog does not include telemetry, analytics SDKs, dynamic ads, or a self-update mechanism.
+TideLog stores AI API keys and Pro license keys with Obsidian SecretStorage. Purchase order IDs and emails submitted through a fulfilment page are used only to deliver, recover, and support licenses. Suggestions and insights read the relevant period/file scope. TideLog does not include telemetry, analytics SDKs, dynamic ads, or a self-update mechanism.
 
 ### Support and payment
 

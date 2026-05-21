@@ -37,15 +37,18 @@ The license service receives:
 - Generated device identifier.
 - Activation, verification, deactivation, and portal request timestamps.
 - Purchase email and Afdian order ID when these are provided for license lookup or license generation.
+- Xiaohongshu order ID and email when you use a TideLog purchase fulfilment page to claim a license.
 - A short-lived hash derived from request metadata for abuse prevention and rate limiting.
 
 The license service does not receive vault note content, AI prompts, AI responses, or AI provider API keys.
 
-License data is used only to validate purchases, enforce the 3-device limit, provide self-service license lookup, support activation issues, prevent abuse, and process refunds or revocations.
+License and fulfilment data is used only to validate purchases, deliver license keys, send email backups, enforce the 3-device limit, provide self-service license lookup, support activation issues, prevent abuse, and process refunds or revocations.
 
 ## Purchase links
 
 TideLog uses Afdian for purchases. When you open the purchase page, your interaction with Afdian is governed by Afdian's own terms and privacy policy.
+
+TideLog may also provide a purchase fulfilment page for platforms such as Xiaohongshu. In that flow, the order ID and email you submit are stored in the TideLog license service so the service can issue one license per imported order, prevent duplicate claims, send an email backup, and help you recover the license later.
 
 ## Server logs
 

@@ -59,8 +59,12 @@ function initLocalDb() {
 		'wrangler', 'd1', 'execute', 'tidelog-license-db',
 		'--local', '--file=migration-v3.sql',
 	], opts);
+	const migrationV4 = spawnSync('npx', [
+		'wrangler', 'd1', 'execute', 'tidelog-license-db',
+		'--local', '--file=migration-v4.sql',
+	], opts);
 
-	if (schema.status !== 0 && migration.status !== 0 && migrationV3.status !== 0) {
+	if (schema.status !== 0 && migration.status !== 0 && migrationV3.status !== 0 && migrationV4.status !== 0) {
 		// Schema might already exist — that's OK.
 		// Just warn and continue.
 		console.log(`  ${YELLOW}⚠ DB init returned non-zero — schema may already exist, continuing.${RESET}`);

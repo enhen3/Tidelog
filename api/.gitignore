@@ -1,3 +1,4 @@
 keys*.txt
 .wrangler/
 bun.lock
+.local-secrets/

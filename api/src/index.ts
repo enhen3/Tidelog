@@ -9,9 +9,16 @@
  *   POST /license/deactivate  — Unbind a device from key
  *   POST /admin/generate      — Batch-generate keys (Admin Token)
  *   GET  /admin/list          — List all keys (Admin Token)
+ *   GET  /admin/xhs           — Xiaohongshu fulfilment admin page
+ *   GET  /admin/xhs/state     — Xiaohongshu fulfilment state (Admin Token)
+ *   POST /admin/xhs/import    — Import Xiaohongshu order IDs (Admin Token)
+ *   POST /admin/xhs/template  — Update Xiaohongshu delivery template (Admin Token)
+ *   POST /admin/xhs/resend    — Resend a fulfilment email (Admin Token)
  *   GET  /portal              — Self-serve license lookup page (HTML)
  *   POST /portal/lookup       — Lookup licenses by email + orderId
  *   POST /portal/unbind       — Unbind a device (authenticated by email + orderId)
+ *   GET  /xhs/claim           — Xiaohongshu buyer claim page
+ *   POST /xhs/claim           — Claim a license for an imported Xiaohongshu order
  */
 
 import type { D1Database, ExportedHandler } from '@cloudflare/workers-types';
@@ -19,6 +26,10 @@ import type { D1Database, ExportedHandler } from '@cloudflare/workers-types';
 export interface Env {
 	DB: D1Database;
 	ADMIN_TOKEN: string;
+	RESEND_API_KEY?: string;
+	MAIL_FROM?: string;
+	MAIL_REPLY_TO?: string;
+	CLAIM_BASE_URL?: string;
 }
 
 interface LicenseRow {
@@ -42,6 +53,33 @@ interface DeviceRow {
 interface RateLimitRow {
 	count: number;
 	reset_at: number;
+}
+
+interface XhsOrderRow {
+	id: number;
+	order_id: string;
+	product_type: string;
+	license_type: string;
+	status: string;
+	imported_at: number;
+	claimed_at: number | null;
+	bound_email: string | null;
+	license_key: string | null;
+	email_sent_at: number | null;
+	email_error: string | null;
+	last_seen_at: number | null;
+}
+
+interface FulfillmentSettingRow {
+	key: string;
+	value: string;
+}
+
+interface FulfillmentSettings {
+	claimTitle: string;
+	claimIntro: string;
+	supportText: string;
+	dmTemplate: string;
 }
 
 // =============================================================================
@@ -135,6 +173,176 @@ function generateKey(): string {
 function isExpired(row: LicenseRow): boolean {
 	if (row.license_type === 'lifetime' || !row.expires_at) return false;
 	return Math.floor(Date.now() / 1000) > row.expires_at;
+}
+
+function nowSeconds(): number {
+	return Math.floor(Date.now() / 1000);
+}
+
+function normalizeOrderId(orderId: string): string {
+	return orderId.trim().replace(/\s+/g, '');
+}
+
+function normalizeEmail(email: string): string {
+	return email.trim().toLowerCase();
+}
+
+function isValidEmail(email: string): boolean {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeHtml(input: string): string {
+	return input
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+function getClaimUrl(request: Request, env: Env): string {
+	if (env.CLAIM_BASE_URL?.trim()) return env.CLAIM_BASE_URL.trim();
+	const url = new URL(request.url);
+	return `${url.origin}/xhs/claim`;
+}
+
+function defaultFulfillmentSettings(request: Request, env: Env): FulfillmentSettings {
+	const claimUrl = getClaimUrl(request, env);
+	return {
+		claimTitle: '领取 TideLog Pro 激活码',
+		claimIntro: '请填写小红书订单号和接收邮箱。验证成功后，页面会立即显示激活码，并发送一封邮件备份。',
+		supportText: '如果订单刚支付完成但还无法领取，请稍后再试，或在小红书私信发送订单号和报错截图。',
+		dmTemplate: `你好，感谢购买 TideLog Pro。请复制你的小红书订单号，打开 ${claimUrl}，填写订单号和邮箱领取激活码。激活路径：Obsidian → Settings → TideLog → Pro。遇到问题请私信：订单号 + 报错截图。`,
+	};
+}
+
+async function getFulfillmentSettings(request: Request, env: Env): Promise<FulfillmentSettings> {
+	const defaults = defaultFulfillmentSettings(request, env);
+	try {
+		const { results } = await env.DB.prepare(
+			'SELECT key, value FROM fulfillment_settings WHERE key IN (?, ?, ?, ?)'
+		).bind('claimTitle', 'claimIntro', 'supportText', 'dmTemplate').all<FulfillmentSettingRow>();
+
+		const settings = { ...defaults };
+		for (const row of results) {
+			if (row.key === 'claimTitle') settings.claimTitle = row.value;
+			if (row.key === 'claimIntro') settings.claimIntro = row.value;
+			if (row.key === 'supportText') settings.supportText = row.value;
+			if (row.key === 'dmTemplate') settings.dmTemplate = row.value.replaceAll('{claim_url}', getClaimUrl(request, env));
+		}
+		return settings;
+	} catch {
+		return defaults;
+	}
+}
+
+async function saveFulfillmentSettings(env: Env, settings: Partial<FulfillmentSettings>): Promise<void> {
+	const updates = Object.entries(settings).filter(([, value]) => typeof value === 'string' && value.trim());
+	for (const [key, value] of updates) {
+		await env.DB.prepare(
+			`INSERT INTO fulfillment_settings (key, value, updated_at)
+			 VALUES (?, ?, ?)
+			 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+		).bind(key, value.trim(), nowSeconds()).run();
+	}
+}
+
+async function logClaimEvent(
+	env: Env,
+	orderId: string,
+	eventType: string,
+	email: string | null,
+	licenseKey: string | null,
+	detail: string | null = null,
+): Promise<void> {
+	try {
+		await env.DB.prepare(
+			`INSERT INTO xhs_claim_events (order_id, event_type, email, license_key, detail)
+			 VALUES (?, ?, ?, ?, ?)`
+		).bind(orderId, eventType, email, licenseKey, detail).run();
+	} catch {
+		// Audit logging must never block a paid customer from receiving a key.
+	}
+}
+
+function calculateExpiresAt(licenseType: string): number | null {
+	return licenseType === 'annual'
+		? nowSeconds() + 365 * 24 * 60 * 60
+		: null;
+}
+
+function buildLicenseEmailText(licenseKey: string, orderId: string, licenseType: string): string {
+	const typeLabel = licenseType === 'annual' ? '年度版' : '终身版';
+	return [
+		'你好，感谢购买 TideLog Pro。',
+		'',
+		`小红书订单号：${orderId}`,
+		`版本：${typeLabel}`,
+		`激活码：${licenseKey}`,
+		'',
+		'激活路径：Obsidian → Settings → TideLog → Pro，输入激活码后点击激活。',
+		'如果遇到问题，请在小红书私信发送订单号和报错截图。',
+	].join('\n');
+}
+
+function buildLicenseEmailHtml(licenseKey: string, orderId: string, licenseType: string): string {
+	const typeLabel = licenseType === 'annual' ? '年度版' : '终身版';
+	return `<!DOCTYPE html>
+<html lang="zh-CN">
+<body style="margin:0;padding:24px;background:#f5f7fa;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;border:1px solid #e5e7eb;">
+    <h1 style="font-size:22px;margin:0 0 8px;color:#2f7f95;">TideLog Pro 激活码</h1>
+    <p style="margin:0 0 20px;color:#6b7280;">感谢购买 TideLog Pro。请保存这封邮件，方便之后找回激活码。</p>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:18px;margin-bottom:18px;">
+      <div style="font-size:13px;color:#64748b;margin-bottom:6px;">激活码</div>
+      <div style="font-size:24px;letter-spacing:1px;font-weight:700;color:#111827;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(licenseKey)}</div>
+    </div>
+    <p style="margin:0 0 8px;">小红书订单号：<strong>${escapeHtml(orderId)}</strong></p>
+    <p style="margin:0 0 18px;">版本：<strong>${escapeHtml(typeLabel)}</strong></p>
+    <p style="margin:0;color:#374151;">激活路径：Obsidian → Settings → TideLog → Pro，输入激活码后点击激活。</p>
+  </div>
+</body>
+</html>`;
+}
+
+async function sendLicenseEmail(
+	env: Env,
+	email: string,
+	licenseKey: string,
+	orderId: string,
+	licenseType: string,
+): Promise<{ sent: boolean; error?: string }> {
+	if (!env.RESEND_API_KEY || !env.MAIL_FROM) {
+		return { sent: false, error: 'Email service is not configured' };
+	}
+
+	const text = buildLicenseEmailText(licenseKey, orderId, licenseType);
+	const html = buildLicenseEmailHtml(licenseKey, orderId, licenseType);
+	const payload: Record<string, unknown> = {
+		from: env.MAIL_FROM,
+		to: [email],
+		subject: '你的 TideLog Pro 激活码',
+		text,
+		html,
+	};
+	if (env.MAIL_REPLY_TO) payload.reply_to = env.MAIL_REPLY_TO;
+
+	try {
+		const response = await fetch('https://api.resend.com/emails', {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(payload),
+		});
+		if (!response.ok) {
+			return { sent: false, error: `Resend returned ${response.status}` };
+		}
+		return { sent: true };
+	} catch (err) {
+		return { sent: false, error: err instanceof Error ? err.message : 'Email request failed' };
+	}
 }
 
 // =============================================================================
@@ -363,6 +571,547 @@ async function handleAdminList(env: Env): Promise<Response> {
 	).first<{ total: number; unused: number; active: number; revoked: number; annual: number; lifetime: number }>();
 
 	return json({ success: true, stats, licenses: enriched });
+}
+
+// =============================================================================
+// Xiaohongshu Fulfilment Handlers
+// =============================================================================
+
+async function handleXhsClaimPage(request: Request, env: Env): Promise<Response> {
+	const settings = await getFulfillmentSettings(request, env);
+	const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(settings.claimTitle)}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 32px 16px;
+    color: #1f2937;
+    background: radial-gradient(circle at top left, rgba(59,142,165,.18), transparent 34%), #f6f8fb;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .card {
+    width: min(100%, 560px);
+    margin: 0 auto;
+    padding: 28px;
+    background: rgba(255,255,255,.94);
+    border: 1px solid rgba(59,142,165,.16);
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(31,41,55,.08);
+  }
+  .brand { display:flex; align-items:center; gap:10px; margin-bottom:6px; color:#2f7f95; font-weight:700; }
+  h1 { margin: 0 0 8px; font-size: 24px; line-height:1.2; }
+  .intro { margin: 0 0 22px; color: #667085; line-height: 1.65; font-size: 14px; }
+  label { display:block; margin:16px 0 7px; font-size:13px; font-weight:650; color:#344054; }
+  input {
+    width: 100%;
+    border: 1px solid #d7dde6;
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-size: 16px;
+    outline: none;
+    background: #fff;
+  }
+  input:focus { border-color:#3b8ea5; box-shadow:0 0 0 4px rgba(59,142,165,.12); }
+  button {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    margin-top: 22px;
+    padding: 13px 16px;
+    background: #3b8ea5;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { opacity:.62; cursor:not-allowed; }
+  .result { display:none; margin-top:22px; border-radius:14px; padding:16px; line-height:1.6; font-size:14px; }
+  .ok { display:block; background:#ecfdf3; border:1px solid #bbf7d0; color:#14532d; }
+  .warn { display:block; background:#fffbeb; border:1px solid #fde68a; color:#854d0e; }
+  .bad { display:block; background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+  .license {
+    margin: 12px 0;
+    padding: 14px;
+    border-radius: 12px;
+    background: white;
+    border: 1px solid rgba(20,83,45,.18);
+    font: 700 22px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .8px;
+    color: #111827;
+    word-break: break-all;
+  }
+  .support { margin-top:20px; color:#667085; font-size:13px; line-height:1.6; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">TideLog Pro</div>
+  <h1>${escapeHtml(settings.claimTitle)}</h1>
+  <p class="intro">${escapeHtml(settings.claimIntro)}</p>
+
+  <label for="orderId">小红书订单号</label>
+  <input id="orderId" autocomplete="off" placeholder="粘贴你的小红书订单号">
+
+  <label for="email">接收邮箱</label>
+  <input id="email" type="email" autocomplete="email" placeholder="用于接收激活码和之后找回">
+
+  <button id="claimBtn" type="button">领取激活码</button>
+  <div id="result" class="result"></div>
+  <p class="support">${escapeHtml(settings.supportText)}</p>
+</main>
+<script>
+(function() {
+  var btn = document.getElementById('claimBtn');
+  var result = document.getElementById('result');
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function show(cls, html) {
+    result.className = 'result ' + cls;
+    result.innerHTML = html;
+  }
+  btn.addEventListener('click', function() {
+    var orderId = document.getElementById('orderId').value.trim();
+    var email = document.getElementById('email').value.trim();
+    if (!orderId || !email) {
+      show('warn', '请先填写订单号和邮箱。');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '正在领取...';
+    fetch('/xhs/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: orderId, email: email })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        var mail = data.emailSent ? '激活码也已发送到你的邮箱。' : '邮件暂未发送成功，请先保存本页激活码。';
+        show('ok',
+          '<strong>' + (data.alreadyClaimed ? '这是你已领取过的激活码' : '领取成功') + '</strong>'
+          + '<div class="license">' + esc(data.licenseKey) + '</div>'
+          + '<div>激活路径：Obsidian → Settings → TideLog → Pro。</div>'
+          + '<div>' + mail + '</div>'
+        );
+      } else {
+        var message = data.error || '暂时无法领取，请稍后重试。';
+        show(data.code === 'order_pending' ? 'warn' : 'bad', esc(message));
+      }
+    })
+    .catch(function() {
+      show('bad', '网络异常，请稍后重试。');
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.textContent = '领取激活码';
+    });
+  });
+})();
+</script>
+</body>
+</html>`;
+
+	return new Response(html, {
+		headers: {
+			'Content-Type': 'text/html; charset=utf-8',
+			'Cache-Control': 'no-cache',
+		},
+	});
+}
+
+async function handleXhsClaim(request: Request, env: Env): Promise<Response> {
+	const body = await request.json<{ orderId?: string; email?: string }>();
+	const orderId = normalizeOrderId(body.orderId || '');
+	const email = normalizeEmail(body.email || '');
+
+	if (!orderId || !email || !isValidEmail(email)) {
+		return error('请填写正确的订单号和邮箱', 400);
+	}
+
+	const order = await env.DB.prepare('SELECT * FROM xhs_orders WHERE order_id = ?')
+		.bind(orderId)
+		.first<XhsOrderRow>();
+
+	if (!order) {
+		await logClaimEvent(env, orderId, 'order_pending', email, null, 'Order is not imported');
+		return json({
+			success: false,
+			code: 'order_pending',
+			error: '订单还在同步，请稍后重试；如果一直无法领取，请在小红书私信发送订单号。',
+		}, 404);
+	}
+
+	if (order.bound_email && normalizeEmail(order.bound_email) !== email) {
+		await logClaimEvent(env, orderId, 'email_mismatch', email, order.license_key, 'Claim attempted with a different email');
+		return json({
+			success: false,
+			code: 'email_mismatch',
+			error: '这个订单已绑定其他邮箱。为了保护激活码，请使用首次领取时填写的邮箱，或私信订单号处理。',
+		}, 409);
+	}
+
+	if (order.license_key) {
+		await logClaimEvent(env, orderId, 'claim_repeat', email, order.license_key);
+		return json({
+			success: true,
+			alreadyClaimed: true,
+			orderId,
+			email,
+			licenseKey: order.license_key,
+			licenseType: order.license_type,
+			emailSent: !!order.email_sent_at,
+		});
+	}
+
+	const licenseType = order.license_type === 'annual' ? 'annual' : 'lifetime';
+	const licenseKey = generateKey();
+	const expiresAt = calculateExpiresAt(licenseType);
+
+	await env.DB.prepare(
+		`INSERT INTO licenses (key, license_type, expires_at, email, order_id)
+		 VALUES (?, ?, ?, ?, ?)`
+	).bind(licenseKey, licenseType, expiresAt, email, orderId).run();
+
+	const updateResult = await env.DB.prepare(
+		`UPDATE xhs_orders
+		 SET status = 'claimed', claimed_at = ?, bound_email = ?, license_key = ?, email_error = NULL, last_seen_at = ?
+		 WHERE order_id = ? AND license_key IS NULL AND (bound_email IS NULL OR lower(bound_email) = ?)`
+	).bind(nowSeconds(), email, licenseKey, nowSeconds(), orderId, email).run();
+
+	if (!updateResult.meta.changes || updateResult.meta.changes === 0) {
+		await env.DB.prepare('DELETE FROM licenses WHERE key = ?').bind(licenseKey).run();
+		const latest = await env.DB.prepare('SELECT * FROM xhs_orders WHERE order_id = ?')
+			.bind(orderId)
+			.first<XhsOrderRow>();
+		if (latest?.license_key && latest.bound_email && normalizeEmail(latest.bound_email) === email) {
+			return json({
+				success: true,
+				alreadyClaimed: true,
+				orderId,
+				email,
+				licenseKey: latest.license_key,
+				licenseType: latest.license_type,
+				emailSent: !!latest.email_sent_at,
+			});
+		}
+		await logClaimEvent(env, orderId, 'claim_race_rejected', email, null);
+		return error('订单状态刚刚发生变化，请刷新后重试', 409);
+	}
+
+	const mail = await sendLicenseEmail(env, email, licenseKey, orderId, licenseType);
+	if (mail.sent) {
+		await env.DB.prepare('UPDATE xhs_orders SET email_sent_at = ?, email_error = NULL WHERE order_id = ?')
+			.bind(nowSeconds(), orderId)
+			.run();
+		await logClaimEvent(env, orderId, 'claim_success', email, licenseKey, 'Email sent');
+	} else {
+		await env.DB.prepare('UPDATE xhs_orders SET email_error = ? WHERE order_id = ?')
+			.bind(mail.error || 'Email failed', orderId)
+			.run();
+		await logClaimEvent(env, orderId, 'email_failed', email, licenseKey, mail.error || 'Email failed');
+	}
+
+	return json({
+		success: true,
+		alreadyClaimed: false,
+		orderId,
+		email,
+		licenseKey,
+		licenseType,
+		expiresAt,
+		emailSent: mail.sent,
+		emailError: mail.sent ? null : mail.error,
+	});
+}
+
+function parseImportedOrderIds(input: string | string[] | undefined): string[] {
+	const raw = Array.isArray(input) ? input : String(input || '').split(/[\n,，;\t ]+/);
+	const seen = new Set<string>();
+	for (const item of raw) {
+		const orderId = normalizeOrderId(String(item));
+		if (orderId) seen.add(orderId);
+	}
+	return [...seen].slice(0, 500);
+}
+
+async function handleAdminXhsImport(request: Request, env: Env): Promise<Response> {
+	const body = await request.json<{
+		ordersText?: string;
+		orderIds?: string[];
+		licenseType?: string;
+		productType?: string;
+	}>();
+	const orderIds = parseImportedOrderIds(body.orderIds || body.ordersText);
+	const licenseType = body.licenseType === 'annual' ? 'annual' : 'lifetime';
+	const productType = body.productType?.trim() || 'tidelog-pro';
+
+	if (orderIds.length === 0) {
+		return error('No order IDs provided', 400);
+	}
+
+	let imported = 0;
+	let updated = 0;
+	let alreadyClaimed = 0;
+	for (const orderId of orderIds) {
+		const existing = await env.DB.prepare('SELECT * FROM xhs_orders WHERE order_id = ?')
+			.bind(orderId)
+			.first<XhsOrderRow>();
+		if (!existing) {
+			await env.DB.prepare(
+				`INSERT INTO xhs_orders (order_id, product_type, license_type, last_seen_at)
+				 VALUES (?, ?, ?, ?)`
+			).bind(orderId, productType, licenseType, nowSeconds()).run();
+			imported++;
+			continue;
+		}
+		if (existing.license_key) {
+			alreadyClaimed++;
+			continue;
+		}
+		await env.DB.prepare(
+			`UPDATE xhs_orders
+			 SET product_type = ?, license_type = ?, last_seen_at = ?
+			 WHERE order_id = ? AND license_key IS NULL`
+		).bind(productType, licenseType, nowSeconds(), orderId).run();
+		updated++;
+	}
+
+	return json({ success: true, total: orderIds.length, imported, updated, alreadyClaimed });
+}
+
+async function handleAdminXhsTemplate(request: Request, env: Env): Promise<Response> {
+	const body = await request.json<Partial<FulfillmentSettings>>();
+	await saveFulfillmentSettings(env, {
+		claimTitle: body.claimTitle,
+		claimIntro: body.claimIntro,
+		supportText: body.supportText,
+		dmTemplate: body.dmTemplate,
+	});
+	const settings = await getFulfillmentSettings(request, env);
+	return json({ success: true, settings });
+}
+
+async function handleAdminXhsResend(request: Request, env: Env): Promise<Response> {
+	const body = await request.json<{ orderId?: string }>();
+	const orderId = normalizeOrderId(body.orderId || '');
+	if (!orderId) return error('Missing orderId', 400);
+
+	const order = await env.DB.prepare('SELECT * FROM xhs_orders WHERE order_id = ?')
+		.bind(orderId)
+		.first<XhsOrderRow>();
+	if (!order || !order.license_key || !order.bound_email) {
+		return error('This order has not been claimed yet', 404);
+	}
+
+	const mail = await sendLicenseEmail(env, order.bound_email, order.license_key, order.order_id, order.license_type);
+	if (mail.sent) {
+		await env.DB.prepare('UPDATE xhs_orders SET email_sent_at = ?, email_error = NULL WHERE order_id = ?')
+			.bind(nowSeconds(), orderId)
+			.run();
+		await logClaimEvent(env, orderId, 'email_resent', order.bound_email, order.license_key);
+	} else {
+		await env.DB.prepare('UPDATE xhs_orders SET email_error = ? WHERE order_id = ?')
+			.bind(mail.error || 'Email failed', orderId)
+			.run();
+		await logClaimEvent(env, orderId, 'email_resend_failed', order.bound_email, order.license_key, mail.error || 'Email failed');
+	}
+
+	return json({ success: mail.sent, emailSent: mail.sent, error: mail.error || null });
+}
+
+async function handleAdminXhsState(request: Request, env: Env): Promise<Response> {
+	const settings = await getFulfillmentSettings(request, env);
+	const stats = await env.DB.prepare(
+		`SELECT
+			COUNT(*) as total,
+			SUM(CASE WHEN license_key IS NULL THEN 1 ELSE 0 END) as unclaimed,
+			SUM(CASE WHEN license_key IS NOT NULL THEN 1 ELSE 0 END) as claimed,
+			SUM(CASE WHEN email_error IS NOT NULL THEN 1 ELSE 0 END) as emailErrors
+		 FROM xhs_orders`
+	).first<{ total: number; unclaimed: number | null; claimed: number | null; emailErrors: number | null }>();
+
+	const { results: recentOrders } = await env.DB.prepare(
+		`SELECT order_id, product_type, license_type, status, imported_at, claimed_at, bound_email, license_key, email_sent_at, email_error
+		 FROM xhs_orders
+		 ORDER BY imported_at DESC, id DESC
+		 LIMIT 50`
+	).all<XhsOrderRow>();
+
+	const { results: recentEvents } = await env.DB.prepare(
+		`SELECT order_id, event_type, email, license_key, detail, created_at
+		 FROM xhs_claim_events
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT 30`
+	).all<Record<string, unknown>>();
+
+	return json({ success: true, settings, claimUrl: getClaimUrl(request, env), stats, recentOrders, recentEvents });
+}
+
+function buildAdminXhsHtml(): string {
+	return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TideLog · 小红书发码后台</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:24px 16px 48px; background:#f6f8fb; color:#172033; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  main { width:min(100%, 960px); margin:0 auto; }
+  h1 { margin:0 0 6px; font-size:28px; }
+  h2 { margin:0 0 14px; font-size:18px; }
+  p { color:#667085; line-height:1.6; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+  .card { background:#fff; border:1px solid #e4e7ec; border-radius:16px; padding:20px; box-shadow:0 12px 34px rgba(31,41,55,.06); margin-top:16px; }
+  label { display:block; margin:12px 0 6px; font-size:13px; font-weight:650; color:#344054; }
+  input, textarea, select { width:100%; border:1px solid #d0d5dd; border-radius:10px; padding:10px 12px; font-size:14px; background:#fff; }
+  textarea { min-height:120px; resize:vertical; }
+  button { border:0; border-radius:10px; padding:10px 14px; margin-top:12px; background:#3b8ea5; color:white; font-weight:700; cursor:pointer; }
+  button.secondary { background:#eef4f6; color:#2f7f95; }
+  .stats { display:flex; gap:10px; flex-wrap:wrap; }
+  .pill { background:#f0f9ff; color:#075985; border-radius:999px; padding:7px 11px; font-size:13px; font-weight:650; }
+  .notice { display:none; margin-top:12px; padding:10px 12px; border-radius:10px; font-size:14px; }
+  .ok { display:block; background:#ecfdf3; color:#14532d; border:1px solid #bbf7d0; }
+  .bad { display:block; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:9px 8px; border-bottom:1px solid #edf0f4; text-align:left; vertical-align:top; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; word-break:break-all; }
+</style>
+</head>
+<body>
+<main>
+  <h1>TideLog 小红书发码后台</h1>
+  <p>这里只保存订单号、邮箱和激活码绑定关系。不要把 Admin Token、客户订单或邮箱提交到 GitHub。</p>
+
+  <section class="card">
+    <h2>登录</h2>
+    <label for="adminToken">Admin Token</label>
+    <input id="adminToken" type="password" placeholder="粘贴 Cloudflare Worker ADMIN_TOKEN">
+    <button type="button" onclick="loadState()">进入后台</button>
+    <div id="loginNotice" class="notice"></div>
+  </section>
+
+  <div id="dashboard" style="display:none">
+    <section class="card">
+      <h2>概览</h2>
+      <div class="stats" id="stats"></div>
+      <label>小红书自动私信内容</label>
+      <textarea id="copyTemplate" readonly></textarea>
+      <button class="secondary" type="button" onclick="copyTemplate()">复制私信话术</button>
+      <p>在小红书个人售卖里，把自动私信配置为这段固定话术。随机激活码由领取页发放。</p>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>导入订单</h2>
+        <label for="licenseType">License 类型</label>
+        <select id="licenseType">
+          <option value="lifetime">终身版</option>
+          <option value="annual">年度版</option>
+        </select>
+        <label for="productType">商品标记</label>
+        <input id="productType" value="tidelog-pro">
+        <label for="ordersText">订单号列表</label>
+        <textarea id="ordersText" placeholder="一行一个订单号，也可以用逗号分隔"></textarea>
+        <button type="button" onclick="importOrders()">导入订单</button>
+        <div id="importNotice" class="notice"></div>
+      </section>
+
+      <section class="card">
+        <h2>编辑领取说明</h2>
+        <label for="claimTitle">领取页标题</label>
+        <input id="claimTitle">
+        <label for="claimIntro">领取页说明</label>
+        <textarea id="claimIntro"></textarea>
+        <label for="supportText">售后提示</label>
+        <textarea id="supportText"></textarea>
+        <label for="dmTemplate">私信话术模板</label>
+        <textarea id="dmTemplate"></textarea>
+        <button type="button" onclick="saveTemplate()">保存话术</button>
+        <div id="templateNotice" class="notice"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>最近订单</h2>
+      <div id="orders"></div>
+    </section>
+  </div>
+</main>
+<script>
+function token() { return document.getElementById('adminToken').value.trim(); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function notice(id, ok, msg) { var el=document.getElementById(id); el.className='notice '+(ok?'ok':'bad'); el.textContent=msg; }
+function api(path, options) {
+  return fetch(path, Object.assign({}, options, { headers: Object.assign({ Authorization: 'Bearer ' + token(), 'Content-Type': 'application/json' }, options && options.headers || {}) })).then(function(r){ return r.json(); });
+}
+function loadState() {
+  api('/admin/xhs/state', { method:'GET', headers: { Authorization: 'Bearer ' + token() } }).then(renderState).catch(function(){ notice('loginNotice', false, '无法加载后台，请检查 Token。'); });
+}
+function renderState(data) {
+  if (!data.success) { notice('loginNotice', false, data.error || 'Token 无效'); return; }
+  document.getElementById('dashboard').style.display='';
+  notice('loginNotice', true, '已加载后台。');
+  var s=data.stats||{};
+  document.getElementById('stats').innerHTML =
+    '<span class="pill">总订单 '+(s.total||0)+'</span>'
+    + '<span class="pill">未领取 '+(s.unclaimed||0)+'</span>'
+    + '<span class="pill">已领取 '+(s.claimed||0)+'</span>'
+    + '<span class="pill">邮件异常 '+(s.emailErrors||0)+'</span>';
+  var settings=data.settings||{};
+  document.getElementById('copyTemplate').value=settings.dmTemplate||'';
+  document.getElementById('claimTitle').value=settings.claimTitle||'';
+  document.getElementById('claimIntro').value=settings.claimIntro||'';
+  document.getElementById('supportText').value=settings.supportText||'';
+  document.getElementById('dmTemplate').value=settings.dmTemplate||'';
+  var rows=(data.recentOrders||[]).map(function(o){
+    var key=o.license_key ? '<code>'+esc(o.license_key)+'</code>' : '未领取';
+    var email=o.bound_email ? esc(o.bound_email) : '';
+    var resend=o.license_key ? '<button class="secondary" onclick="resendEmail(\\''+esc(o.order_id)+'\\')">重发邮件</button>' : '';
+    return '<tr><td><code>'+esc(o.order_id)+'</code></td><td>'+esc(o.license_type)+'</td><td>'+esc(o.status)+'</td><td>'+email+'</td><td>'+key+'</td><td>'+esc(o.email_error||'')+'</td><td>'+resend+'</td></tr>';
+  }).join('');
+  document.getElementById('orders').innerHTML='<table><thead><tr><th>订单号</th><th>类型</th><th>状态</th><th>邮箱</th><th>激活码</th><th>邮件错误</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function copyTemplate() {
+  navigator.clipboard.writeText(document.getElementById('copyTemplate').value);
+}
+function importOrders() {
+  api('/admin/xhs/import', { method:'POST', body: JSON.stringify({
+    ordersText: document.getElementById('ordersText').value,
+    licenseType: document.getElementById('licenseType').value,
+    productType: document.getElementById('productType').value
+  }) }).then(function(data){
+    notice('importNotice', !!data.success, data.success ? ('导入 '+data.imported+'，更新 '+data.updated+'，已领取跳过 '+data.alreadyClaimed) : (data.error||'导入失败'));
+    if (data.success) loadState();
+  });
+}
+function saveTemplate() {
+  api('/admin/xhs/template', { method:'POST', body: JSON.stringify({
+    claimTitle: document.getElementById('claimTitle').value,
+    claimIntro: document.getElementById('claimIntro').value,
+    supportText: document.getElementById('supportText').value,
+    dmTemplate: document.getElementById('dmTemplate').value
+  }) }).then(function(data){
+    notice('templateNotice', !!data.success, data.success ? '已保存。' : (data.error||'保存失败'));
+    if (data.success) loadState();
+  });
+}
+function resendEmail(orderId) {
+  api('/admin/xhs/resend', { method:'POST', body: JSON.stringify({ orderId: orderId }) }).then(function(data){
+    alert(data.emailSent ? '邮件已发送。' : ('邮件未发送：' + (data.error || '未知错误')));
+    loadState();
+  });
+}
+</script>
+</body>
+</html>`;
 }
 
 // =============================================================================
@@ -983,6 +1732,15 @@ export default {
 			}
 
 			if (path.startsWith('/admin/')) {
+				if (path === '/admin/xhs' && request.method === 'GET') {
+					return new Response(buildAdminXhsHtml(), {
+						headers: {
+							'Content-Type': 'text/html; charset=utf-8',
+							'Cache-Control': 'no-cache',
+						},
+					});
+				}
+
 				const authError = checkAdmin(request, env);
 				if (authError) return authError;
 
@@ -991,6 +1749,18 @@ export default {
 				}
 				if (path === '/admin/list' && request.method === 'GET') {
 					return await handleAdminList(env);
+				}
+				if (path === '/admin/xhs/state' && request.method === 'GET') {
+					return await handleAdminXhsState(request, env);
+				}
+				if (path === '/admin/xhs/import' && request.method === 'POST') {
+					return await handleAdminXhsImport(request, env);
+				}
+				if (path === '/admin/xhs/template' && request.method === 'POST') {
+					return await handleAdminXhsTemplate(request, env);
+				}
+				if (path === '/admin/xhs/resend' && request.method === 'POST') {
+					return await handleAdminXhsResend(request, env);
 				}
 			}
 
@@ -1007,6 +1777,14 @@ export default {
 				const limited = await checkRateLimit(request, env, 'portal-unbind', 15, 60);
 				if (limited) return limited;
 				return await handlePortalUnbind(request, env);
+			}
+			if (path === '/xhs/claim' && request.method === 'GET') {
+				return await handleXhsClaimPage(request, env);
+			}
+			if (path === '/xhs/claim' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'xhs-claim', 15, 60);
+				if (limited) return limited;
+				return await handleXhsClaim(request, env);
 			}
 
 			if (path === '/' || path === '/health') {
