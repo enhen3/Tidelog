@@ -125,8 +125,10 @@ export class OnboardingModal extends Modal {
             void this.plugin.activateChatView('evening');
         });
 
-        const buyLink = contentEl.createEl('a', {
-            cls: 'tl-onboarding-link',
+        const proFooter = contentEl.createDiv('tl-onboarding-pro-footer');
+        proFooter.createSpan({ cls: 'tl-onboarding-pro-copy', text: t('onboarding.proFooterText') });
+        const buyLink = proFooter.createEl('a', {
+            cls: 'tl-onboarding-pro-link',
             text: t('onboarding.buyLink'),
             href: this.plugin.licenseManager.getPurchaseUrl(),
         });

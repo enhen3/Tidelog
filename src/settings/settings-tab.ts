@@ -65,6 +65,8 @@ export class TideLogSettingTab extends PluginSettingTab {
     private renderAISettings(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.sectionAI')).setHeading();
 
+        this.renderAISetupGuide(containerEl);
+
         new Setting(containerEl)
             .setName(t('settings.aiProvider'))
             .setDesc(t('settings.aiProviderDesc'))
@@ -85,6 +87,64 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         this.renderProviderSettings(containerEl);
         containerEl.createDiv({ cls: 'tl-settings-section-note', text: t('settings.aiPrivacyNote') });
+    }
+
+    private renderAISetupGuide(containerEl: HTMLElement): void {
+        const provider = this.plugin.settings.activeProvider;
+        const exampleProvider: AIProviderType = 'siliconflow';
+        const exampleModel = 'deepseek-ai/DeepSeek-V3.2';
+        const hasConfiguredApi = Boolean(this.plugin.settings.providers[provider]?.apiKey?.trim());
+        const exampleApplied =
+            provider === exampleProvider &&
+            this.plugin.settings.providers[exampleProvider].model === exampleModel;
+        const guideEl = containerEl.createEl('details', { cls: 'tl-ai-setup-guide tl-settings-collapsible-card' });
+        guideEl.open = !hasConfiguredApi;
+
+        const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-collapsible-summary' });
+        const summaryCopyEl = summaryEl.createDiv('tl-settings-collapsible-summary-copy');
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.aiSetupKicker') });
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.aiSetupTitle') });
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.aiSetupDesc') });
+        summaryEl.createSpan({ cls: 'tl-settings-collapse-icon', text: '⌄' });
+
+        const bodyEl = guideEl.createDiv('tl-settings-collapsible-body tl-ai-setup-content');
+        const mainEl = bodyEl.createDiv('tl-ai-setup-main');
+
+        const stepsEl = mainEl.createDiv('tl-ai-setup-steps');
+        [
+            t('settings.aiSetupStepProvider'),
+            t('settings.aiSetupStepKey'),
+            t('settings.aiSetupStepTest'),
+        ].forEach((step, index) => {
+            const stepEl = stepsEl.createDiv('tl-ai-setup-step');
+            stepEl.createSpan({ cls: 'tl-ai-setup-step-number', text: String(index + 1) });
+            stepEl.createSpan({ cls: 'tl-ai-setup-step-copy', text: step });
+        });
+
+        const actionsEl = bodyEl.createDiv('tl-ai-setup-actions');
+        const chooseBtn = actionsEl.createEl('button', {
+            cls: 'mod-cta tl-settings-action-btn',
+            text: exampleApplied
+                ? t('settings.aiSetupSiliconFlowSelected')
+                : t('settings.aiSetupUseSiliconFlow'),
+        });
+        if (exampleApplied) {
+            chooseBtn.disabled = true;
+        } else {
+            chooseBtn.addEventListener('click', () => {
+                this.plugin.settings.activeProvider = exampleProvider;
+                this.plugin.settings.providers[exampleProvider].model = exampleModel;
+                this.saveSettingsPreservingScroll(() => this.display());
+            });
+        }
+
+        const siliconFlowLink = actionsEl.createEl('a', {
+            cls: 'tl-settings-secondary-btn tl-ai-setup-link',
+            text: t('settings.aiSetupOpenSiliconFlow'),
+            href: 'https://cloud.siliconflow.cn/account/ak',
+        });
+        siliconFlowLink.setAttribute('target', '_blank');
+        siliconFlowLink.setAttribute('rel', 'noopener noreferrer');
     }
 
     private renderFolderSettings(containerEl: HTMLElement): void {
@@ -241,12 +301,17 @@ export class TideLogSettingTab extends PluginSettingTab {
     private renderGettingStarted(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.gettingStarted')).setHeading();
 
-        const guideEl = containerEl.createDiv('tl-settings-guide-card');
-        const mainEl = guideEl.createDiv('tl-settings-guide-main');
-        const copyEl = mainEl.createDiv('tl-settings-guide-copy');
-        copyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.gettingStartedGuide') });
-        copyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.gettingStartedTitle') });
-        copyEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.gettingStartedDesc') });
+        const guideEl = containerEl.createEl('details', { cls: 'tl-settings-guide-card tl-settings-collapsible-card' });
+        guideEl.open = !this.plugin.settings.onboardingCompleted;
+        const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-collapsible-summary' });
+        const summaryCopyEl = summaryEl.createDiv('tl-settings-collapsible-summary-copy');
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.gettingStartedGuide') });
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.gettingStartedTitle') });
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.gettingStartedDesc') });
+        summaryEl.createSpan({ cls: 'tl-settings-collapse-icon', text: '⌄' });
+
+        const bodyEl = guideEl.createDiv('tl-settings-collapsible-body');
+        const mainEl = bodyEl.createDiv('tl-settings-guide-main');
 
         const stepsEl = mainEl.createDiv('tl-settings-guide-steps');
         [
@@ -260,7 +325,7 @@ export class TideLogSettingTab extends PluginSettingTab {
             stepEl.createSpan({ text: step });
         });
 
-        const actionEl = guideEl.createDiv('tl-settings-card-actions');
+        const actionEl = bodyEl.createDiv('tl-settings-card-actions');
         const openBtn = actionEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('settings.openGettingStarted') });
         openBtn.addEventListener('click', () => {
             new OnboardingModal(this.app, this.plugin).open();
@@ -451,11 +516,11 @@ export class TideLogSettingTab extends PluginSettingTab {
      */
     private getModelPlaceholder(provider: AIProviderType): string {
         const placeholders: Record<AIProviderType, string> = {
-            openrouter: 'anthropic/claude-sonnet-4.5',
-            anthropic: 'claude-sonnet-4-5-20250929',
+            openrouter: 'anthropic/claude-sonnet-4.6',
+            anthropic: 'claude-sonnet-4-6',
             gemini: 'gemini-2.5-flash',
-            openai: 'gpt-5.1',
-            siliconflow: 'deepseek-ai/DeepSeek-V3.2-Exp',
+            openai: 'gpt-5.4-mini',
+            siliconflow: 'deepseek-ai/DeepSeek-V3.2',
             custom: 'deepseek-chat',
         };
         return placeholders[provider];
@@ -468,19 +533,20 @@ export class TideLogSettingTab extends PluginSettingTab {
         switch (provider) {
             case 'openrouter':
                 return {
-                    'anthropic/claude-sonnet-4.5': t('settings.recommended', 'Claude Sonnet 4.5'),
-                    'anthropic/claude-sonnet-4': 'Claude Sonnet 4',
-                    'openai/gpt-5.1': 'GPT-5.1',
-                    'openai/gpt-4.1': 'GPT-4.1',
+                    'anthropic/claude-sonnet-4.6': t('settings.recommended', 'Claude Sonnet 4.6'),
+                    'anthropic/claude-opus-4.7': t('settings.powerful', 'Claude Opus 4.7'),
+                    'anthropic/claude-haiku-4.5': t('settings.fast', 'Claude Haiku 4.5'),
+                    'openai/gpt-5.5': 'GPT-5.5',
+                    'openai/gpt-5.4-mini': t('settings.fast', 'GPT-5.4 mini'),
                     'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
                     'google/gemini-2.5-pro': 'Gemini 2.5 Pro',
                     'meta-llama/llama-3.3-70b-instruct': 'Llama 3.3 70B Instruct',
                 };
             case 'anthropic':
                 return {
-                    'claude-sonnet-4-5-20250929': t('settings.recommended', 'Claude Sonnet 4.5'),
-                    'claude-sonnet-4-20250514': 'Claude Sonnet 4',
-                    'claude-3-5-haiku-20241022': t('settings.fast', 'Claude 3.5 Haiku'),
+                    'claude-sonnet-4-6': t('settings.recommended', 'Claude Sonnet 4.6'),
+                    'claude-opus-4-7': t('settings.powerful', 'Claude Opus 4.7'),
+                    'claude-haiku-4-5-20251001': t('settings.fast', 'Claude Haiku 4.5'),
                 };
             case 'gemini':
                 return {
@@ -490,14 +556,15 @@ export class TideLogSettingTab extends PluginSettingTab {
                 };
             case 'openai':
                 return {
-                    'gpt-5.1': t('settings.recommended', 'GPT-5.1'),
-                    'gpt-5-mini': t('settings.fast', 'GPT-5 mini'),
+                    'gpt-5.4-mini': t('settings.recommended', 'GPT-5.4 mini'),
+                    'gpt-5.5': t('settings.powerful', 'GPT-5.5'),
+                    'gpt-5.4': 'GPT-5.4',
+                    'gpt-5.4-nano': t('settings.fast', 'GPT-5.4 nano'),
                     'gpt-4.1': 'GPT-4.1',
-                    'gpt-4.1-mini': 'GPT-4.1 mini',
                 };
             case 'siliconflow':
                 return {
-                    'deepseek-ai/DeepSeek-V3.2-Exp': t('settings.recommended', 'DeepSeek V3.2 Exp'),
+                    'deepseek-ai/DeepSeek-V3.2': t('settings.recommended', 'DeepSeek V3.2'),
                     'deepseek-ai/DeepSeek-R1': t('settings.reasoning', 'DeepSeek R1'),
                     'Qwen/Qwen3-Coder-480B-A35B-Instruct': t('settings.powerful', 'Qwen3 Coder 480B'),
                     'Qwen/Qwen3-32B': t('settings.fast', 'Qwen3 32B'),

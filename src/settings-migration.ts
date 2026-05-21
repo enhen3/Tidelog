@@ -26,6 +26,31 @@ const MIGRATIONS: Migration[] = [
             }
         },
     },
+    {
+        version: 2,
+        migrate(settings) {
+            const sf = settings.providers.siliconflow;
+            if (sf && sf.model === 'deepseek-ai/DeepSeek-V3.2-Exp') {
+                sf.model = 'deepseek-ai/DeepSeek-V3.2';
+            }
+
+            const updateInactiveProviderDefault = (
+                provider: keyof TideLogSettings['providers'],
+                from: string,
+                to: string,
+            ) => {
+                const config = settings.providers[provider];
+                if (settings.activeProvider !== provider && config?.model === from) {
+                    config.model = to;
+                }
+            };
+
+            updateInactiveProviderDefault('openrouter', 'anthropic/claude-sonnet-4', 'anthropic/claude-sonnet-4.6');
+            updateInactiveProviderDefault('anthropic', 'claude-sonnet-4-20250514', 'claude-sonnet-4-6');
+            updateInactiveProviderDefault('gemini', 'gemini-2.0-flash', 'gemini-2.5-flash');
+            updateInactiveProviderDefault('openai', 'gpt-4o', 'gpt-5.4-mini');
+        },
+    },
 ];
 
 /** Current schema version — always equals the last migration's version */

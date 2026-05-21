@@ -93,27 +93,27 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
     providers: {
         openrouter: {
             apiKey: '',
-            model: 'anthropic/claude-sonnet-4',
+            model: 'anthropic/claude-sonnet-4.6',
             enabled: false,
         },
         anthropic: {
             apiKey: '',
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             enabled: false,
         },
         gemini: {
             apiKey: '',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             enabled: false,
         },
         openai: {
             apiKey: '',
-            model: 'gpt-4o',
+            model: 'gpt-5.4-mini',
             enabled: false,
         },
         siliconflow: {
             apiKey: '',
-            model: 'deepseek-ai/DeepSeek-V3.2-Exp',
+            model: 'deepseek-ai/DeepSeek-V3.2',
             enabled: true,
             baseUrl: 'https://api.siliconflow.cn/v1',
         },
