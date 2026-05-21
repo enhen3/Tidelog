@@ -41,6 +41,11 @@ function initLocalDb() {
 			'--local', `--file=${file}`,
 		], opts);
 	}
+	spawnSync('npx', [
+		'wrangler', 'd1', 'execute', 'tidelog-license-db',
+		'--local',
+		'--command=DELETE FROM fulfillment_settings; DELETE FROM xhs_claim_events; DELETE FROM xhs_orders;',
+	], opts);
 	console.log(`  ${GREEN}✓ D1 schema applied${RESET}`);
 }
 
@@ -114,6 +119,9 @@ async function main() {
 
 		const stateNoAuth = await get(worker, '/admin/xhs/state');
 		assert('Admin state without token is rejected', stateNoAuth.status === 401, `got ${stateNoAuth.status}`);
+
+		const defaultClaimHtml = await get(worker, '/xhs/claim');
+		assert('Claim page does not promise email when mail is not configured', defaultClaimHtml.text.includes('之后也可以用订单号和邮箱找回'));
 
 		console.log(`\n${YELLOW}▶ Test: unimported order is not fulfilled${RESET}`);
 		const unimported = await post(worker, '/xhs/claim', {
@@ -204,6 +212,7 @@ async function main() {
 		const claimHtml = await get(worker, '/xhs/claim');
 		assert('Claim page contains title', claimHtml.text.includes('测试领取标题'));
 		assert('Claim page posts to /xhs/claim', claimHtml.text.includes("fetch('/xhs/claim'"));
+		assert('Claim page exposes mail backup configuration to the result copy', claimHtml.text.includes('var mailBackupEnabled = false'));
 	} finally {
 		await worker.stop();
 	}

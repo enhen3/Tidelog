@@ -206,11 +206,18 @@ function getClaimUrl(request: Request, env: Env): string {
 	return `${url.origin}/xhs/claim`;
 }
 
+function isEmailConfigured(env: Env): boolean {
+	return !!(env.RESEND_API_KEY?.trim() && env.MAIL_FROM?.trim());
+}
+
 function defaultFulfillmentSettings(request: Request, env: Env): FulfillmentSettings {
 	const claimUrl = getClaimUrl(request, env);
+	const mailCopy = isEmailConfigured(env)
+		? '验证成功后，页面会立即显示激活码，并发送一封邮件备份。'
+		: '验证成功后，页面会立即显示激活码。请先保存好激活码，之后也可以用订单号和邮箱找回。';
 	return {
 		claimTitle: '领取 TideLog Pro 激活码',
-		claimIntro: '请填写小红书订单号和接收邮箱。验证成功后，页面会立即显示激活码，并发送一封邮件备份。',
+		claimIntro: `请填写小红书订单号和接收邮箱。${mailCopy}`,
 		supportText: '如果订单刚支付完成但还无法领取，请稍后再试，或在小红书私信发送订单号和报错截图。',
 		dmTemplate: `你好，感谢购买 TideLog Pro。请复制你的小红书订单号，打开 ${claimUrl}，填写订单号和邮箱领取激活码。激活路径：Obsidian → Settings → TideLog → Pro。遇到问题请私信：订单号 + 报错截图。`,
 	};
@@ -579,6 +586,7 @@ async function handleAdminList(env: Env): Promise<Response> {
 
 async function handleXhsClaimPage(request: Request, env: Env): Promise<Response> {
 	const settings = await getFulfillmentSettings(request, env);
+	const mailBackupEnabled = isEmailConfigured(env);
 	const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -667,6 +675,7 @@ async function handleXhsClaimPage(request: Request, env: Env): Promise<Response>
 </main>
 <script>
 (function() {
+  var mailBackupEnabled = ${mailBackupEnabled ? 'true' : 'false'};
   var btn = document.getElementById('claimBtn');
   var result = document.getElementById('result');
   function esc(s) {
@@ -693,7 +702,9 @@ async function handleXhsClaimPage(request: Request, env: Env): Promise<Response>
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
-        var mail = data.emailSent ? '激活码也已发送到你的邮箱。' : '邮件暂未发送成功，请先保存本页激活码。';
+        var mail = data.emailSent
+          ? '激活码也已发送到你的邮箱。'
+          : (mailBackupEnabled ? '邮件暂未发送成功，请先保存本页激活码。' : '请先保存本页激活码；之后也可以通过邮箱和订单号找回。');
         show('ok',
           '<strong>' + (data.alreadyClaimed ? '这是你已领取过的激活码' : '领取成功') + '</strong>'
           + '<div class="license">' + esc(data.licenseKey) + '</div>'
