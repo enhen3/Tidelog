@@ -178,13 +178,13 @@ function check(cond, label) {
 }
 
 // Build a plugin stub
-function makePlugin(eveningQuestions) {
+function makePlugin(eveningQuestions, { isPro = true, purchaseUrl = '' } = {}) {
     return {
         settings: { ...DEFAULT_SETTINGS, eveningQuestions },
         saveSettings: async () => {},
         licenseManager: {
-            isPro: () => true,
-            getPurchaseUrl: () => '',
+            isPro: () => isPro,
+            getPurchaseUrl: () => purchaseUrl,
             getLicenseLabel: () => '',
             getExpiryDate: () => null,
             activate: async () => ({ success: true, message: '' }),
@@ -233,6 +233,24 @@ console.log('Test 1: row structure (handle is draggable, row is not)');
     check(toggles[0]?.checked === true, 'required default question starts enabled');
     check(toggles[5]?.checked === false, 'optional default question starts disabled');
     check(rows[5]?.classList.contains('tl-q-disabled') === true, 'disabled optional question is visually dimmed');
+}
+
+// Test 1b: Free Pro card stays compact — no blank-page recovery helper in Settings
+console.log('\nTest 1b: free Pro card omits blank-page recovery helper');
+{
+    const questions = getDefaultEveningQuestions();
+    const plugin = makePlugin(questions, {
+        isPro: false,
+        purchaseUrl: 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
+    });
+    const tab = new TideLogSettingTab({}, plugin);
+    tab.display();
+
+    const proCard = tab.containerEl.querySelector('.tl-settings-pro-card');
+    check(!!proCard, 'settings Pro card renders for free users');
+    check(proCard?.querySelector('.tl-settings-pro-purchase-note')?.textContent?.includes('爱发电'), 'settings Pro card keeps the purchase/login/license note');
+    check(proCard?.querySelector('.tl-settings-pro-trouble-note') === null, 'settings Pro card omits the blank-page recovery helper line');
+    check(!proCard?.textContent?.includes('页面空白'), 'settings Pro card copy no longer contains 页面空白');
 }
 
 // Test 2: expanding a default question by clicking the row shows BOTH name input AND content textarea

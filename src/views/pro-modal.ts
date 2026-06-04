@@ -5,6 +5,7 @@
 import { App, Modal } from 'obsidian';
 import type { LicenseManager } from '../services/license-manager';
 import { t } from '../i18n';
+import { renderProPurchaseGuidance } from './pro-purchase-guidance';
 
 export class ProModal extends Modal {
     private featureName: string;
@@ -61,6 +62,7 @@ export class ProModal extends Modal {
             href: purchaseUrl,
         });
         buyBtn.setAttr('target', '_blank');
+        renderProPurchaseGuidance(contentEl);
 
         // Settings link
         const settingsLink = contentEl.createDiv('tl-pro-modal-settings-link');

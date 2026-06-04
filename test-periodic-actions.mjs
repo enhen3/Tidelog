@@ -852,12 +852,16 @@ internal tag
     global.__lastMenu.items[1].callback();
     const popup = document.querySelector('.tl-period-picker-popup-week');
     check(!!popup, 'capture week choice opens concrete week picker');
-    const targetWeek = [...popup.querySelectorAll('.tl-period-picker-week-option')]
-        .find(btn => btn.textContent.includes('5/18') && btn.textContent.includes('5/24'));
-    check(!!targetWeek, 'week picker uses week-range options instead of day cells');
-    targetWeek.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const targetWeek = popup.querySelector('.tl-period-picker-week-option-current');
+    const currentWeekStart = moment().startOf('isoWeek');
+    const currentWeekPath = `Plans/Weekly/${currentWeekStart.isoWeekYear()}-W${String(currentWeekStart.isoWeek()).padStart(2, '0')}.md`;
+    check(
+        !!targetWeek?.querySelector('.tl-period-picker-week-option-range')?.textContent.match(/\d+\/\d+\s*-\s*\d+\/\d+/),
+        'week picker uses week-range options instead of day cells',
+    );
+    targetWeek?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     await flush();
-    check(files.get('Plans/Weekly/2026-W21.md')?.content.includes('- [ ] Promote idea'), 'capture week picker writes selected weekly plan');
+    check(files.get(currentWeekPath)?.content.includes('- [ ] Promote idea'), 'capture week picker writes selected weekly plan');
     check(!captures.includes('Promote idea'), 'capture item is removed after promotion');
 }
 

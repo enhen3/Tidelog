@@ -5,6 +5,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../i18n';
 import type TideLogPlugin from '../main';
+import { renderProPurchaseGuidance } from './pro-purchase-guidance';
 
 export class OnboardingModal extends Modal {
     private plugin: TideLogPlugin;
@@ -136,6 +137,7 @@ export class OnboardingModal extends Modal {
         buyLink.addEventListener('click', () => {
             void this.plugin.completeOnboarding();
         });
+        renderProPurchaseGuidance(contentEl, 'tl-pro-purchase-guidance-onboarding');
 
         const laterButton = contentEl.createEl('button', {
             cls: 'tl-onboarding-later',

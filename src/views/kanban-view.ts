@@ -13,6 +13,7 @@ import {
 import TideLogPlugin from '../main';
 import { t, getLanguage } from '../i18n';
 import { replaceFile } from '../utils/vault-write';
+import { renderProPurchaseGuidance } from './pro-purchase-guidance';
 
 export const KANBAN_VIEW_TYPE = 'tl-kanban-view';
 
@@ -80,6 +81,7 @@ export class KanbanView extends ItemView {
             href: this.plugin.licenseManager.getPurchaseUrl(),
         });
         buyBtn.setAttr('target', '_blank');
+        renderProPurchaseGuidance(locked, 'tl-pro-purchase-guidance-locked');
     }
 
     // =========================================================================

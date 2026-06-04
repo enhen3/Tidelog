@@ -5989,6 +5989,43 @@ button.tl-periodic-open-btn {
 	transform: translateY(-1px);
 }
 
+.tl-pro-purchase-guidance {
+	margin: -4px auto var(--size-4-3);
+	max-width: 420px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--tl-brand-teal) 8%, var(--background-secondary));
+	border: 1px solid color-mix(in srgb, var(--tl-brand-teal) 18%, var(--background-modifier-border));
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	text-align: left;
+}
+
+.tl-pro-purchase-guidance-main {
+	color: var(--text-normal);
+	font-weight: 640;
+}
+
+.tl-pro-purchase-guidance-tip {
+	margin-top: 4px;
+}
+
+.tl-pro-purchase-guidance-locked {
+	margin-top: 12px;
+	margin-bottom: 0;
+}
+
+.tl-pro-purchase-guidance-settings {
+	width: min(260px, 100%);
+	margin: 0;
+	text-align: right;
+}
+
+.tl-pro-purchase-guidance-onboarding {
+	margin: 10px auto 12px;
+}
+
 .tl-pro-modal-settings-link {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
@@ -7294,27 +7331,125 @@ body .tl-settings-boundary-note {
 }
 
 .tl-settings-tab .tl-settings-pro-card {
-	grid-template-columns: minmax(0, 1fr) minmax(160px, auto);
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+	padding: 18px;
 	background:
 		linear-gradient(135deg, rgba(59,142,165,0.10), rgba(212,185,120,0.055)),
 		color-mix(in srgb, var(--background-secondary) 90%, transparent);
 }
 
+.tl-settings-pro-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 14px;
+}
+
+.tl-settings-pro-copy {
+	min-width: 0;
+}
+
 .tl-settings-pro-status {
-	padding: 6px 10px;
+	flex: 0 0 auto;
+	padding: 5px 9px;
 	border-radius: 999px;
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 700;
+	line-height: 1.2;
 }
 
 .tl-settings-pro-status.is-free {
-	background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+	background: color-mix(in srgb, var(--text-muted) 10%, transparent);
 	color: var(--text-muted);
 }
 
 .tl-settings-pro-status.is-pro {
-	background: color-mix(in srgb, var(--tl-brand-teal) 18%, transparent);
+	background: color-mix(in srgb, var(--tl-brand-teal) 16%, transparent);
 	color: var(--tl-brand-teal-2);
+}
+
+.tl-settings-pro-benefits {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 2px;
+}
+
+.tl-settings-pro-benefit {
+	padding: 4px 8px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--tl-brand-teal) 8%, transparent);
+	border: 1px solid color-mix(in srgb, var(--tl-brand-teal) 14%, transparent);
+	color: var(--text-muted);
+	font-size: 11px;
+	font-weight: 620;
+	line-height: 1.25;
+}
+
+.tl-settings-pro-purchase-panel {
+	display: grid;
+	grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
+	gap: 8px 12px;
+	align-items: center;
+	padding-top: 2px;
+}
+
+.tl-settings-pro-primary-btn {
+	justify-self: start;
+	min-height: 34px;
+}
+
+.tl-settings-pro-purchase-note {
+	color: var(--text-muted);
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.tl-settings-license-panel,
+.tl-settings-pro-active-panel {
+	display: grid;
+	gap: 8px;
+	padding: 12px;
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--background-primary) 42%, transparent);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 82%, transparent);
+}
+
+.tl-settings-license-title {
+	color: var(--text-muted);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.tl-settings-license-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.tl-settings-license-row input {
+	flex: 1 1 220px;
+	min-width: 0;
+}
+
+.tl-settings-license-helper {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	color: var(--text-faint);
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.tl-settings-license-helper a {
+	color: var(--text-accent);
+	text-decoration: none;
+}
+
+.tl-settings-license-helper a:hover {
+	text-decoration: underline;
 }
 
 .tl-settings-pro-meta,
@@ -7322,7 +7457,7 @@ body .tl-settings-boundary-note {
 	color: var(--text-muted);
 	font-size: 12px;
 	line-height: 1.5;
-	text-align: right;
+	text-align: left;
 }
 
 .tl-settings-redeem-card {
@@ -7530,6 +7665,22 @@ body .tl-settings-tab .tl-q-add-link:hover {
 	.tl-settings-pro-side {
 		align-items: stretch;
 		justify-self: stretch;
+	}
+
+	.tl-settings-pro-header,
+	.tl-settings-license-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.tl-settings-pro-purchase-panel {
+		grid-template-columns: 1fr;
+	}
+
+	.tl-settings-pro-primary-btn,
+	.tl-settings-license-activate-btn {
+		justify-self: stretch;
+		width: 100%;
 	}
 
 	.tl-settings-redeem-inline {

@@ -152,6 +152,7 @@ fs.writeFileSync(
     `
 export { LicenseManager } from ${JSON.stringify(path.join(__dirname, 'src/services/license-manager.ts'))};
 export { KanbanView } from ${JSON.stringify(path.join(__dirname, 'src/views/kanban-view.ts'))};
+export { ProModal } from ${JSON.stringify(path.join(__dirname, 'src/views/pro-modal.ts'))};
 `,
 );
 
@@ -168,7 +169,7 @@ const bundle = await esbuild.build({
 
 const moduleObj = { exports: {} };
 new Function('module', 'exports', 'require', bundle.outputFiles[0].text)(moduleObj, moduleObj.exports, require);
-const { LicenseManager, KanbanView } = moduleObj.exports;
+const { LicenseManager, KanbanView, ProModal } = moduleObj.exports;
 
 let pass = 0;
 let fail = 0;
@@ -262,6 +263,30 @@ console.log('\nTest 3: free users see standalone Kanban Pro lock');
     check(
         link?.getAttribute('href') === plugin.licenseManager.getPurchaseUrl(),
         'Kanban lock links to purchase URL',
+    );
+}
+
+console.log('\nTest 4: Pro modal explains Afdian sign-in purchase friction');
+{
+    const licenseManager = {
+        getPurchaseUrl: () => 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
+    };
+    const modal = new ProModal({}, 'Commercial Flow Test Feature', licenseManager);
+    modal.onOpen();
+
+    const text = modal.contentEl.textContent || '';
+    const buyLink = modal.contentEl.querySelector('a.tl-pro-cta-btn');
+
+    check(text.includes('需要登录/注册爱发电'), 'Pro modal states Afdian account sign-in is required');
+    check(text.includes('购买后自动收到 License Key'), 'Pro modal states the License Key is sent automatically after purchase');
+    check(text.includes('页面空白'), 'Pro modal explains the blank Afdian page recovery path');
+    check(
+        buyLink?.textContent?.trim() === '🛒 前往爱发电购买 Pro',
+        'Pro modal keeps the purchase CTA concise while opening Afdian',
+    );
+    check(
+        buyLink?.getAttribute('href') === licenseManager.getPurchaseUrl(),
+        'Pro modal purchase CTA still links to the Afdian purchase URL',
     );
 }
 

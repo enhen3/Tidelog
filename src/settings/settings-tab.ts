@@ -902,71 +902,76 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         new Setting(containerEl).setName('Pro').setHeading();
 
-        const proCardEl = containerEl.createDiv('tl-settings-pro-card');
-        const mainEl = proCardEl.createDiv('tl-settings-pro-main');
-        mainEl.createDiv({ cls: 'tl-settings-card-kicker', text: isPro ? 'TideLog Pro active' : 'TideLog Pro' });
-        mainEl.createDiv({
+        const proCardEl = containerEl.createDiv(`tl-settings-pro-card ${isPro ? 'is-pro' : 'is-free'}`);
+        const headerEl = proCardEl.createDiv('tl-settings-pro-header');
+        const copyEl = headerEl.createDiv('tl-settings-pro-copy');
+        copyEl.createDiv({ cls: 'tl-settings-card-kicker', text: isPro ? 'TideLog Pro active' : 'TideLog Pro' });
+        copyEl.createDiv({
             cls: 'tl-settings-card-title',
             text: isPro ? t('settings.proActiveTitle') : t('settings.proUpgradeTitle'),
         });
-        mainEl.createDiv({
+        copyEl.createDiv({
             cls: 'tl-settings-card-desc',
             text: isPro ? t('settings.proActiveDesc') : t('settings.proUpgradeDesc'),
         });
+        headerEl.createDiv({
+            cls: `tl-settings-pro-status ${isPro ? 'is-pro' : 'is-free'}`,
+            text: isPro ? t('settings.proActive') : t('settings.proFree'),
+        });
 
-        const proFeaturesEl = mainEl.createDiv('tl-settings-pro-features');
+        const proFeaturesEl = proCardEl.createDiv('tl-settings-pro-benefits');
         [
             t('settings.proFeatureReview'),
             t('settings.proFeatureInsight'),
             t('settings.proFeatureReports'),
-            t('settings.proFeatureSuggestions'),
         ].forEach((feature) => {
-            proFeaturesEl.createSpan({ cls: 'tl-settings-pro-feature', text: feature });
+            proFeaturesEl.createSpan({ cls: 'tl-settings-pro-benefit', text: feature });
         });
 
-        if (!isPro) {
-            const redeemEl = mainEl.createDiv('tl-settings-redeem-inline');
-            redeemEl.createDiv({ cls: 'tl-settings-redeem-title', text: t('settings.redeemCode') });
-            let keyValue = '';
-            const inputEl = redeemEl.createEl('input', { cls: 'tl-setting-input-key' });
-            inputEl.type = 'text';
-            inputEl.placeholder = t('settings.licenseKeyPlaceholder');
-            inputEl.addEventListener('input', () => { keyValue = inputEl.value; });
-            const activateBtn = redeemEl.createEl('button', { cls: 'tl-settings-action-btn', text: t('settings.activate') });
-            activateBtn.addEventListener('click', () => {
-                void (async () => {
-                    activateBtn.setText(t('settings.verifying'));
-                    activateBtn.setAttribute('disabled', 'true');
-                    const result = await this.plugin.licenseManager.activate(keyValue);
-                    if (result.success) {
-                        new Notice(`🎉 ${result.message}`);
-                        this.display();
-                    } else {
-                        new Notice(`❌ ${result.message}`);
-                        activateBtn.setText(t('settings.activate'));
-                        activateBtn.removeAttribute('disabled');
-                    }
-                })();
-            });
-        }
-
-        const sideEl = proCardEl.createDiv('tl-settings-pro-side');
-        sideEl.createDiv({ cls: `tl-settings-pro-status ${isPro ? 'is-pro' : 'is-free'}`, text: isPro ? t('settings.proActive') : t('settings.proFree') });
-
         if (isPro) {
+            const activeEl = proCardEl.createDiv('tl-settings-pro-active-panel');
             const label = this.plugin.licenseManager.getLicenseLabel();
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
-            sideEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
-            const portalBtn = sideEl.createEl('button', { cls: 'tl-settings-action-btn', text: t('settings.manageDevicesBtn') });
+            activeEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
+            const portalBtn = activeEl.createEl('button', { cls: 'tl-settings-action-btn', text: t('settings.manageDevicesBtn') });
             portalBtn.addEventListener('click', () => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); });
-        } else {
-            const purchaseBtn = sideEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('pro.purchase') });
-            purchaseBtn.addEventListener('click', () => { window.open(purchaseUrl); });
-            const portalBtn = sideEl.createEl('button', { cls: 'tl-settings-secondary-btn', text: t('settings.lostCodeBtn') });
-            portalBtn.addEventListener('click', () => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); });
-            sideEl.createDiv({ cls: 'tl-settings-redeem-desc', text: t('settings.redeemDesc') });
+            return;
         }
+
+        const purchasePanelEl = proCardEl.createDiv('tl-settings-pro-purchase-panel');
+        const purchaseBtn = purchasePanelEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn tl-settings-pro-primary-btn', text: t('pro.purchase') });
+        purchaseBtn.addEventListener('click', () => { window.open(purchaseUrl); });
+        purchasePanelEl.createDiv({ cls: 'tl-settings-pro-purchase-note', text: t('settings.proPurchaseNote') });
+
+        const licensePanelEl = proCardEl.createDiv('tl-settings-license-panel');
+        licensePanelEl.createDiv({ cls: 'tl-settings-license-title', text: t('settings.haveLicense') });
+        const licenseRowEl = licensePanelEl.createDiv('tl-settings-license-row');
+        let keyValue = '';
+        const inputEl = licenseRowEl.createEl('input', { cls: 'tl-setting-input-key' });
+        inputEl.type = 'text';
+        inputEl.placeholder = t('settings.licenseKeyPlaceholder');
+        inputEl.addEventListener('input', () => { keyValue = inputEl.value; });
+        const activateBtn = licenseRowEl.createEl('button', { cls: 'tl-settings-action-btn tl-settings-license-activate-btn', text: t('settings.activate') });
+        activateBtn.addEventListener('click', () => {
+            void (async () => {
+                activateBtn.setText(t('settings.verifying'));
+                activateBtn.setAttribute('disabled', 'true');
+                const result = await this.plugin.licenseManager.activate(keyValue);
+                if (result.success) {
+                    new Notice(`🎉 ${result.message}`);
+                    this.display();
+                } else {
+                    new Notice(`❌ ${result.message}`);
+                    activateBtn.setText(t('settings.activate'));
+                    activateBtn.removeAttribute('disabled');
+                }
+            })();
+        });
+        const helperEl = licensePanelEl.createDiv('tl-settings-license-helper');
+        helperEl.createSpan({ text: t('settings.licenseHelpText') });
+        const portalLink = helperEl.createEl('a', { text: t('settings.lookupLicenseInline'), href: 'https://tidelog-api.mydreamchronicle.com/portal' });
+        portalLink.setAttr('target', '_blank');
     }
 
 }

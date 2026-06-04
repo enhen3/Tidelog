@@ -14,6 +14,7 @@ import TideLogPlugin from '../main';
 import { t } from '../i18n';
 import { KANBAN_VIEW_TYPE } from './kanban-view';
 import { CALENDAR_VIEW_TYPE } from './calendar-view';
+import { renderProPurchaseGuidance } from './pro-purchase-guidance';
 
 export const DASHBOARD_VIEW_TYPE = 'tl-dashboard-view';
 
@@ -68,6 +69,7 @@ export class DashboardView extends ItemView {
             href: purchaseUrl,
         });
         buyBtn.setAttr('target', '_blank');
+        renderProPurchaseGuidance(locked, 'tl-pro-purchase-guidance-locked');
     }
 
     async onClose(): Promise<void> {

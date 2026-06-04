@@ -12,6 +12,7 @@ import {
 
 import TideLogPlugin from '../main';
 import { t, getLanguage } from '../i18n';
+import { renderProPurchaseGuidance } from './pro-purchase-guidance';
 
 export const CALENDAR_VIEW_TYPE = 'tl-calendar-view';
 
@@ -70,6 +71,7 @@ export class CalendarView extends ItemView {
             href: purchaseUrl,
         });
         buyBtn.setAttr('target', '_blank');
+        renderProPurchaseGuidance(locked, 'tl-pro-purchase-guidance-locked');
     }
 
     async onClose(): Promise<void> {
