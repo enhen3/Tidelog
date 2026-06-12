@@ -2,7 +2,7 @@
  * Vault Manager - Handles file and folder operations
  */
 
-import { App, CachedMetadata, TFile, TFolder, moment, Plugin } from 'obsidian';
+import { App, CachedMetadata, TFile, TFolder, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
 import { replaceFile, updateFile } from '../utils/vault-write';
@@ -144,11 +144,12 @@ export class VaultManager {
         if (!templatePath) {
             try {
                 const plugins = (this.app as unknown as Record<string, unknown>).plugins as
-                    { getPlugin(id: string): Plugin & { settings?: { daily?: { template?: string } } } | null } | undefined;
+                    { getPlugin(id: string): unknown } | undefined;
                 if (plugins) {
                     const periodicNotes = plugins.getPlugin('periodic-notes');
                     if (periodicNotes) {
-                        const pnSettings = (periodicNotes).settings;
+                        const pnSettings = (periodicNotes as Record<string, unknown>)['settings'] as
+                            { daily?: { template?: string } } | undefined;
                         if (pnSettings?.daily?.template) {
                             templatePath = pnSettings.daily.template;
                         }
@@ -192,16 +193,18 @@ export class VaultManager {
     private async triggerTemplaterIfAvailable(file: TFile): Promise<void> {
         try {
             const plugins = (this.app as unknown as Record<string, unknown>).plugins as
-                { getPlugin(id: string): Plugin | null } | undefined;
+                { getPlugin(id: string): unknown } | undefined;
             if (!plugins) return;
 
             const templater = plugins.getPlugin('templater-obsidian');
             if (!templater) return;
 
             // Templater exposes overwite_file_commands or a templater object
-            const tp = templater as Plugin & { templater?: { overwrite_file_commands?: (file: TFile) => Promise<void> } };
-            if (tp.templater?.overwrite_file_commands) {
-                await tp.templater.overwrite_file_commands(file);
+            const tp = templater as Record<string, unknown>;
+            const templaterApi = tp['templater'] as
+                { overwrite_file_commands?: (file: TFile) => Promise<void> } | undefined;
+            if (templaterApi?.overwrite_file_commands) {
+                await templaterApi.overwrite_file_commands(file);
             }
         } catch (e) {
             console.warn('[TideLog] Templater processing skipped:', e);

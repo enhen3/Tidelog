@@ -677,9 +677,9 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     check(!modalSource.toLowerCase().includes('token') && !modalSource.includes('费用'), 'first insight UI does not show token or cost estimates');
     check(zhSource.includes("'firstInsight.stepScan': '分析记录'") && enSource.includes("'firstInsight.stepScan': 'Analyze records'"), 'first insight stepper uses user-facing analyze-records wording');
     check(modalSource.includes('buildGenerationEstimate') && modalSource.includes('scan.validEntries.reduce'), 'first insight estimates generation time from scanned journal count and content size');
-    check(modalSource.includes('formatRemainingMinutes') && modalSource.includes('activeWindow.setInterval(updateProgress, 1000)'), 'first insight generation updates minute-level remaining time while waiting for the model');
+    check(modalSource.includes('formatRemainingMinutes') && modalSource.includes('window.setInterval(updateProgress, 1000)'), 'first insight generation updates minute-level remaining time while waiting for the model');
     check(modalSource.includes('tl-first-insight-generating-status') && css.includes('.tl-first-insight-generating-status'), 'first insight generation status is shown near the loading button');
-    check(modalSource.includes('activeWindow.setTimeout(() => this.revealElement(card), 120') && modalSource.includes('container.scrollTo'), 'first insight scrolls to the generated report after completion');
+    check(modalSource.includes('window.setTimeout(() => this.revealElement(card), 120') && modalSource.includes('container.scrollTo'), 'first insight scrolls to the generated report after completion');
     check(!zhSource.includes('已等待') && !zhSource.includes('elapsedSeconds') && !enSource.includes('Elapsed:'), 'first insight generation copy does not show elapsed time');
     check(!zhSource.includes('不代表失败') && zhSource.includes('正在继续整理证据和生成报告'), 'long-running generation copy uses reassuring user-facing wording');
     check(zhSource.includes('estimateMinutesRange') && zhSource.includes('remainingMinutesRange'), 'first insight generation uses conservative time ranges instead of a precise single minute');

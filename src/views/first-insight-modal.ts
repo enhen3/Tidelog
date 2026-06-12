@@ -280,7 +280,7 @@ export class FirstInsightModal extends Modal {
             progressEl?.setText(progressText);
         };
         updateProgress();
-        const progressTimer = activeWindow.setInterval(updateProgress, 1000);
+        const progressTimer = window.setInterval(updateProgress, 1000);
 
         try {
             stage = t('firstInsight.stagePreparing');
@@ -319,14 +319,14 @@ export class FirstInsightModal extends Modal {
                 : t('firstInsight.generatedDraftNotice'));
             this.renderSaveAction(card);
             this.revealElement(card);
-            activeWindow.setTimeout(() => this.revealElement(card), 120);
+            window.setTimeout(() => this.revealElement(card), 120);
             return true;
         } catch (error) {
             notice.addClass('tl-insights-notice-stale');
             notice.setText(error instanceof Error ? error.message : t('firstInsight.generateFailed'));
             return false;
         } finally {
-            activeWindow.clearInterval(progressTimer);
+            window.clearInterval(progressTimer);
             progressEl?.remove();
             button.removeClass('tl-insights-primary-btn-loading');
         }
@@ -347,10 +347,10 @@ export class FirstInsightModal extends Modal {
             }
         };
 
-        if (typeof activeWindow !== 'undefined' && typeof activeWindow.requestAnimationFrame === 'function') {
-            activeWindow.requestAnimationFrame(reveal);
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(reveal);
         } else {
-            activeWindow.setTimeout(reveal, 0);
+            window.setTimeout(reveal, 0);
         }
     }
 
