@@ -61,6 +61,11 @@ export class InsightsRenderer {
     }
 
     private renderLocked(panel: HTMLElement): void {
+        if (this.shouldShowFirstInsightEntry() && this.host.insightsMode === 'profile') {
+            this.renderFirstInsightEntry(panel);
+            return;
+        }
+
         const card = panel.createDiv('tl-insights-card tl-insights-locked');
         card.createDiv({ cls: 'tl-insights-card-title', text: t('insights.lockedTitle') });
         card.createDiv({ cls: 'tl-insights-card-desc', text: t('insights.lockedDesc') });
@@ -267,6 +272,11 @@ export class InsightsRenderer {
     }
 
     private async renderProfile(body: HTMLElement): Promise<void> {
+        if (this.shouldShowFirstInsightEntry()) {
+            this.renderFirstInsightEntry(body);
+            return;
+        }
+
         const card = body.createDiv('tl-insights-card');
         const monthKey = moment().format('YYYY-MM');
         const existing = this.findProfileFileForMonth(monthKey);
@@ -370,6 +380,48 @@ export class InsightsRenderer {
                 this.host.switchTab('review');
             },
         );
+    }
+
+    private renderFirstInsightEntry(containerEl: HTMLElement): void {
+        if (!this.shouldShowFirstInsightEntry()) return;
+
+        const hasConfiguredAI = this.host.plugin.hasConfiguredAI();
+        const card = containerEl.createDiv('tl-insights-card tl-first-insight-entry-card');
+        const header = card.createDiv('tl-insights-card-header');
+        const titleWrap = header.createDiv('tl-insights-card-title-wrap');
+        titleWrap.createDiv({ cls: 'tl-insights-card-title', text: t('firstInsight.entryTitle') });
+        titleWrap.createDiv({
+            cls: 'tl-insights-card-subtitle',
+            text: hasConfiguredAI ? t('firstInsight.entrySubtitle') : t('firstInsight.entryNeedsApiSubtitle'),
+        });
+        const desc = hasConfiguredAI ? t('firstInsight.entryDesc') : t('firstInsight.entryNeedsApiDesc');
+        if (desc.trim()) {
+            card.createDiv({ cls: 'tl-insights-card-desc', text: desc });
+        }
+        const btn = card.createEl('button', {
+            cls: 'tl-insights-primary-btn tl-insights-primary-btn-ready',
+            text: hasConfiguredAI ? t('firstInsight.entryBtn') : t('firstInsight.entryApiBtn'),
+            attr: { type: 'button' },
+        });
+        btn.addEventListener('click', () => {
+            if (hasConfiguredAI) {
+                void this.host.plugin.openFirstInsight();
+            } else {
+                this.openSettings();
+            }
+        });
+    }
+
+    private shouldShowFirstInsightEntry(): boolean {
+        return !this.host.plugin.settings.firstInsightCompleted;
+    }
+
+    private openSettings(): void {
+        const setting = (this.host.app as unknown as {
+            setting?: { open?: () => void; openTabById?: (id: string) => void };
+        }).setting;
+        setting?.open?.();
+        setting?.openTabById?.(this.host.plugin.manifest.id);
     }
 
     private async getWeeklyStatus(): Promise<ReportStatus> {

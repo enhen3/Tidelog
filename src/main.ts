@@ -22,6 +22,8 @@ import { OnboardingModal } from './views/onboarding-modal';
 import { VaultManager } from './services/vault-manager';
 import { TemplateManager } from './services/template-manager';
 import { InsightService } from './services/insight-service';
+import { LegacyImportService } from './services/legacy-import-service';
+import { FirstInsightService } from './services/first-insight-service';
 import { PlanSuggestionService } from './services/plan-suggestion-service';
 import { createAIProvider } from './ai/ai-provider';
 import { TaskRegistryService } from './services/task-registry';
@@ -30,6 +32,7 @@ import { FileLinkService } from './services/file-linker';
 import { DashboardService } from './services/dashboard-service';
 import { LicenseManager } from './services/license-manager';
 import { ProModal } from './views/pro-modal';
+import { FirstInsightModal } from './views/first-insight-modal';
 
 import { migrateSettings } from './settings-migration';
 
@@ -42,11 +45,18 @@ const PROVIDER_KEYS: AIProviderType[] = [
     'custom',
 ];
 
+interface SecretStorageLike {
+    getSecret(id: string): string | null;
+    setSecret(id: string, value: string): void;
+}
+
 export default class TideLogPlugin extends Plugin {
     settings: TideLogSettings = DEFAULT_SETTINGS;
     vaultManager!: VaultManager;
     templateManager!: TemplateManager;
     insightService!: InsightService;
+    legacyImportService!: LegacyImportService;
+    firstInsightService!: FirstInsightService;
     planSuggestionService!: PlanSuggestionService;
     taskRegistry!: TaskRegistryService;
     kanbanService!: KanbanService;
@@ -79,6 +89,8 @@ export default class TideLogPlugin extends Plugin {
         this.vaultManager = new VaultManager(this.app, this.settings);
         this.templateManager = new TemplateManager(this.app, this.settings);
         this.insightService = new InsightService(this);
+        this.legacyImportService = new LegacyImportService(this);
+        this.firstInsightService = new FirstInsightService(this);
         this.planSuggestionService = new PlanSuggestionService(this);
         this.taskRegistry = new TaskRegistryService(this.app, this.settings);
         this.kanbanService = new KanbanService(this.app, this.settings, this.taskRegistry, this.vaultManager);
@@ -154,6 +166,14 @@ export default class TideLogPlugin extends Plugin {
             name: t('cmd.generateMonthlyInsight'),
             callback: () => {
                 void this.generateInsight('monthly');
+            },
+        });
+
+        this.addCommand({
+            id: 'generate-first-insight',
+            name: t('cmd.generateFirstInsight'),
+            callback: () => {
+                void this.openFirstInsight();
             },
         });
 
@@ -283,19 +303,35 @@ export default class TideLogPlugin extends Plugin {
         return 'tidelog-license-key';
     }
 
+    private getSecretStorage(): SecretStorageLike | null {
+        const secretStorage = (this.app as App & { secretStorage?: Partial<SecretStorageLike> }).secretStorage;
+        if (
+            secretStorage
+            && typeof secretStorage.getSecret === 'function'
+            && typeof secretStorage.setSecret === 'function'
+        ) {
+            return secretStorage as SecretStorageLike;
+        }
+
+        return null;
+    }
+
     private migratePersistedSecretsToSecretStorage(): boolean {
+        const secretStorage = this.getSecretStorage();
+        if (!secretStorage) return false;
+
         let migrated = false;
 
         for (const provider of PROVIDER_KEYS) {
             const persistedKey = this.settings.providers[provider].apiKey?.trim();
             if (!persistedKey) continue;
-            this.app.secretStorage.setSecret(this.getProviderSecretId(provider), persistedKey);
+            secretStorage.setSecret(this.getProviderSecretId(provider), persistedKey);
             migrated = true;
         }
 
         const persistedLicenseKey = this.settings.proLicense.key?.trim();
         if (persistedLicenseKey) {
-            this.app.secretStorage.setSecret(this.getLicenseSecretId(), persistedLicenseKey);
+            secretStorage.setSecret(this.getLicenseSecretId(), persistedLicenseKey);
             migrated = true;
         }
 
@@ -303,35 +339,42 @@ export default class TideLogPlugin extends Plugin {
     }
 
     private loadSecretsIntoRuntimeSettings(): void {
+        const secretStorage = this.getSecretStorage();
+        if (!secretStorage) return;
+
         for (const provider of PROVIDER_KEYS) {
             this.settings.providers[provider].apiKey =
-                this.app.secretStorage.getSecret(this.getProviderSecretId(provider)) || '';
+                secretStorage.getSecret(this.getProviderSecretId(provider)) || '';
         }
 
         this.settings.proLicense.key =
-            this.app.secretStorage.getSecret(this.getLicenseSecretId()) || '';
+            secretStorage.getSecret(this.getLicenseSecretId()) || '';
     }
 
     private persistRuntimeSecrets(): void {
+        const secretStorage = this.getSecretStorage();
+        if (!secretStorage) return;
+
         for (const provider of PROVIDER_KEYS) {
-            this.app.secretStorage.setSecret(
+            secretStorage.setSecret(
                 this.getProviderSecretId(provider),
                 this.settings.providers[provider].apiKey || '',
             );
         }
 
-        this.app.secretStorage.setSecret(
+        secretStorage.setSecret(
             this.getLicenseSecretId(),
             this.settings.proLicense.key || '',
         );
     }
 
     private getPersistableSettings(): TideLogSettings {
+        const secretStorage = this.getSecretStorage();
         const providers = { ...this.settings.providers };
         for (const provider of PROVIDER_KEYS) {
             providers[provider] = {
                 ...this.settings.providers[provider],
-                apiKey: '',
+                apiKey: secretStorage ? '' : this.settings.providers[provider].apiKey,
             };
         }
 
@@ -339,7 +382,7 @@ export default class TideLogPlugin extends Plugin {
             ...this.settings,
             proLicense: {
                 ...this.settings.proLicense,
-                key: '',
+                key: secretStorage ? '' : this.settings.proLicense.key,
             },
             providers,
             eveningQuestions: this.settings.eveningQuestions.map((q) => ({ ...q })),
@@ -348,6 +391,16 @@ export default class TideLogPlugin extends Plugin {
 
     openOnboarding(): void {
         new OnboardingModal(this.app, this).open();
+    }
+
+    async openFirstInsight(): Promise<void> {
+        await this.initializeVaultStructure();
+        new FirstInsightModal(this.app, this).open();
+    }
+
+    hasConfiguredAI(): boolean {
+        const activeProvider = this.settings.activeProvider;
+        return Boolean(this.settings.providers[activeProvider]?.apiKey?.trim());
     }
 
     async completeOnboarding(): Promise<void> {

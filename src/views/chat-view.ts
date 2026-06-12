@@ -136,8 +136,14 @@ export class ChatView extends ItemView {
         this.reviewHintEl = this.chatPanel.createDiv('tl-review-input-hint');
         this.renderInputArea(this.chatPanel);
 
-        // Switch to Plan tab by default
-        await this.switchTab('kanban');
+        // New users should land on the first-value path: old journals → profile.
+        // Once the initial profile exists, the daily Plan tab becomes the natural home.
+        if (this.shouldStartAtFirstInsight()) {
+            this.insightsMode = 'profile';
+            await this.switchTab('review');
+        } else {
+            await this.switchTab('kanban');
+        }
 
         // Live refresh: re-render kanban when vault files change
         this.vaultModifyRef = this.app.vault.on('modify', (file) => {
@@ -279,8 +285,7 @@ export class ChatView extends ItemView {
             this.periodicSelectorOpen = false;
         } else if (animate) {
             if (tab === 'review') {
-                // Insights tab: reset to weekly report
-                this.insightsMode = 'weekly';
+                this.insightsMode = this.shouldStartAtFirstInsight() ? 'profile' : 'weekly';
             } else if (tab === 'chat') {
                 this.reviewSelectedMonth = moment();
                 this.reviewSelectedDate = moment();
@@ -1048,6 +1053,10 @@ export class ChatView extends ItemView {
 
     private async renderInsightsTab(panel: HTMLElement): Promise<void> {
         await this.insightsRenderer.render(panel);
+    }
+
+    private shouldStartAtFirstInsight(): boolean {
+        return !this.plugin.settings.firstInsightCompleted;
     }
 
     /**

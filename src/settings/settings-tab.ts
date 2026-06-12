@@ -21,6 +21,8 @@ import { OnboardingModal } from '../views/onboarding-modal';
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;
+    private legacyImportDescEl: HTMLElement | null = null;
+    private legacyImportButtonEl: HTMLButtonElement | null = null;
 
     constructor(app: App, plugin: TideLogPlugin) {
         super(app, plugin);
@@ -42,32 +44,25 @@ export class TideLogSettingTab extends PluginSettingTab {
         containerEl.empty();
         containerEl.addClass('tl-settings-tab');
         if (Platform.isMobile) containerEl.addClass('is-mobile');
+        this.legacyImportDescEl = null;
+        this.legacyImportButtonEl = null;
 
         this.renderSettingsHero(containerEl);
         this.renderGettingStarted(containerEl);
-        this.renderProLicense(containerEl);
-
-        // Core workflow setup: connect AI first, then decide where files are
-        // written and how late-night dates are interpreted.
         this.renderAISettings(containerEl);
+        this.renderLegacyImportEntry(containerEl);
+        this.renderProLicense(containerEl);
+        this.renderEveningQuestions(containerEl);
         this.renderFolderSettings(containerEl);
         this.renderDayBoundarySetting(containerEl);
-
-        // Review questions are the main behavior-design surface, so they sit
-        // after the basics and can double as a clear Free → Pro upgrade path.
-        this.renderEveningQuestions(containerEl);
-
-        // Language is useful, but rarely revisited after first setup. Keep it
-        // at the end so the top of the page follows the user's setup journey.
         this.renderLanguageSetting(containerEl);
     }
 
     private renderAISettings(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName(t('settings.sectionAI')).setHeading();
+        const guideEl = this.renderAISetupGuide(containerEl);
+        const fieldsEl = guideEl.createDiv('tl-ai-config-fields');
 
-        this.renderAISetupGuide(containerEl);
-
-        new Setting(containerEl)
+        new Setting(fieldsEl)
             .setName(t('settings.aiProvider'))
             .setDesc(t('settings.aiProviderDesc'))
             .addDropdown((dropdown) =>
@@ -85,19 +80,14 @@ export class TideLogSettingTab extends PluginSettingTab {
                     })
             );
 
-        this.renderProviderSettings(containerEl);
-        containerEl.createDiv({ cls: 'tl-settings-section-note', text: t('settings.aiPrivacyNote') });
+        this.renderProviderSettings(fieldsEl);
+        fieldsEl.createDiv({ cls: 'tl-settings-section-note', text: t('settings.aiPrivacyNote') });
     }
 
-    private renderAISetupGuide(containerEl: HTMLElement): void {
+    private renderAISetupGuide(containerEl: HTMLElement): HTMLDetailsElement {
         const provider = this.plugin.settings.activeProvider;
-        const exampleProvider: AIProviderType = 'siliconflow';
-        const exampleModel = 'deepseek-ai/DeepSeek-V3.2';
         const hasConfiguredApi = Boolean(this.plugin.settings.providers[provider]?.apiKey?.trim());
-        const exampleApplied =
-            provider === exampleProvider &&
-            this.plugin.settings.providers[exampleProvider].model === exampleModel;
-        const guideEl = containerEl.createEl('details', { cls: 'tl-ai-setup-guide tl-settings-collapsible-card' });
+        const guideEl = containerEl.createEl('details', { cls: 'tl-settings-guide-card tl-ai-setup-guide tl-settings-collapsible-card' });
         guideEl.open = !hasConfiguredApi;
 
         const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-collapsible-summary' });
@@ -110,37 +100,40 @@ export class TideLogSettingTab extends PluginSettingTab {
         const bodyEl = guideEl.createDiv('tl-settings-collapsible-body tl-ai-setup-content');
         const mainEl = bodyEl.createDiv('tl-ai-setup-main');
 
-        const stepsEl = mainEl.createDiv('tl-ai-setup-steps');
+        const stepsEl = mainEl.createDiv('tl-ai-setup-flow');
         [
             t('settings.aiSetupStepProvider'),
             t('settings.aiSetupStepKey'),
             t('settings.aiSetupStepTest'),
         ].forEach((step, index) => {
-            const stepEl = stepsEl.createDiv('tl-ai-setup-step');
-            stepEl.createSpan({ cls: 'tl-ai-setup-step-number', text: String(index + 1) });
-            stepEl.createSpan({ cls: 'tl-ai-setup-step-copy', text: step });
+            const stepEl = stepsEl.createDiv('tl-ai-setup-flow-step');
+            stepEl.createSpan({ cls: 'tl-ai-setup-flow-number', text: String(index + 1) });
+            stepEl.createSpan({ cls: 'tl-ai-setup-flow-copy', text: step });
         });
 
-        const actionsEl = bodyEl.createDiv('tl-ai-setup-actions');
-        const chooseBtn = actionsEl.createEl('button', {
-            cls: 'mod-cta tl-settings-action-btn',
-            text: exampleApplied
-                ? t('settings.aiSetupSiliconFlowSelected')
-                : t('settings.aiSetupUseSiliconFlow'),
-        });
-        if (exampleApplied) {
-            chooseBtn.disabled = true;
-        } else {
-            chooseBtn.addEventListener('click', () => {
-                this.plugin.settings.activeProvider = exampleProvider;
-                this.plugin.settings.providers[exampleProvider].model = exampleModel;
-                this.saveSettingsPreservingScroll(() => this.display());
-            });
-        }
+        this.renderAISetupHelp(mainEl);
 
-        const siliconFlowLink = actionsEl.createEl('a', {
-            cls: 'tl-settings-secondary-btn tl-ai-setup-link',
-            text: t('settings.aiSetupOpenSiliconFlow'),
+        return guideEl;
+    }
+
+    private renderAISetupHelp(containerEl: HTMLElement): void {
+        const helpEl = containerEl.createEl('details', { cls: 'tl-ai-help-card' });
+        const summaryEl = helpEl.createEl('summary', { cls: 'tl-ai-help-summary' });
+        summaryEl.createSpan({ cls: 'tl-ai-help-title', text: t('settings.aiHelpTitle') });
+        summaryEl.createSpan({ cls: 'tl-settings-collapse-icon', text: '⌄' });
+
+        const bodyEl = helpEl.createDiv('tl-ai-help-body');
+        [
+            t('settings.aiHelpStepOpen'),
+            t('settings.aiHelpStepCreate'),
+            t('settings.aiHelpStepPaste'),
+        ].forEach((step) => {
+            bodyEl.createDiv({ cls: 'tl-ai-help-step', text: step });
+        });
+
+        const siliconFlowLink = bodyEl.createEl('a', {
+            cls: 'tl-settings-secondary-btn tl-ai-help-link',
+            text: t('settings.aiHelpOpenSiliconFlow'),
             href: 'https://cloud.siliconflow.cn/account/ak',
         });
         siliconFlowLink.setAttribute('target', '_blank');
@@ -193,7 +186,7 @@ export class TideLogSettingTab extends PluginSettingTab {
     }
 
     private renderDayBoundarySetting(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName(t('settings.dayBoundaryHour')).setHeading();
+        new Setting(containerEl).setName(t('settings.sectionDayBoundary')).setHeading();
 
         const getBoundaryExampleTime = (value: number) => {
             if (value <= 1) return '00:30';
@@ -333,6 +326,71 @@ export class TideLogSettingTab extends PluginSettingTab {
 
     }
 
+    private renderLegacyImportEntry(containerEl: HTMLElement): void {
+        const guideEl = containerEl.createEl('details', { cls: 'tl-settings-legacy-import tl-settings-guide-card tl-settings-collapsible-card' });
+        guideEl.open = false;
+
+        const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-collapsible-summary' });
+        const summaryCopyEl = summaryEl.createDiv('tl-settings-collapsible-summary-copy');
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.legacyImportKicker') });
+        summaryCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.legacyImportTitle') });
+        this.legacyImportDescEl = summaryCopyEl.createDiv({ cls: 'tl-settings-card-desc' });
+        summaryEl.createSpan({ cls: 'tl-settings-collapse-icon', text: '⌄' });
+
+        const bodyEl = guideEl.createDiv('tl-settings-collapsible-body');
+        const mainEl = bodyEl.createDiv('tl-settings-guide-main');
+        const stepsEl = mainEl.createDiv('tl-settings-guide-steps');
+        [
+            t('settings.legacyImportStepReadonly'),
+            t('settings.legacyImportStepNormalize'),
+            t('settings.legacyImportStepSave'),
+        ].forEach((step, index) => {
+            const stepEl = stepsEl.createDiv('tl-settings-guide-step');
+            stepEl.createSpan({ cls: 'tl-settings-guide-step-number', text: String(index + 1) });
+            stepEl.createSpan({ text: step });
+        });
+
+        const actionEl = bodyEl.createDiv('tl-settings-card-actions');
+        const openBtn = actionEl.createEl('button', {
+            cls: 'mod-cta tl-settings-action-btn',
+            attr: { type: 'button' },
+        });
+        this.legacyImportButtonEl = openBtn;
+        this.refreshLegacyImportEntryState();
+
+        openBtn.addEventListener('click', () => {
+            if (this.plugin.hasConfiguredAI()) {
+                void this.plugin.openFirstInsight();
+                return;
+            }
+            const aiGuide = this.containerEl.querySelector('.tl-ai-setup-guide');
+            if (aiGuide instanceof HTMLDetailsElement) {
+                aiGuide.open = true;
+            }
+            if (aiGuide && typeof aiGuide.scrollIntoView === 'function') {
+                aiGuide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+
+    private refreshLegacyImportEntryState(): void {
+        const hasConfiguredApi = this.plugin.hasConfiguredAI();
+        if (this.legacyImportDescEl) {
+            this.legacyImportDescEl.textContent = this.plugin.settings.firstInsightCompleted
+                ? t('settings.legacyImportCompletedDesc')
+                : hasConfiguredApi
+                    ? t('settings.legacyImportReadyDesc')
+                    : t('settings.legacyImportNeedsApiDesc');
+        }
+        if (this.legacyImportButtonEl) {
+            this.legacyImportButtonEl.textContent = hasConfiguredApi
+                ? this.plugin.settings.firstInsightCompleted
+                    ? t('settings.legacyImportCompletedBtn')
+                    : t('settings.legacyImportBtn')
+                : t('settings.legacyImportApiBtn');
+        }
+    }
+
     /**
      * Render settings for the currently selected AI provider
      */
@@ -343,14 +401,14 @@ export class TideLogSettingTab extends PluginSettingTab {
         // --- Custom provider: Base URL ---
         if (provider === 'custom') {
             const urlSetting = new Setting(containerEl)
-                .setName('API base URL')
+                .setName(t('settings.baseUrl'))
                 .setDesc(t('settings.baseUrlDesc'));
 
             urlSetting.addText((text) => {
                 text.inputEl.addClass('tl-setting-input-wide');
                 text
                     .setPlaceholder(t('settings.baseUrlExample'))
-                    .setValue(config.baseUrl || '')
+                    .setValue(config.baseUrl || 'https://api.siliconflow.cn/v1')
                     .onChange((value) => {
                         this.plugin.settings.providers[provider].baseUrl = value;
                         void this.plugin.saveSettings();
@@ -360,9 +418,10 @@ export class TideLogSettingTab extends PluginSettingTab {
             // Preset URL buttons
             const presetDesc = urlSetting.descEl;
             const presetContainer = presetDesc.createDiv('tl-preset-urls');
+            const currentBaseUrl = (config.baseUrl || 'https://api.siliconflow.cn/v1').replace(/\/+$/, '');
             const presets: [string, string][] = [
-                ['DeepSeek', 'https://api.deepseek.com/v1'],
                 ['SiliconFlow', 'https://api.siliconflow.cn/v1'],
+                ['DeepSeek', 'https://api.deepseek.com/v1'],
                 ['Groq', 'https://api.groq.com/openai/v1'],
                 ['Ollama', 'http://localhost:11434/v1'],
             ];
@@ -371,6 +430,9 @@ export class TideLogSettingTab extends PluginSettingTab {
                     cls: 'tl-preset-btn',
                     text: label,
                 });
+                if (currentBaseUrl === url.replace(/\/+$/, '')) {
+                    btn.addClass('is-active');
+                }
                 btn.addEventListener('click', () => {
                     void (async () => {
                         this.plugin.settings.providers[provider].baseUrl = url;
@@ -396,6 +458,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                 .setValue(config.apiKey)
                 .onChange((value) => {
                     this.plugin.settings.providers[provider].apiKey = value;
+                    this.refreshLegacyImportEntryState();
                     void this.plugin.saveSettings();
                 });
         });
@@ -417,7 +480,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                 });
         });
 
-        // --- Model selection: dropdown + free text input ---
+        // --- Model selection ---
         const models = this.getModelsForProvider(provider);
         const hasPresets = Object.keys(models).length > 0;
 
@@ -427,31 +490,32 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         if (hasPresets) {
             modelSetting.addDropdown((dropdown) => {
-                dropdown.addOption('', '— manual —');
                 for (const [value, name] of Object.entries(models)) {
                     dropdown.addOption(value, name);
                 }
-                // If current model is in presets, select it; otherwise leave at manual
-                dropdown.setValue(models[config.model] ? config.model : '');
+                const selectedModel = models[config.model] ? config.model : Object.keys(models)[0];
+                if (selectedModel !== config.model) {
+                    this.plugin.settings.providers[provider].model = selectedModel;
+                    void this.plugin.saveSettings();
+                }
+                dropdown.setValue(selectedModel);
                 dropdown.onChange((value) => {
-                    if (value) {
-                        this.plugin.settings.providers[provider].model = value;
-                        void this.plugin.saveSettings().then(() => this.display());
-                    }
-                });
-            });
-        }
-
-        modelSetting.addText((text) => {
-            text.inputEl.addClass('tl-setting-input-model');
-            text
-                .setPlaceholder(this.getModelPlaceholder(provider))
-                .setValue(config.model)
-                .onChange((value) => {
                     this.plugin.settings.providers[provider].model = value;
                     void this.plugin.saveSettings();
                 });
-        });
+            });
+        } else {
+            modelSetting.addText((text) => {
+                text.inputEl.addClass('tl-setting-input-model');
+                text
+                    .setPlaceholder(this.getModelPlaceholder(provider))
+                    .setValue(config.model)
+                    .onChange((value) => {
+                        this.plugin.settings.providers[provider].model = value;
+                        void this.plugin.saveSettings();
+                    });
+            });
+        }
 
         this.renderInlineTestConnection(modelSetting);
     }
@@ -565,9 +629,12 @@ export class TideLogSettingTab extends PluginSettingTab {
             case 'siliconflow':
                 return {
                     'deepseek-ai/DeepSeek-V3.2': t('settings.recommended', 'DeepSeek V3.2'),
+                    'Pro/deepseek-ai/DeepSeek-V3.2': t('settings.powerful', 'DeepSeek V3.2 Pro'),
+                    'Pro/zai-org/GLM-4.7': t('settings.powerful', 'GLM-4.7 Pro'),
+                    'Pro/zai-org/GLM-5': t('settings.powerful', 'GLM-5 Pro'),
                     'deepseek-ai/DeepSeek-R1': t('settings.reasoning', 'DeepSeek R1'),
-                    'Qwen/Qwen3-Coder-480B-A35B-Instruct': t('settings.powerful', 'Qwen3 Coder 480B'),
                     'Qwen/Qwen3-32B': t('settings.fast', 'Qwen3 32B'),
+                    'Qwen/Qwen3.5-35B-A3B': t('settings.fast', 'Qwen3.5 35B'),
                     'zai-org/GLM-4.6': 'GLM-4.6',
                 };
             case 'custom':
@@ -900,7 +967,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         const isPro = this.plugin.licenseManager.isPro();
         const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
 
-        new Setting(containerEl).setName('Pro').setHeading();
+        new Setting(containerEl).setName(t('settings.sectionPro')).setHeading();
 
         const proCardEl = containerEl.createDiv(`tl-settings-pro-card ${isPro ? 'is-pro' : 'is-free'}`);
         const headerEl = proCardEl.createDiv('tl-settings-pro-header');
@@ -934,8 +1001,6 @@ export class TideLogSettingTab extends PluginSettingTab {
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
             activeEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
-            const portalBtn = activeEl.createEl('button', { cls: 'tl-settings-action-btn', text: t('settings.manageDevicesBtn') });
-            portalBtn.addEventListener('click', () => { window.open('https://tidelog-api.mydreamchronicle.com/portal'); });
             return;
         }
 

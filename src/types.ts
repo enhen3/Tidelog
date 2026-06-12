@@ -40,6 +40,7 @@ export interface TideLogSettings {
 
     // Onboarding
     onboardingCompleted: boolean;
+    firstInsightCompleted: boolean;
 
     // AI Provider Settings
     activeProvider: AIProviderType;

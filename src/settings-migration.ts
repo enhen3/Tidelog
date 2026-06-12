@@ -51,6 +51,24 @@ const MIGRATIONS: Migration[] = [
             updateInactiveProviderDefault('openai', 'gpt-4o', 'gpt-5.4-mini');
         },
     },
+    {
+        version: 3,
+        migrate(settings) {
+            const sf = settings.providers.siliconflow;
+            if (sf && !sf.baseUrl) {
+                sf.baseUrl = 'https://api.siliconflow.cn/v1';
+            }
+
+            const custom = settings.providers.custom;
+            if (
+                custom &&
+                settings.activeProvider !== 'custom' &&
+                (!custom.baseUrl || custom.baseUrl === 'https://api.deepseek.com/v1')
+            ) {
+                custom.baseUrl = 'https://api.siliconflow.cn/v1';
+            }
+        },
+    },
 ];
 
 /** Current schema version — always equals the last migration's version */

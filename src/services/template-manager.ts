@@ -42,6 +42,38 @@ ${t('tmpl.basicInfoComment')}
 - ${t('tmpl.career')}: 
 - ${t('tmpl.lifeStage')}: 
 
+${t('tmpl.ahaThemes')}
+
+${t('tmpl.ahaThemesComment')}
+
+-
+-
+-
+
+${t('tmpl.ahaBehaviorPattern')}
+
+${t('tmpl.ahaBehaviorPatternComment')}
+
+-
+
+${t('tmpl.ahaBlindSpot')}
+
+${t('tmpl.ahaBlindSpotComment')}
+
+-
+
+${t('tmpl.ahaNextExperiment')}
+
+${t('tmpl.ahaNextExperimentComment')}
+
+-
+
+${t('tmpl.ahaEvidence')}
+
+${t('tmpl.ahaEvidenceComment')}
+
+-
+
 ${t('tmpl.emotionTraits')}
 
 ${t('tmpl.anxietyTriggers')}

@@ -89,6 +89,7 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
     proLicense: { key: '', activated: false },
     language: 'zh',
     onboardingCompleted: false,
+    firstInsightCompleted: false,
     activeProvider: 'siliconflow',
     providers: {
         openrouter: {
@@ -121,7 +122,7 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
             apiKey: '',
             model: '',
             enabled: false,
-            baseUrl: 'https://api.deepseek.com/v1',
+            baseUrl: 'https://api.siliconflow.cn/v1',
         },
     },
     dayBoundaryHour: 2,

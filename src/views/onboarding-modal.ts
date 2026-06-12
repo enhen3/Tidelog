@@ -5,7 +5,6 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../i18n';
 import type TideLogPlugin from '../main';
-import { renderProPurchaseGuidance } from './pro-purchase-guidance';
 
 export class OnboardingModal extends Modal {
     private plugin: TideLogPlugin;
@@ -36,6 +35,7 @@ export class OnboardingModal extends Modal {
             cls: 'tl-onboarding-desc',
             text: t('onboarding.desc'),
         });
+        heroEl.createDiv({ cls: 'tl-onboarding-privacy-note', text: t('onboarding.privacyNote') });
 
         const productEl = contentEl.createDiv('tl-onboarding-product-card');
         const productHeaderEl = productEl.createDiv('tl-onboarding-product-header');
@@ -104,6 +104,8 @@ export class OnboardingModal extends Modal {
             t('onboarding.stepProDesc'),
         );
 
+        this.renderFirstInsightEntry(contentEl);
+
         const buttonRow = contentEl.createDiv('tl-onboarding-buttons');
 
         const setupButton = buttonRow.createEl('button', {
@@ -137,7 +139,6 @@ export class OnboardingModal extends Modal {
         buyLink.addEventListener('click', () => {
             void this.plugin.completeOnboarding();
         });
-        renderProPurchaseGuidance(contentEl, 'tl-pro-purchase-guidance-onboarding');
 
         const laterButton = contentEl.createEl('button', {
             cls: 'tl-onboarding-later',
@@ -174,6 +175,35 @@ export class OnboardingModal extends Modal {
         const copyEl = detailEl.createDiv('tl-onboarding-detail-copy');
         copyEl.createDiv({ cls: 'tl-onboarding-detail-title', text: title });
         copyEl.createDiv({ cls: 'tl-onboarding-detail-desc', text: desc });
+    }
+
+    private renderFirstInsightEntry(containerEl: HTMLElement): void {
+        const hasConfiguredAI = this.plugin.hasConfiguredAI();
+        const cardEl = containerEl.createDiv('tl-onboarding-detail-item tl-onboarding-first-insight-card');
+        cardEl.createDiv('tl-onboarding-detail-rail');
+        const copyEl = cardEl.createDiv('tl-onboarding-detail-copy');
+        copyEl.createDiv({ cls: 'tl-onboarding-section-kicker', text: t('onboarding.firstInsightKicker') });
+        copyEl.createDiv({ cls: 'tl-onboarding-detail-title', text: t('onboarding.firstInsightTitle') });
+        copyEl.createDiv({
+            cls: 'tl-onboarding-detail-desc',
+            text: hasConfiguredAI ? t('onboarding.firstInsightReadyDesc') : t('onboarding.firstInsightNeedsApiDesc'),
+        });
+
+        const actionEl = copyEl.createDiv('tl-onboarding-first-insight-actions');
+        const buttonEl = actionEl.createEl('button', {
+            cls: 'tl-onboarding-secondary tl-onboarding-first-insight',
+            text: hasConfiguredAI ? t('onboarding.firstInsightReadyBtn') : t('onboarding.firstInsightNeedsApiBtn'),
+            attr: { type: 'button' },
+        });
+        buttonEl.addEventListener('click', () => {
+            void this.plugin.completeOnboarding();
+            this.close();
+            if (hasConfiguredAI) {
+                void this.plugin.openFirstInsight();
+            } else {
+                this.openSettings();
+            }
+        });
     }
 
     private openSettings(): void {

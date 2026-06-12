@@ -895,17 +895,63 @@ You know the user through their notes, but you must stay evidence-bound. Use the
 <method>
 1. Evidence: identify concrete dates, tasks, reviews, repeated words, and behavior changes.
 2. Judgment: decide whether each finding is stable, emerging, or only a weak signal.
-3. Rewrite: update the profile in plain language the user would recognize.
+3. Aha modules: explicitly update the five TideLog profile modules, with citations inside every analytic module.
+4. Rewrite: update the profile in plain language the user would recognize.
 </method>
 
 <output>
 ## Profile Update Analysis
-Analyze emotional pattern, work style, thinking style, capability boundary, and values. For each meaningful change, include the evidence. For dimensions without evidence, say "No clear change observed."
+Analyze the user's profile using this standard structure:
+- Three recurring themes in past records
+- One repeated behavior pattern
+- One possible blind spot
+- One small experiment for next week
+- Evidence references
 
-Then output the complete updated profile inside <profile_update> tags. Preserve still-accurate parts from the current profile and add only evidence-backed updates.
+Each Aha module must carry evidence directly in the section:
+- Each of the 3 themes cites 2-3 dates/source paths/snippets.
+- The repeated behavior pattern lists the specific dates/source paths before interpreting the trigger.
+- The blind spot cites supporting records and labels evidence strength as strong / medium / weak.
+- The experiment explains which evidence it responds to.
+- Use a claim → evidence → interpretation structure. Do not state a pattern first and leave the evidence vague.
+
+Also update long-term dimensions: basic information, emotional traits, action patterns, thinking style, values, and growth boundaries. For each meaningful change, include evidence. For dimensions without evidence, say "No clear change observed."
+
+Then output the complete updated profile inside <profile_update> tags. Preserve still-accurate parts from the current profile, merge overlapping content instead of stacking duplicate paragraphs, and remove or downgrade unsupported, outdated, or conflicting claims.
 
 <profile_update>
 # User Profile
+## Three recurring themes in past records
+...
+
+## One repeated behavior pattern
+...
+
+## One possible blind spot
+...
+
+## One small experiment for next week
+...
+
+## Evidence references
+...
+
+## Basic information
+...
+
+## Emotional traits
+...
+
+## Action patterns
+...
+
+## Thinking style
+...
+
+## Values
+...
+
+## Growth boundaries
 ...
 </profile_update>
 
@@ -920,6 +966,8 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 
 <writing_rules>
 - Natural English, direct and specific.
+- Keep the report as third-person feedback, not a generic AI summary.
+- Every key insight must cite 2-3 source dates, source paths, or snippets when available. Do not put all citations only in "Evidence references"; cite them inside the relevant section too.
 - Do not invent traits, diagnoses, identities, motivations, or life events.
 - Avoid AI cliches and motivational slogans.
 - Make uncertainty visible instead of pretending to know.
@@ -941,17 +989,63 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 <method>
 1. 证据：找出具体日期、任务、复盘内容、反复出现的词、行为变化。
 2. 判断：区分稳定模式、正在出现的信号、证据很弱的观察。
-3. 重写：用用户自己能认出来的自然语言更新画像。
+3. Aha 模块：显式更新 TideLog 的五个画像模块，并在每个分析模块内部放入引用证据。
+4. 重写：用用户自己能认出来的自然语言更新画像。
 </method>
 
 <output>
 ## 画像更新分析
-分析情绪模式、做事风格、思考方式、能力边界、价值取向。每条有效变化都要带证据；没有证据的维度写"暂未发现清晰变化"。
+按下面标准分析用户画像：
+- 过去记录里的三个高频主题
+- 一个反复出现的行为模式
+- 一个可能的盲点
+- 下周一个小实验
+- 引用证据
 
-随后把完整更新后的画像放在 <profile_update> 标签内。保留原画像中仍然准确的部分，只加入有证据支撑的新内容。
+每个 Aha 模块都要直接带证据：
+- 3 个高频主题各自引用 2-3 条日期/源文件/片段。
+- 反复行为模式先列出具体日期/源文件，再解释触发条件。
+- 潜在盲点必须列支撑记录，并标注证据强度：强 / 中等 / 弱。
+- 下周小实验要说明它回应了哪些证据。
+- 使用「观点 → 证据 → 解释」结构。不要先下判断，再用模糊描述带过证据。
+
+同时更新长期维度：基本信息、情绪特征、行动模式、思考方式、价值取向、成长边界。每条有效变化都要带证据；没有证据的维度写"暂未发现清晰变化"。
+
+随后把完整更新后的画像放在 <profile_update> 标签内。保留原画像中仍然准确的部分；有重叠内容时合并成一份完整画像，不要重复堆叠段落；删除或降级没有证据支撑、过时或与新证据冲突的内容。
 
 <profile_update>
 # 用户画像
+## 过去记录里的三个高频主题
+...
+
+## 一个反复出现的行为模式
+...
+
+## 一个可能的盲点
+...
+
+## 下周一个小实验
+...
+
+## 引用证据
+...
+
+## 基本信息
+...
+
+## 情绪特征
+...
+
+## 行动模式
+...
+
+## 思考方式
+...
+
+## 价值取向
+...
+
+## 成长边界
 ...
 </profile_update>
 
@@ -966,6 +1060,8 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 
 <writing_rules>
 - 自然中文，直接、具体。
+- 保持第三视角反馈，不要写成普通 AI 总结。
+- 每个关键洞察都要尽量引用 2-3 条来源日期、源文件或片段。不要只在「引用证据」集中列证据；相关分析段落里也要直接引用。
 - 不得编造性格、诊断、身份、动机或人生事件。
 - 避免 AI 套话和励志口号。
 - 不确定就写出不确定，不要装作知道。

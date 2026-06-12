@@ -38,7 +38,7 @@ export function createAIProvider(settings: TideLogSettings): AIProvider {
             return new CustomProvider(
                 config.apiKey,
                 config.model,
-                config.baseUrl || 'https://api.deepseek.com/v1'
+                config.baseUrl || 'https://api.siliconflow.cn/v1'
             );
         default:
             return new OpenRouterProvider(

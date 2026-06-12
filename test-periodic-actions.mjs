@@ -336,8 +336,12 @@ function createInsightsHarness(mode = 'monthly', loopCount = 8, serviceDelayMs =
             dailyFolder: 'Daily',
             planFolder: 'Plans',
             archiveFolder: 'Archive',
+            firstInsightCompleted: true,
         },
+        manifest: { id: 'tidelog' },
         licenseManager: { isPro: () => true },
+        hasConfiguredAI: () => true,
+        openFirstInsight: async () => {},
         insightService: {
             generateWeeklyInsight: async (onChunk, onComplete, target, options = {}) => {
                 generated.push(`weekly:${target.format('YYYY-MM-DD')}:${options.force ? 'force' : 'normal'}`);

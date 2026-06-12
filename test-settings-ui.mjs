@@ -190,6 +190,8 @@ function makePlugin(eveningQuestions, { isPro = true, purchaseUrl = '' } = {}) {
             activate: async () => ({ success: true, message: '' }),
         },
         getAIProvider: () => ({ sendMessage: async () => '', testConnection: async () => true }),
+        hasConfiguredAI: () => true,
+        openFirstInsight: async () => {},
     };
 }
 
@@ -251,6 +253,33 @@ console.log('\nTest 1b: free Pro card omits blank-page recovery helper');
     check(proCard?.querySelector('.tl-settings-pro-purchase-note')?.textContent?.includes('爱发电'), 'settings Pro card keeps the purchase/login/license note');
     check(proCard?.querySelector('.tl-settings-pro-trouble-note') === null, 'settings Pro card omits the blank-page recovery helper line');
     check(!proCard?.textContent?.includes('页面空白'), 'settings Pro card copy no longer contains 页面空白');
+}
+
+// Test 1c: legacy import card refreshes immediately after API configuration changes
+console.log('\nTest 1c: legacy import card updates after API is configured');
+{
+    const questions = getDefaultEveningQuestions();
+    const plugin = makePlugin(questions);
+    plugin.settings.activeProvider = 'siliconflow';
+    plugin.settings.providers.siliconflow.apiKey = '';
+    let firstInsightOpened = 0;
+    plugin.hasConfiguredAI = () => Boolean(plugin.settings.providers[plugin.settings.activeProvider]?.apiKey?.trim());
+    plugin.openFirstInsight = async () => { firstInsightOpened++; };
+
+    const tab = new TideLogSettingTab({}, plugin);
+    tab.display();
+
+    const legacyCard = tab.containerEl.querySelector('.tl-settings-legacy-import');
+    const legacyButton = legacyCard?.querySelector('button');
+    check(legacyCard?.textContent?.includes('先配置 API'), 'legacy import card asks for API before a key is configured');
+
+    plugin.settings.providers.siliconflow.apiKey = 'sk-test';
+    tab.refreshLegacyImportEntryState();
+
+    check(legacyCard?.textContent?.includes('导入旧日记并建立画像'), 'legacy import card switches to import/profile action after API key is configured');
+    click(legacyButton);
+    await Promise.resolve();
+    check(firstInsightOpened === 1, 'legacy import action opens the first insight flow after API is configured');
 }
 
 // Test 2: expanding a default question by clicking the row shows BOTH name input AND content textarea
@@ -470,6 +499,8 @@ console.log('\nTest 9: onboarding modal renders and completes');
         activateChatView: async (type) => {
             if (type === 'evening') reviewStarted = true;
         },
+        hasConfiguredAI: () => false,
+        openFirstInsight: async () => {},
     };
     const app = {
         setting: {
@@ -495,7 +526,7 @@ console.log('\nTest 9: onboarding modal renders and completes');
     plugin.settings.onboardingCompleted = false;
     const modal2 = new OnboardingModal(app, plugin);
     modal2.open();
-    click(modal2.contentEl.querySelector('.tl-onboarding-secondary'));
+    click(modal2.contentEl.querySelector('.tl-onboarding-buttons .tl-onboarding-secondary'));
     check(plugin.settings.onboardingCompleted === true, 'review action marks onboarding completed');
     check(reviewStarted === true, 'review action starts daily review');
 }
@@ -504,6 +535,7 @@ console.log('\nTest 9: onboarding modal renders and completes');
 console.log('\nTest 10: settings polish regression guards');
 {
     const settingsSrc = fs.readFileSync(path.join(__dirname, 'src/settings/settings-tab.ts'), 'utf8');
+    const onboardingSrc = fs.readFileSync(path.join(__dirname, 'src/views/onboarding-modal.ts'), 'utf8');
     const zhSrc = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
     const enSrc = fs.readFileSync(path.join(__dirname, 'src/i18n/en.ts'), 'utf8');
     const migrationSrc = fs.readFileSync(path.join(__dirname, 'src/settings-migration.ts'), 'utf8');
@@ -526,25 +558,43 @@ console.log('\nTest 10: settings polish regression guards');
     check(!zhSrc.includes('Pro 中生效') && zhSrc.includes('Pro 生效中') && zhSrc.includes('需 Pro'), 'review question badges distinguish Pro active vs Pro required');
     check(settingsSrc.includes('saveSettingsPreservingScroll'), 'rerenders preserve current scroll position');
     check(settingsSrc.includes('renderInlineTestConnection'), 'AI test connection is integrated into the model row');
-    check(settingsSrc.includes('renderAISetupGuide'), 'AI setup guide is shown before provider API key fields');
-    check(settingsSrc.indexOf('this.renderAISetupGuide(containerEl)') < settingsSrc.indexOf(".setName(t('settings.aiProvider'))"), 'AI setup guide appears above the provider picker');
+    const settingsOrder = [
+        'this.renderGettingStarted(containerEl)',
+        'this.renderAISettings(containerEl)',
+        'this.renderLegacyImportEntry(containerEl)',
+        'this.renderProLicense(containerEl)',
+        'this.renderEveningQuestions(containerEl)',
+        'this.renderFolderSettings(containerEl)',
+        'this.renderDayBoundarySetting(containerEl)',
+        'this.renderLanguageSetting(containerEl)',
+    ].map(snippet => settingsSrc.indexOf(snippet));
+    check(settingsOrder.every(index => index >= 0) && settingsOrder.every((index, i, arr) => i === 0 || arr[i - 1] < index), 'settings sections follow Start, AI, old journals, Pro, review, folders, date, preferences order');
+    check(settingsSrc.includes('renderAISetupGuide') && settingsSrc.includes('tl-ai-config-fields'), 'AI setup is folded together with provider fields');
+    check(settingsSrc.indexOf("guideEl.createDiv('tl-ai-config-fields')") < settingsSrc.indexOf(".setName(t('settings.aiProvider'))"), 'AI provider picker lives inside the folded API setup card');
     check(settingsSrc.includes("createEl('details'") && settingsSrc.includes('guideEl.open = !hasConfiguredApi'), 'AI setup guide collapses by default after an API key is configured');
     check(settingsSrc.includes('guideEl.open = !this.plugin.settings.onboardingCompleted'), 'getting-started guide collapses after onboarding is completed');
-    check(settingsSrc.includes('https://cloud.siliconflow.cn/account/ak'), 'AI setup guide links directly to the SiliconFlow API key page');
-    check(DEFAULT_SETTINGS.activeProvider === 'siliconflow' && DEFAULT_SETTINGS.providers.siliconflow.model === 'deepseek-ai/DeepSeek-V3.2', 'new users start from the current SiliconFlow example model');
+    check(!settingsSrc.includes('aiSetupUseSiliconFlow') && !settingsSrc.includes('aiSetupOpenSiliconFlow'), 'API setup removes redundant example preset buttons');
+    check(settingsSrc.includes('tl-ai-help-card') && settingsSrc.includes('https://cloud.siliconflow.cn/account/ak'), 'API setup keeps SiliconFlow guidance in a folded help entry');
+    check(DEFAULT_SETTINGS.activeProvider === 'siliconflow' && DEFAULT_SETTINGS.providers.siliconflow.model === 'deepseek-ai/DeepSeek-V3.2' && DEFAULT_SETTINGS.providers.siliconflow.baseUrl === 'https://api.siliconflow.cn/v1', 'new users start from the current SiliconFlow base URL and model');
+    check(DEFAULT_SETTINGS.providers.custom.baseUrl === 'https://api.siliconflow.cn/v1' && migrationSrc.includes("version: 3") && migrationSrc.includes("https://api.siliconflow.cn/v1"), 'custom-compatible API Base URL defaults and migrates to SiliconFlow');
+    check(settingsSrc.includes(".setName(t('settings.baseUrl'))") && settingsSrc.includes("btn.addClass('is-active')") && cssSrc.includes('.tl-preset-btn.is-active'), 'custom Base URL uses localized label and marks the selected preset');
     check(migrationSrc.includes("deepseek-ai/DeepSeek-V3.2-Exp") && migrationSrc.includes("deepseek-ai/DeepSeek-V3.2"), 'settings migration upgrades old SiliconFlow V3.2 Exp model IDs');
     check(migrationSrc.includes('updateInactiveProviderDefault') && migrationSrc.includes('gpt-5.4-mini'), 'settings migration refreshes inactive stale provider defaults without overriding the active provider');
     check(settingsSrc.includes('gpt-5.4-mini') && settingsSrc.includes('gpt-5.5'), 'OpenAI model presets use current model IDs');
     check(settingsSrc.includes('claude-sonnet-4-6') && settingsSrc.includes('gemini-2.5-flash'), 'Anthropic and Gemini presets use current model IDs');
-    check(zhSrc.includes('2 分钟配置好 API') && zhSrc.includes('复制完整 Key，包括开头的 sk-'), 'Chinese AI setup copy guides first-time users through example-based API key setup');
+    check(settingsSrc.includes('deepseek-ai/DeepSeek-V3.2') && settingsSrc.includes('Qwen/Qwen3.5-35B-A3B') && settingsSrc.includes('modelSetting.addDropdown'), 'SiliconFlow models are selected from presets instead of manual typing');
+    check(zhSrc.includes('连接你的 AI 服务') && zhSrc.includes('粘贴 API Key') && zhSrc.includes('测试连接') && zhSrc.includes('不知道怎么获取 API Key？'), 'Chinese AI setup copy uses a compact provider/key/test flow with optional help');
     check(!zhSrc.includes('大陆用户建议') && !enSrc.includes('mainland China users'), 'AI setup guide no longer makes a direct region-based recommendation');
-    check(enSrc.includes('Set up API in 2 minutes') && enSrc.includes('copy the full key including the sk- prefix'), 'English AI setup copy mirrors the example-based setup flow');
+    check(enSrc.includes('Connect your AI service') && enSrc.includes('Paste API key') && enSrc.includes('Test connection'), 'English AI setup copy mirrors the compact provider/key/test flow');
     check(!settingsSrc.includes('tl-ai-setup-meta') && !cssSrc.includes('tl-ai-setup-pill'), 'AI setup guide no longer renders extra bottom hint tags');
     check(!zhSrc.includes('settings.aiSetupMeta') && !enSrc.includes('settings.aiSetupMeta'), 'AI setup guide copy removes redundant bottom hint tag strings');
-    check(cssSrc.includes('tl-ai-setup-guide') && cssSrc.includes('tl-ai-setup-step-number'), 'AI setup guide has dedicated visual hierarchy styles');
+    check(cssSrc.includes('tl-ai-setup-guide') && cssSrc.includes('tl-ai-setup-flow-number') && cssSrc.includes('tl-ai-config-fields') && cssSrc.includes('tl-ai-help-card'), 'AI setup guide has dedicated compact visual hierarchy styles');
+    check(!settingsSrc.includes('manageDevicesBtn'), 'settings no longer shows a device-management CTA after activation');
+    check(!zhSrc.includes('管理设备绑定') && !enSrc.includes('Manage device bindings'), 'device-management copy is removed from settings strings');
     check(cssSrc.includes('tl-settings-guide-main'), 'getting-started guide uses a full-width consistent settings layout');
     check(!settingsSrc.includes('tl-settings-workflow-card') && !zhSrc.includes('新版工作流') && !enSrc.includes('New workflow'), 'settings page merges workflow explanation into quick start instead of a separate new-workflow card');
-    check(zhSrc.includes('计划 → 复盘') && enSrc.includes('Plan → Review'), 'settings quick start explains the plan review loop');
+    check(zhSrc.includes('第一次怎么用 TideLog') && zhSrc.includes('有旧日记：先建立一份带证据的初始画像') && enSrc.includes('How to use TideLog the first time'), 'settings quick start follows a new-user path from value to old journals to today');
+    check(zhSrc.includes("'settings.sectionFolders': '文件位置'") && zhSrc.includes("'settings.sectionDayBoundary': '日期归属'") && zhSrc.includes("'settings.sectionPro': 'Pro 权益'"), 'settings section names use a consistent user-facing taxonomy');
     check(zhSrc.includes('完成复盘后刷新计划建议') && enSrc.includes('refresh planning suggestions after a review'), 'settings AI copy mentions post-review suggestion refresh');
     check(zhSrc.includes('settings.enableMorning') && zhSrc.includes('启用计划流程'), 'settings old Morning switch copy is renamed to the plan flow');
     check(zhSrc.includes('settings.enableEvening') && zhSrc.includes('启用复盘流程'), 'settings old Evening switch copy is renamed to the review flow');
@@ -558,7 +608,7 @@ console.log('\nTest 10: settings polish regression guards');
     check(zhSrc.includes('把日记变成行动闭环') && enSrc.includes('Turn notes into an action loop'), 'settings hero uses a concise action-loop slogan');
     check(zhSrc.includes("'settings.openGettingStarted': '查看完整说明'") && enSrc.includes("'settings.openGettingStarted': 'View details'"), 'getting-started action uses user-facing detail wording');
     check(!zhSrc.includes("'settings.openGettingStarted': '打开引导'") && !enSrc.includes("'settings.openGettingStarted': 'Open guide'"), 'getting-started action avoids clumsy open-guide wording');
-    check(cssSrc.includes('tl-onboarding-pro-footer') && cssSrc.includes('tl-onboarding-pro-link'), 'onboarding Pro CTA uses lightweight footer styling');
+    check(cssSrc.includes('tl-onboarding-pro-footer') && cssSrc.includes('tl-onboarding-pro-link') && !onboardingSrc.includes('tl-pro-purchase-guidance-onboarding') && !onboardingSrc.includes('renderProPurchaseGuidance'), 'onboarding Pro CTA uses lightweight footer styling');
     check(settingsSrc.includes('reviewProRequiredNotice'), 'free users get a Pro requirement notice when enabling extra review questions');
     check(cssSrc.includes('tl-onboarding-method-grid'), 'onboarding includes richer method/value cards');
     check(cssSrc.includes('color: #071417') || cssSrc.includes('color: #0B1B1F'), 'settings hero copy uses dark readable text on the light hero background');

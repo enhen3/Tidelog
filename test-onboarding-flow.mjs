@@ -135,15 +135,22 @@ function check(condition, label, extra = '') {
     }
 }
 
-function makePlugin() {
-    const calls = { complete: 0, activate: [] };
+function makePlugin({ hasConfiguredAI = true } = {}) {
+    const calls = { complete: 0, activate: [], firstInsight: 0, settingsOpen: 0, settingsTab: [] };
     const plugin = {
         __calls: calls,
-        app: { setting: { open: () => {}, openTabById: () => {} } },
+        app: {
+            setting: {
+                open: () => { calls.settingsOpen++; },
+                openTabById: (id) => { calls.settingsTab.push(id); },
+            },
+        },
         manifest: { id: 'tidelog' },
         licenseManager: { getPurchaseUrl: () => 'https://example.com' },
         completeOnboarding: async () => { calls.complete++; },
         activateChatView: async (sopType) => { calls.activate.push(sopType); },
+        openFirstInsight: async () => { calls.firstInsight++; },
+        hasConfiguredAI: () => hasConfiguredAI,
     };
     return plugin;
 }
@@ -157,7 +164,7 @@ console.log('Test 1: onboarding no longer pushes Review users into planning');
     const modal = new OnboardingModal(plugin.app, plugin);
     modal.onOpen();
 
-    const secondary = modal.contentEl.querySelector('.tl-onboarding-secondary');
+    const secondary = modal.contentEl.querySelector('.tl-onboarding-buttons .tl-onboarding-secondary');
     check(secondary?.textContent === '开始每日复盘', 'secondary CTA is review-oriented', `actual: ${JSON.stringify(secondary?.textContent)}`);
     check(!modal.contentEl.textContent.includes('开始晨间计划'), 'onboarding copy has no morning-plan CTA');
 
@@ -173,7 +180,7 @@ console.log('\nTest 2: English CTA is also review-oriented');
     const modal = new OnboardingModal(plugin.app, plugin);
     modal.onOpen();
 
-    const secondary = modal.contentEl.querySelector('.tl-onboarding-secondary');
+    const secondary = modal.contentEl.querySelector('.tl-onboarding-buttons .tl-onboarding-secondary');
     check(secondary?.textContent === 'Start daily review', 'English secondary CTA is review-oriented', `actual: ${JSON.stringify(secondary?.textContent)}`);
     check(!modal.contentEl.textContent.includes('Start morning plan'), 'English onboarding copy has no morning-plan CTA');
 }
@@ -187,13 +194,46 @@ console.log('\nTest 3: onboarding is a scrollable long guide, not a dead one-scr
 
     check(!modal.contentEl.querySelector('.tl-onboarding-scroll-hint'), 'clumsy text scroll hint is not rendered');
     check(!modal.contentEl.textContent.includes('继续下滑'), 'onboarding does not use direct scroll-instruction copy');
-    check(modal.contentEl.querySelectorAll('.tl-onboarding-detail-item').length === 3, 'detailed plan/review/insights usage sections render');
+    check(modal.contentEl.querySelectorAll('.tl-onboarding-detail-list .tl-onboarding-detail-item').length === 3, 'detailed plan/review/insights usage sections render');
     check(modal.contentEl.textContent.includes('记录很多，行动没变'), 'onboarding names the concrete pain, not only features');
+    check(modal.contentEl.textContent.includes('你的日记和个人信息都保留在本地 vault'), 'onboarding reassures users about local privacy');
     check(modal.contentEl.textContent.includes('计划') && modal.contentEl.textContent.includes('复盘') && modal.contentEl.textContent.includes('洞察'), 'Chinese onboarding uses Chinese surface names');
     check(!modal.contentEl.textContent.includes('Plan') && !modal.contentEl.textContent.includes('Review') && !modal.contentEl.textContent.includes('Insights'), 'Chinese onboarding avoids English surface names');
 }
 
-console.log('\nTest 4: onboarding CSS enables internal scrolling with a visible scrollbar');
+console.log('\nTest 4: onboarding exposes the first insight path without replacing review');
+{
+    setLanguage('zh');
+    const plugin = makePlugin({ hasConfiguredAI: true });
+    const modal = new OnboardingModal(plugin.app, plugin);
+    modal.onOpen();
+
+    const firstInsight = modal.contentEl.querySelector('.tl-onboarding-first-insight');
+    check(firstInsight?.textContent === '从旧日记生成画像', 'configured onboarding CTA starts the old-journal profile path', `actual: ${JSON.stringify(firstInsight?.textContent)}`);
+    check(modal.contentEl.textContent.includes('API 已经配置好'), 'configured onboarding copy says the report can start now');
+    firstInsight?.dispatchEvent(new dom.window.Event('click'));
+    await Promise.resolve();
+    check(plugin.__calls.firstInsight === 1, 'first insight CTA opens the first insight modal');
+    check(plugin.__calls.activate.length === 0, 'first insight CTA does not start daily review');
+}
+
+console.log('\nTest 5: onboarding first insight path guides API setup before AI is configured');
+{
+    setLanguage('zh');
+    const plugin = makePlugin({ hasConfiguredAI: false });
+    const modal = new OnboardingModal(plugin.app, plugin);
+    modal.onOpen();
+
+    const firstInsight = modal.contentEl.querySelector('.tl-onboarding-first-insight');
+    check(firstInsight?.textContent === '先配置 API', 'unconfigured onboarding CTA points to API setup', `actual: ${JSON.stringify(firstInsight?.textContent)}`);
+    check(modal.contentEl.textContent.includes('旧日记画像需要 AI 生成'), 'unconfigured onboarding copy explains why API is needed');
+    firstInsight?.dispatchEvent(new dom.window.Event('click'));
+    await Promise.resolve();
+    check(plugin.__calls.firstInsight === 0, 'unconfigured onboarding CTA does not open generation modal');
+    check(plugin.__calls.settingsOpen === 1 && plugin.__calls.settingsTab[0] === 'tidelog', 'unconfigured onboarding CTA opens plugin settings');
+}
+
+console.log('\nTest 6: onboarding CSS enables internal scrolling with a visible scrollbar');
 {
     const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
     check(css.includes('max-height: min(760px, calc(100vh - 96px));'), 'onboarding modal has viewport max-height');
