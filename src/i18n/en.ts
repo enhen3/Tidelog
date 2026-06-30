@@ -928,6 +928,7 @@ export const en: Record<string, string> = {
     'firstInsight.reportTitle': '# First Insight Profile Report',
     'firstInsight.reportFileName': '{0}-first-insight-profile-report.md',
     'firstInsight.reportArchiveNote': 'Import ID: {0}. Normalized copies are saved at: {1}',
+    'firstInsight.metaValidCount': '{0} journals',
 
     'settings.legacyImportKicker': 'Old journal import',
     'settings.legacyImportTitle': 'Build a profile / add old journals',

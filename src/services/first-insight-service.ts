@@ -111,8 +111,30 @@ export class FirstInsightService {
 
         const date = moment().format('YYYY-MM-DD');
         const filePath = `${this.plugin.settings.archiveFolder}/Insights/${t('firstInsight.reportFileName', date)}`;
-        const header = `${t('firstInsight.reportTitle')}\n\n${t('insight.generatedAt', draft.generatedAt)}\n\n`;
-        const body = `${header}${draft.report.trim()}\n\n---\n\n${t('firstInsight.reportArchiveNote', draft.importId, draft.normalizedFolderPath)}\n`;
+
+        // Report-info callout (consistent with weekly/monthly/profile reports):
+        // period · journal count · generated time.
+        const sep = getLanguage() === 'en' ? '  ·  ' : '　·　';
+        const metaParts = [
+            `${t('insight.reportPeriodLabel')} ${draft.dateRange.start} – ${draft.dateRange.end}`,
+            t('firstInsight.metaValidCount', String(draft.validCount)),
+            `${t('insight.reportGeneratedLabel')} ${draft.generatedAt}`,
+        ];
+        const meta = `> [!tl-meta] ${t('insight.reportInfoTitle')}\n> ${metaParts.join(sep)}`;
+
+        // The model already emits its own "# …" title. Insert the meta callout
+        // right after that H1 instead of prepending a second title (which would
+        // duplicate the heading).
+        const reportLines = draft.report.trim().split('\n');
+        const h1Idx = reportLines.findIndex((l) => /^#\s+/.test(l));
+        let composed: string;
+        if (h1Idx >= 0) {
+            reportLines.splice(h1Idx + 1, 0, '', meta);
+            composed = reportLines.join('\n');
+        } else {
+            composed = `${t('firstInsight.reportTitle')}\n\n${meta}\n\n${draft.report.trim()}`;
+        }
+        const body = `${composed}\n\n---\n\n${t('firstInsight.reportArchiveNote', draft.importId, draft.normalizedFolderPath)}\n`;
 
         const existing = this.plugin.app.vault.getAbstractFileByPath(filePath);
         if (existing instanceof TFile) {
@@ -259,6 +281,10 @@ The updated profile must preserve still-evidence-backed existing profile content
 
 <output_format>
 # First Insight Profile Report
+
+> [!tl-quote]
+> <one plain sentence capturing the single most important thing these records reveal>
+
 ...
 
 <profile_update>
@@ -352,6 +378,10 @@ ${journalContext}
 
 <output_format>
 # 首次洞察画像报告
+
+> [!tl-quote]
+> <一句平实的话，概括这些记录揭示的最重要的一点>
+
 ...
 
 <profile_update>

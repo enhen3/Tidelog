@@ -930,6 +930,7 @@ export const zh: Record<string, string> = {
     'firstInsight.reportTitle': '# 首次洞察画像报告',
     'firstInsight.reportFileName': '{0}-首次洞察画像报告.md',
     'firstInsight.reportArchiveNote': '导入 ID：{0}。规范化副本保存在：{1}',
+    'firstInsight.metaValidCount': '{0} 篇日记',
 
     'settings.legacyImportKicker': '旧日记导入',
     'settings.legacyImportTitle': '从旧日记建立画像 / 纳入系统',
