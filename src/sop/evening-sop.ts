@@ -312,6 +312,20 @@ export class EveningSOP {
     }
 
     /**
+     * Format an AI follow-up question as an Obsidian [!question] callout.
+     * The first line becomes the callout title; any remaining lines become body.
+     */
+    private formatQuestionCallout(text: string): string {
+        const lines = text.split('\n').map((l) => l.trimEnd());
+        const first = (lines.shift() ?? '').trim();
+        let out = `> [!question] ${first}`;
+        for (const line of lines) {
+            out += line.trim() ? `\n> ${line}` : '\n>';
+        }
+        return out;
+    }
+
+    /**
      * Move to next question
      */
     private moveToNextQuestion(
@@ -387,11 +401,8 @@ ${emotionQ}`
                 .find(m => m.role === 'assistant');
 
             if (lastAIMessage) {
-                // Format AI question as blockquote, then user's answer
-                const aiQuestion = lastAIMessage.content
-                    .split('\n')
-                    .map(line => `> ${line}`)
-                    .join('\n');
+                // Format AI question as a [!question] callout, then user's answer
+                const aiQuestion = this.formatQuestionCallout(lastAIMessage.content);
                 formattedContent = `\n${aiQuestion}\n\n${content}\n`;
             } else {
                 formattedContent = `\n${content}\n`;
@@ -450,6 +461,19 @@ ${emotionQ}`
                 dailyNote.path,
                 yamlFields
             );
+
+            // Write/refresh the "today at a glance" overview callout.
+            const tasksTotal = typeof yamlFields.tasks_total === 'number' ? yamlFields.tasks_total : 0;
+            const tasksDone = typeof yamlFields.tasks_done === 'number' ? yamlFields.tasks_done : 0;
+            const planContent = await this.getPlanContent(context);
+            const hasPlan = !!planContent && /- \[[ x]\]/.test(planContent);
+            await this.plugin.vaultManager.upsertDailyOverview?.(dailyNote.path, {
+                emotionScore: emotionScore ? parseInt(emotionScore, 10) : null,
+                tasksDone,
+                tasksTotal,
+                hasPlan,
+                hasReview: true,
+            });
         } catch (error) {
             console.error('[Evening SOP] Failed to update YAML:', error);
         }

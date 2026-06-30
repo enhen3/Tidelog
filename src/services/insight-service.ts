@@ -327,7 +327,7 @@ ${t('insight.generateMonthlyReport')}`;
             await this.plugin.vaultManager.ensureInsightsFolder();
             const date = moment().format('YYYY-MM-DD');
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${t('insight.profileUpdateFile', date)}`;
-            const header = `${t('insight.profileUpdateTitle')}\n\n${t('insight.generatedAt', moment().format('YYYY-MM-DD HH:mm'))}\n\n`;
+            const header = `${t('insight.profileUpdateTitle')}\n\n${this.buildReportInfoCallout()}\n\n`;
 
             // Remove <profile_update> and extraction tags from the saved analysis
             // (profile goes to user_profile.md, patterns/principles to their files)
@@ -372,6 +372,21 @@ ${t('insight.generateMonthlyReport')}`;
     }
 
     /**
+     * Build the `[!abstract]` report-info callout shown under a report title.
+     * Period range is optional (profile analyses have no period).
+     */
+    private buildReportInfoCallout(start?: moment.Moment, end?: moment.Moment): string {
+        const sep = getLanguage() === 'en' ? '  ·  ' : '　·　';
+        const generated = `${t('insight.reportGeneratedLabel')} ${moment().format('YYYY-MM-DD HH:mm')}`;
+        const segments: string[] = [];
+        if (start && end) {
+            segments.push(`${t('insight.reportPeriodLabel')} ${start.format('YYYY-MM-DD')} – ${end.format('YYYY-MM-DD')}`);
+        }
+        segments.push(generated);
+        return `> [!abstract] ${t('insight.reportInfoTitle')}\n> ${segments.join(sep)}`;
+    }
+
+    /**
      * Save insight report to archive
      */
     private async saveInsightReport(
@@ -389,9 +404,12 @@ ${t('insight.generateMonthlyReport')}`;
                 : t('insight.monthlyFileName', date.format('YYYY-MM'));
 
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${fileName}`;
-            const header = type === 'weekly'
-                ? `${t('insight.weeklyReportTitle', date.format('YYYY'), String(date.isoWeek()))}\n\n${t('insight.generatedAt', moment().format('YYYY-MM-DD HH:mm'))}\n\n`
-                : `${t('insight.monthlyReportTitle', getLanguage() === 'en' ? date.format('YYYY-MM') : date.format('YYYY年MM月'))}\n\n${t('insight.generatedAt', moment().format('YYYY-MM-DD HH:mm'))}\n\n`;
+            const title = type === 'weekly'
+                ? t('insight.weeklyReportTitle', date.format('YYYY'), String(date.isoWeek()))
+                : t('insight.monthlyReportTitle', getLanguage() === 'en' ? date.format('YYYY-MM') : date.format('YYYY年MM月'));
+            const start = type === 'weekly' ? date.clone().startOf('isoWeek') : date.clone().startOf('month');
+            const end = type === 'weekly' ? date.clone().endOf('isoWeek') : date.clone().endOf('month');
+            const header = `${title}\n\n${this.buildReportInfoCallout(start, end)}\n\n`;
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {

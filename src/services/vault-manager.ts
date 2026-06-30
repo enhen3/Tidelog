@@ -4,7 +4,7 @@
 
 import { App, CachedMetadata, TFile, TFolder, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
-import { t } from '../i18n';
+import { t, getLanguage } from '../i18n';
 import { replaceFile, updateFile } from '../utils/vault-write';
 
 export class VaultManager {
@@ -245,10 +245,10 @@ export class VaultManager {
         if (!hasPlan || !hasReview) {
             let appendContent = '';
             if (!hasPlan) {
-                appendContent += `\n${planHeader}\n\n${t('vault.planComment')}\n`;
+                appendContent += `\n${planHeader}\n`;
             }
             if (!hasReview) {
-                appendContent += `\n${reviewHeader}\n\n${t('vault.reviewComment')}\n`;
+                appendContent += `\n${reviewHeader}\n`;
             }
             await updateFile(this.app, file, (current) => current + appendContent);
         }
@@ -282,13 +282,80 @@ ${t('vault.dailyNoteTitle', dateStr, weekday)}
 
 ## ${t('vault.sectionPlan')}
 
-${t('vault.planComment')}
-
 ## ${t('vault.sectionReview')}
-
-${t('vault.reviewComment')}
-
 `;
+    }
+
+    /**
+     * Write or refresh the "today at a glance" overview callout near the top of
+     * a daily note (after the H1 title, before the first `## ` section).
+     *
+     * Idempotent: an existing overview block is replaced in place, so repeating
+     * a review never stacks duplicate blocks. Every line is blockquote-prefixed
+     * so task/section parsers never mistake it for content.
+     */
+    async upsertDailyOverview(
+        filePath: string,
+        data: {
+            emotionScore?: number | null;
+            tasksDone?: number;
+            tasksTotal?: number;
+            hasPlan?: boolean;
+            hasReview?: boolean;
+        }
+    ): Promise<void> {
+        const file = this.app.vault.getAbstractFileByPath(filePath);
+        if (!(file instanceof TFile)) return;
+
+        const sep = getLanguage() === 'en' ? '  ·  ' : '　·　';
+        const parts: string[] = [];
+        if (data.emotionScore != null && data.emotionScore >= 1 && data.emotionScore <= 10) {
+            parts.push(`${t('vault.overviewMood')} ${data.emotionScore}/10`);
+        }
+        if ((data.tasksTotal ?? 0) > 0) {
+            parts.push(`${t('vault.overviewTasks')} ${data.tasksDone ?? 0}/${data.tasksTotal}`);
+        }
+        if (data.hasReview) {
+            parts.push(data.hasPlan ? t('vault.overviewLoopClosed') : t('vault.overviewReviewed'));
+        }
+        // Nothing meaningful to show — leave the note clean.
+        if (parts.length === 0) return;
+
+        const block = `> [!abstract] ${t('vault.overviewTitle')}\n> ${parts.join(sep)}`;
+
+        await updateFile(this.app, file, (content) => {
+            const lines = content.split('\n');
+
+            // Drop any existing overview block (title line + following `>` lines).
+            const titleNeedle = `> [!abstract] ${t('vault.overviewTitle')}`;
+            const startIdx = lines.findIndex((l) => l.trim().startsWith(titleNeedle));
+            if (startIdx >= 0) {
+                let endIdx = startIdx;
+                while (endIdx + 1 < lines.length && lines[endIdx + 1].trim().startsWith('>')) {
+                    endIdx++;
+                }
+                // Also swallow one trailing blank line left behind.
+                if (endIdx + 1 < lines.length && lines[endIdx + 1].trim() === '') endIdx++;
+                lines.splice(startIdx, endIdx - startIdx + 1);
+            }
+
+            // Find insertion point: right after the H1 title, else after frontmatter.
+            let insertIdx = lines.findIndex((l) => /^#\s+/.test(l));
+            if (insertIdx >= 0) {
+                insertIdx += 1;
+            } else if (lines[0]?.trim() === '---') {
+                const fmEnd = lines.indexOf('---', 1);
+                insertIdx = fmEnd >= 0 ? fmEnd + 1 : 0;
+            } else {
+                insertIdx = 0;
+            }
+
+            // Skip blank lines immediately after the anchor so the block sits snug.
+            while (insertIdx < lines.length && lines[insertIdx].trim() === '') insertIdx++;
+
+            lines.splice(insertIdx, 0, '', block, '');
+            return lines.join('\n').replace(/\n{3,}/g, '\n\n');
+        });
     }
 
     /**

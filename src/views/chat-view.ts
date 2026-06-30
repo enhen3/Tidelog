@@ -1224,18 +1224,36 @@ export class ChatView extends ItemView {
         }
 
         const messageEl = this.createMessageElement('ai');
+
+        // Respect reduced-motion (and trivial messages): render the final
+        // markdown immediately without the typewriter pass.
+        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        if (reduceMotion || content.length === 0) {
+            void MarkdownRenderer.render(this.app, content, messageEl, '', this);
+            this.scrollToBottom();
+            return;
+        }
+
+        // Phase 1 — reveal as plain text with a caret. setText is cheap, so we
+        // avoid re-parsing markdown on every tick (the old loop's main jank).
+        // Step scales with length to keep the reveal ~steady regardless of size.
+        messageEl.addClass('tl-streaming');
         let currentIndex = 0;
+        const step = Math.max(2, Math.ceil(content.length / 110));
 
         const typewriter = window.setInterval(() => {
-            if (currentIndex < content.length) {
-                currentIndex = Math.min(currentIndex + 3, content.length);
-                messageEl.empty();
-                void MarkdownRenderer.render(this.app, content.substring(0, currentIndex), messageEl, '', this);
-                this.scrollToBottom();
-            } else {
+            currentIndex = Math.min(currentIndex + step, content.length);
+            messageEl.setText(content.substring(0, currentIndex));
+            this.scrollToBottom();
+            if (currentIndex >= content.length) {
                 window.clearInterval(typewriter);
+                // Phase 2 — render the final markdown exactly once.
+                messageEl.removeClass('tl-streaming');
+                messageEl.empty();
+                void MarkdownRenderer.render(this.app, content, messageEl, '', this);
+                this.scrollToBottom();
             }
-        }, 15);
+        }, 16);
     }
 
     /**

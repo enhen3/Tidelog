@@ -677,22 +677,22 @@ Your job is to open the facts, not decorate them. Read daily notes, weekly/month
 </method>
 
 <report_structure>
-### 1. This Week In One Sentence
-One concise sentence with the week theme, completion/loop data, and emotional direction.
+### This Week In One Sentence
+One concise sentence with the week theme, completion/loop data, and emotional direction. Present it as an Obsidian quote callout — begin the line with "> [!quote]" followed by the sentence.
 
-### 2. What Actually Happened
+### What Actually Happened
 Use short paragraphs. Anchor every point in specific evidence from notes or plans.
 
-### 3. Patterns Worth Noticing
+### Patterns Worth Noticing
 Behavior, emotion, and thinking patterns. Mark confidence as high / medium / low.
 
-### 4. Friction And Missed Loops
+### Friction And Missed Loops
 Name the friction directly. Avoid blame; explain the mechanism.
 
-### 5. Next Week Plan Advice
+### Next Week Plan Advice
 2-3 practical suggestions: what to do, why it fits the evidence, and the first step.
 
-### 6. Dashboard Summary
+### Dashboard Summary
 2-3 natural sentences, no Markdown, with one data point and one pattern insight.
 </report_structure>
 
@@ -727,22 +727,22 @@ At the end, keep these machine-readable tags exactly:
 </method>
 
 <report_structure>
-### 1. 本周一句话
-用一句自然的话概括本周主题，带上完成/闭环数据和情绪方向。
+### 本周一句话
+用一句自然的话概括本周主题，带上完成/闭环数据和情绪方向。请用 Obsidian 引用标注呈现这句话——以 "> [!quote]" 开头，后接这句话。
 
-### 2. 这一周实际发生了什么
+### 这一周实际发生了什么
 短段落写作。每个判断都要落到具体记录或计划证据上。
 
-### 3. 值得注意的模式
+### 值得注意的模式
 从行为、情绪、思考三个角度分析，并标注置信度：高 / 中 / 低。
 
-### 4. 阻力与未闭环
+### 阻力与未闭环
 直接指出卡点，但不责备用户；解释机制，比如启动成本、目标过多、精力波动、外部打断。
 
-### 5. 下周计划建议
+### 下周计划建议
 2-3 条：做什么、为什么适合用户、第一步怎么开始。
 
-### 6. 仪表盘摘要
+### 仪表盘摘要
 2-3 句自然中文，不用 Markdown，包含一个数据点和一个模式判断。
 </report_structure>
 
@@ -781,25 +781,25 @@ The monthly report must look across weeks. Do not stitch weekly summaries togeth
 </method>
 
 <report_structure>
-### 1. Month Theme
-One clear sentence, then 2-3 lines about goal progress, loops, and energy trend.
+### Month Theme
+One clear sentence, then 2-3 lines about goal progress, loops, and energy trend. Present the opening sentence as an Obsidian quote callout — begin the line with "> [!quote]" followed by the sentence.
 
-### 2. The Month As A Story Of Evidence
+### The Month As A Story Of Evidence
 Write naturally. Use concrete scenes and data, not generic summary language.
 
-### 3. Cross-Week Pattern Analysis
+### Cross-Week Pattern Analysis
 Behavior / emotion / thinking / relationships if present. Mark confidence as high / medium / low.
 
-### 4. Growth And Cost
+### Growth And Cost
 What became easier? What still consumed energy? What tradeoff appears repeatedly?
 
-### 5. Next Month Operating System
+### Next Month Operating System
 2-4 recommendations tied to evidence: keep / reduce / redesign / test.
 
-### 6. Profile Update Notes
+### Profile Update Notes
 Say what should be updated in the user profile and why.
 
-### 7. Dashboard Summary
+### Dashboard Summary
 2-3 natural sentences, no Markdown, with one growth highlight and one risk/pattern.
 </report_structure>
 
@@ -834,25 +834,25 @@ At the end, keep these machine-readable tags exactly:
 </method>
 
 <report_structure>
-### 1. 月度主题
-一句话概括这个月，然后用 2-3 行说明目标推进、闭环和精力趋势。
+### 月度主题
+一句话概括这个月，然后用 2-3 行说明目标推进、闭环和精力趋势。请用 Obsidian 引用标注呈现开头那句话——以 "> [!quote]" 开头，后接这句话。
 
-### 2. 这个月的事实故事
+### 这个月的事实故事
 自然写作，用具体场景和数据，不写空泛总结。
 
-### 3. 跨周模式分析
+### 跨周模式分析
 行为 / 情绪 / 思考 / 人际（如有）。标注置信度：高 / 中 / 低。
 
-### 4. 成长与代价
+### 成长与代价
 什么变容易了？什么仍在消耗精力？反复出现的取舍是什么？
 
-### 5. 下月行动系统
+### 下月行动系统
 2-4 条建议，分别对应：保留 / 减少 / 重设计 / 小实验。
 
-### 6. 用户画像更新提示
+### 用户画像更新提示
 说明哪些画像内容值得更新，以及证据是什么。
 
-### 7. 仪表盘摘要
+### 仪表盘摘要
 2-3 句自然中文，不用 Markdown，包含一个成长亮点和一个风险/模式。
 </report_structure>
 

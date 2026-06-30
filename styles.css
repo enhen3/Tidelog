@@ -481,6 +481,27 @@
 	border-color: color-mix(in srgb, var(--tl-red) 20%, transparent);
 }
 
+/* --- Streaming caret (typewriter reveal) --- */
+.tl-message-content.tl-streaming::after {
+	content: '';
+	display: inline-block;
+	width: 2px;
+	height: 1.05em;
+	margin-left: 2px;
+	vertical-align: -0.18em;
+	border-radius: 1px;
+	background: var(--tl-accent);
+	animation: tl-caret-blink 1s steps(1, end) infinite;
+}
+
+@keyframes tl-caret-blink {
+	50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tl-message-content.tl-streaming::after { animation: none; }
+}
+
 /* --- Thinking indicator (animated dots) --- */
 .tl-thinking-dots {
 	display: flex;
