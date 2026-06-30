@@ -23,6 +23,7 @@ import { loadDayLoopData } from './loop-utils';
 
 import { ChatController } from './chat-controller';
 import { replaceFile } from '../utils/vault-write';
+import { isSectionHeading } from '../utils/md';
 
 type SidebarTab = 'chat' | 'kanban' | 'review';
 type ReviewMode = 'home' | 'dialogue';
@@ -442,8 +443,7 @@ export class ChatView extends ItemView {
             let planSectionIdx = -1;
             let planSectionEnd = -1;
             for (let i = 0; i < lines.length; i++) {
-                const trimmed = lines[i].trim();
-                if (trimmed === '## 计划' || trimmed === '## Plan' || trimmed === `## ${t('vault.sectionPlan')}`) {
+                if (isSectionHeading(lines[i], '计划', 'Plan', t('vault.sectionPlan'))) {
                     planSectionIdx = i;
                     // Find the end of the Plan section (next ## heading or end of file)
                     planSectionEnd = lines.length;

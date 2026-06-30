@@ -383,7 +383,7 @@ ${t('insight.generateMonthlyReport')}`;
             segments.push(`${t('insight.reportPeriodLabel')} ${start.format('YYYY-MM-DD')} – ${end.format('YYYY-MM-DD')}`);
         }
         segments.push(generated);
-        return `> [!abstract] ${t('insight.reportInfoTitle')}\n> ${segments.join(sep)}`;
+        return `> [!tl-meta] ${t('insight.reportInfoTitle')}\n> ${segments.join(sep)}`;
     }
 
     /**

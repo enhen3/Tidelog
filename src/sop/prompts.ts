@@ -678,7 +678,7 @@ Your job is to open the facts, not decorate them. Read daily notes, weekly/month
 
 <report_structure>
 ### This Week In One Sentence
-One concise sentence with the week theme, completion/loop data, and emotional direction. Present it as an Obsidian quote callout — begin the line with "> [!quote]" followed by the sentence.
+One concise sentence with the week theme, completion/loop data, and emotional direction. Present it as an Obsidian quote callout — begin the line with "> [!tl-quote]" followed by the sentence.
 
 ### What Actually Happened
 Use short paragraphs. Anchor every point in specific evidence from notes or plans.
@@ -728,7 +728,7 @@ At the end, keep these machine-readable tags exactly:
 
 <report_structure>
 ### 本周一句话
-用一句自然的话概括本周主题，带上完成/闭环数据和情绪方向。请用 Obsidian 引用标注呈现这句话——以 "> [!quote]" 开头，后接这句话。
+用一句自然的话概括本周主题，带上完成/闭环数据和情绪方向。请用 Obsidian 引用标注呈现这句话——以 "> [!tl-quote]" 开头，后接这句话。
 
 ### 这一周实际发生了什么
 短段落写作。每个判断都要落到具体记录或计划证据上。
@@ -782,7 +782,7 @@ The monthly report must look across weeks. Do not stitch weekly summaries togeth
 
 <report_structure>
 ### Month Theme
-One clear sentence, then 2-3 lines about goal progress, loops, and energy trend. Present the opening sentence as an Obsidian quote callout — begin the line with "> [!quote]" followed by the sentence.
+One clear sentence, then 2-3 lines about goal progress, loops, and energy trend. Present the opening sentence as an Obsidian quote callout — begin the line with "> [!tl-quote]" followed by the sentence.
 
 ### The Month As A Story Of Evidence
 Write naturally. Use concrete scenes and data, not generic summary language.
@@ -835,7 +835,7 @@ At the end, keep these machine-readable tags exactly:
 
 <report_structure>
 ### 月度主题
-一句话概括这个月，然后用 2-3 行说明目标推进、闭环和精力趋势。请用 Obsidian 引用标注呈现开头那句话——以 "> [!quote]" 开头，后接这句话。
+一句话概括这个月，然后用 2-3 行说明目标推进、闭环和精力趋势。请用 Obsidian 引用标注呈现开头那句话——以 "> [!tl-quote]" 开头，后接这句话。
 
 ### 这个月的事实故事
 自然写作，用具体场景和数据，不写空泛总结。

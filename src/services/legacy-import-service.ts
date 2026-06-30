@@ -8,7 +8,7 @@
 
 import { TFile, TFolder, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
-import { t } from '../i18n';
+import { t, getLanguage } from '../i18n';
 
 export type LegacyDateSource = 'frontmatter' | 'filename' | 'body' | 'mtime';
 export type LegacyExclusionReason = 'outside_range' | 'missing_date' | 'too_short' | 'read_error';
@@ -516,6 +516,9 @@ export function buildSystemDailyNoteFromLegacy(entry: NormalizedLegacyJournal): 
     const weekday = date.isValid() ? date.format('dddd') : '';
     const weekRef = date.isValid() ? `${date.format('YYYY')}-W${date.format('ww')}` : '';
     const monthRef = date.isValid() ? date.format('YYYY-MM') : '';
+    const titleText = date.isValid()
+        ? (getLanguage() === 'en' ? date.format('dddd, MMMM D, YYYY') : `${date.format('YYYY年M月D日')} ${weekday}`)
+        : entry.date;
 
     return `---
 type: daily
@@ -534,13 +537,13 @@ legacy_import_source: "${escapeYaml(entry.sourcePath)}"
 legacy_import_normalized: "${escapeYaml(entry.normalizedPath)}"
 ---
 
-${t('vault.dailyNoteTitle', entry.date, weekday)}
+${t('vault.dailyNoteTitle', titleText)}
 
-## ${t('vault.sectionPlan')}
+## ☀️ ${t('vault.sectionPlan')}
 
 ${t('legacyImport.systemPlanPlaceholder')}
 
-## ${t('vault.sectionReview')}
+## 🌙 ${t('vault.sectionReview')}
 
 ${buildSystemDailyImportSection(entry)}
 `;

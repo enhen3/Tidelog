@@ -278,9 +278,11 @@ ${t('tmpl.weeklyGoals')}
 
 ${t('tmpl.weeklyGoalsComment')}
 
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+- [ ]
+
+---
 
 ${t('tmpl.weeklyReview')}
 
@@ -333,7 +335,9 @@ ${t('tmpl.monthlyGrowth')}
 
 ${t('tmpl.monthlyGrowthComment')}
 
-- 
+-
+
+---
 
 ${t('tmpl.monthlyReview')}
 

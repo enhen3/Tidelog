@@ -18,6 +18,7 @@ import {
 } from './prompts';
 import { formatAPIError } from '../utils/error-formatter';
 import { t, getLanguage } from '../i18n';
+import { isSectionHeading } from '../utils/md';
 import { moment } from 'obsidian';
 
 interface QuestionConfig {
@@ -157,7 +158,7 @@ export class EveningSOP {
             const planLines: string[] = [];
 
             for (const line of lines) {
-                if (line.startsWith('## 计划') || line.startsWith('## Plan')) {
+                if (isSectionHeading(line, '计划', 'Plan', t('vault.sectionPlan'))) {
                     inMorningSection = true;
                     continue;
                 }
@@ -318,7 +319,7 @@ export class EveningSOP {
     private formatQuestionCallout(text: string): string {
         const lines = text.split('\n').map((l) => l.trimEnd());
         const first = (lines.shift() ?? '').trim();
-        let out = `> [!question] ${first}`;
+        let out = `> [!tl-question] ${first}`;
         for (const line of lines) {
             out += line.trim() ? `\n> ${line}` : '\n>';
         }

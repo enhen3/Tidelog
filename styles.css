@@ -8372,3 +8372,109 @@ body .tl-onboarding-modal {
 	color: var(--text-faint);
 	font-weight: 500;
 }
+
+/* =============================================================================
+   TideLog document callouts
+   -----------------------------------------------------------------------------
+   Premium, muted, consistent styling for the callouts TideLog writes into
+   generated notes (daily overview, AI questions, report info, report quote).
+   These rules are loaded app-wide, so they style the actual note pages in
+   reading view and live preview — not just the plugin's sidebar.
+
+   Design intent (after ADA-winning apps): one quiet ink family instead of a
+   rainbow of default callout colors, generous whitespace, restrained
+   monochrome icons, refined small-caps titles, hairline accents.
+   ============================================================================= */
+
+.callout[data-callout^="tl-"] {
+	margin: 1.1em 0;
+	padding: 0.7em 0.95em;
+	border: 1px solid color-mix(in srgb, rgb(var(--callout-color)) 16%, transparent);
+	border-radius: 12px;
+	background: color-mix(in srgb, rgb(var(--callout-color)) 5%, var(--background-primary));
+	box-shadow: none;
+	mix-blend-mode: normal;
+}
+
+.callout[data-callout^="tl-"] .callout-title {
+	padding: 0;
+	gap: 0.5em;
+	align-items: center;
+	font-size: 0.76em;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: color-mix(in srgb, rgb(var(--callout-color)) 72%, var(--text-muted));
+}
+
+.callout[data-callout^="tl-"] .callout-icon {
+	color: rgb(var(--callout-color));
+}
+
+.callout[data-callout^="tl-"] .callout-icon .svg-icon {
+	width: 15px;
+	height: 15px;
+}
+
+.callout[data-callout^="tl-"] .callout-content {
+	margin-top: 0.4em;
+	line-height: 1.6;
+	color: var(--text-normal);
+}
+
+.callout[data-callout^="tl-"] .callout-content > :first-child {
+	margin-top: 0;
+}
+
+.callout[data-callout^="tl-"] .callout-content > :last-child {
+	margin-bottom: 0;
+}
+
+/* ── Per-type ink + icon — one cohesive, low-saturation family ── */
+
+.callout[data-callout="tl-overview"] {
+	--callout-color: 74, 123, 138;   /* muted tidal teal */
+	--callout-icon: lucide-compass;
+}
+
+.callout[data-callout="tl-question"] {
+	--callout-color: 122, 132, 144;  /* neutral slate */
+	--callout-icon: lucide-message-circle;
+}
+
+.callout[data-callout="tl-meta"] {
+	--callout-color: 130, 138, 148;  /* quiet gray */
+	--callout-icon: lucide-calendar-days;
+}
+
+/* ── Quote — editorial: a single italic line behind a hairline rule ── */
+
+.callout[data-callout="tl-quote"] {
+	--callout-color: 150, 138, 120;  /* warm taupe */
+	--callout-icon: lucide-quote;
+	margin: 1.2em 0;
+	padding: 0.1em 0 0.1em 1em;
+	border: none;
+	border-left: 2px solid color-mix(in srgb, rgb(var(--callout-color)) 55%, transparent);
+	border-radius: 0;
+	background: transparent;
+}
+
+.callout[data-callout="tl-quote"] .callout-title {
+	display: none;
+}
+
+.callout[data-callout="tl-quote"] .callout-content {
+	margin-top: 0;
+	font-size: 1.06em;
+	font-style: italic;
+	line-height: 1.65;
+	color: var(--text-normal);
+}
+
+/* ── Dark mode: lift the inks so they read on dark backgrounds ── */
+
+.theme-dark .callout[data-callout="tl-overview"] { --callout-color: 120, 170, 184; }
+.theme-dark .callout[data-callout="tl-question"] { --callout-color: 150, 160, 172; }
+.theme-dark .callout[data-callout="tl-meta"]     { --callout-color: 150, 158, 168; }
+.theme-dark .callout[data-callout="tl-quote"]    { --callout-color: 188, 170, 142; }

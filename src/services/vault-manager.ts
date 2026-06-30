@@ -6,6 +6,11 @@ import { App, CachedMetadata, TFile, TFolder, moment } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t, getLanguage } from '../i18n';
 import { replaceFile, updateFile } from '../utils/vault-write';
+import { isSectionHeading } from '../utils/md';
+
+/** Quiet, thematic section markers for the daily note (morning / evening). */
+const PLAN_EMOJI = '☀️';
+const REVIEW_EMOJI = '🌙';
 
 export class VaultManager {
     private app: App;
@@ -235,20 +240,19 @@ export class VaultManager {
 
         // 2) Ensure Plan and Review sections exist
         const content = await this.app.vault.read(file);
-        const planHeader = `## ${t('vault.sectionPlan')}`;
-        const reviewHeader = `## ${t('vault.sectionReview')}`;
+        const lines = content.split('\n');
 
-        // Check both localized and hardcoded variants
-        const hasPlan = content.includes('## 计划') || content.includes('## Plan') || content.includes(planHeader);
-        const hasReview = content.includes('## 复盘') || content.includes('## Review') || content.includes(reviewHeader);
+        // Match by plain name so emoji-decorated headings still count as present.
+        const hasPlan = lines.some((l) => isSectionHeading(l, '计划', 'Plan', t('vault.sectionPlan')));
+        const hasReview = lines.some((l) => isSectionHeading(l, '复盘', 'Review', t('vault.sectionReview')));
 
         if (!hasPlan || !hasReview) {
             let appendContent = '';
             if (!hasPlan) {
-                appendContent += `\n${planHeader}\n`;
+                appendContent += `\n## ${PLAN_EMOJI} ${t('vault.sectionPlan')}\n`;
             }
             if (!hasReview) {
-                appendContent += `\n${reviewHeader}\n`;
+                appendContent += `\n## ${REVIEW_EMOJI} ${t('vault.sectionReview')}\n`;
             }
             await updateFile(this.app, file, (current) => current + appendContent);
         }
@@ -263,6 +267,9 @@ export class VaultManager {
         const weekday = date.format('dddd');
         const weekRef = this.getWeekRef(date);
         const monthRef = date.format('YYYY-MM');
+        const titleText = getLanguage() === 'en'
+            ? date.format('dddd, MMMM D, YYYY')
+            : `${date.format('YYYY年M月D日')} ${weekday}`;
 
         return `---
 type: daily
@@ -278,11 +285,11 @@ weekly_ref: "[[${weekRef}]]"
 monthly_ref: "[[${monthRef}]]"
 ---
 
-${t('vault.dailyNoteTitle', dateStr, weekday)}
+${t('vault.dailyNoteTitle', titleText)}
 
-## ${t('vault.sectionPlan')}
+## ${PLAN_EMOJI} ${t('vault.sectionPlan')}
 
-## ${t('vault.sectionReview')}
+## ${REVIEW_EMOJI} ${t('vault.sectionReview')}
 `;
     }
 
@@ -321,13 +328,13 @@ ${t('vault.dailyNoteTitle', dateStr, weekday)}
         // Nothing meaningful to show — leave the note clean.
         if (parts.length === 0) return;
 
-        const block = `> [!abstract] ${t('vault.overviewTitle')}\n> ${parts.join(sep)}`;
+        const block = `> [!tl-overview] ${t('vault.overviewTitle')}\n> ${parts.join(sep)}`;
 
         await updateFile(this.app, file, (content) => {
             const lines = content.split('\n');
 
             // Drop any existing overview block (title line + following `>` lines).
-            const titleNeedle = `> [!abstract] ${t('vault.overviewTitle')}`;
+            const titleNeedle = `> [!tl-overview] ${t('vault.overviewTitle')}`;
             const startIdx = lines.findIndex((l) => l.trim().startsWith(titleNeedle));
             if (startIdx >= 0) {
                 let endIdx = startIdx;
@@ -538,9 +545,9 @@ ${t('vault.dailyNoteTitle', dateStr, weekday)}
             const lines = existingContent.split('\n');
             let sectionIndex = -1;
 
-            // Find the section header
+            // Find the section header (emoji-tolerant)
             for (let i = 0; i < lines.length; i++) {
-                if (lines[i].trim().startsWith(`## ${sectionHeader}`)) {
+                if (isSectionHeading(lines[i], sectionHeader)) {
                     sectionIndex = i;
                     break;
                 }
@@ -581,9 +588,9 @@ ${t('vault.dailyNoteTitle', dateStr, weekday)}
             const lines = existingContent.split('\n');
             let sectionIndex = -1;
 
-            // Find the section header
+            // Find the section header (emoji-tolerant)
             for (let i = 0; i < lines.length; i++) {
-                if (lines[i].trim().startsWith(`## ${sectionHeader}`)) {
+                if (isSectionHeading(lines[i], sectionHeader)) {
                     sectionIndex = i;
                     break;
                 }
@@ -679,7 +686,7 @@ ${t('vault.dailyNoteTitle', dateStr, weekday)}
             const sectionLines: string[] = [];
 
             for (const line of lines) {
-                if (line.trim().startsWith(`## ${sectionHeader}`)) {
+                if (isSectionHeading(line, sectionHeader)) {
                     inSection = true;
                     continue;
                 }
@@ -767,12 +774,11 @@ ${t('vault.dailyNoteTitle', dateStr, weekday)}
         const content = await this.app.vault.cachedRead(file);
         const taskLine = `- [ ] ${taskText}`;
 
-        // Try to insert under ## Plan / ## 计划
-        const sectionHeader = `## ${t('vault.sectionPlan')}`;
+        // Try to insert under ## Plan / ## 计划 (emoji-tolerant)
         const lines = content.split('\n');
         let insertIdx = -1;
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].trim().startsWith(sectionHeader) || lines[i].trim().startsWith('## 计划') || lines[i].trim().startsWith('## Plan')) {
+            if (isSectionHeading(lines[i], t('vault.sectionPlan'), '计划', 'Plan')) {
                 insertIdx = i + 1;
                 // Skip past any sub-headers, blank lines, or existing content until next ## or ---
                 while (insertIdx < lines.length && !lines[insertIdx].startsWith('## ') && !lines[insertIdx].startsWith('---')) {
