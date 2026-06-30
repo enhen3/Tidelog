@@ -8478,3 +8478,82 @@ body .tl-onboarding-modal {
 .theme-dark .callout[data-callout="tl-question"] { --callout-color: 150, 160, 172; }
 .theme-dark .callout[data-callout="tl-meta"]     { --callout-color: 150, 158, 168; }
 .theme-dark .callout[data-callout="tl-quote"]    { --callout-color: 188, 170, 142; }
+
+/* =============================================================================
+   Premium UI polish — interaction & empty states
+   -----------------------------------------------------------------------------
+   Conservative, additive refinements layered over the existing component CSS.
+   Restraint over flourish: tactile feedback on the things that are actually
+   interactive (buttons, inputs), a consistent focus ring, and a calmer empty
+   state — not decorative motion on static containers.
+   ============================================================================= */
+
+/* ── Consistent, refined keyboard focus ring ── */
+.tl-input:focus-visible,
+.tl-send-btn:focus-visible,
+.tl-insights-primary-btn:focus-visible,
+.tl-review-start-btn:focus-visible,
+.tl-tab-btn:focus-visible,
+.tl-subnav-btn:focus-visible,
+.tl-mode-btn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--tl-accent) 26%, transparent);
+}
+
+/* ── Action buttons: a quiet, tactile lift ── */
+.tl-send-btn,
+.tl-insights-primary-btn,
+.tl-review-start-btn {
+	transition:
+		transform var(--tl-duration-fast) var(--tl-ease),
+		box-shadow var(--tl-duration-fast) var(--tl-ease),
+		background var(--tl-duration-fast) var(--tl-ease),
+		opacity var(--tl-duration-fast) var(--tl-ease);
+}
+
+.tl-send-btn:hover:not(:disabled),
+.tl-insights-primary-btn:hover:not(:disabled),
+.tl-review-start-btn:hover:not(:disabled) {
+	transform: translateY(-1px);
+}
+
+.tl-send-btn:active:not(:disabled),
+.tl-insights-primary-btn:active:not(:disabled),
+.tl-review-start-btn:active:not(:disabled) {
+	transform: translateY(0);
+}
+
+/* ── Plan-suggestion lines: gentle reveal on hover ── */
+.tl-plan-suggestion-item {
+	transition: transform var(--tl-duration-fast) var(--tl-ease);
+}
+
+.tl-plan-suggestion-item:hover {
+	transform: translateX(2px);
+}
+
+/* ── Inbox empty state: calmer and centered ── */
+.tl-capture-empty {
+	text-align: center;
+	font-style: normal;
+	color: var(--tl-text-tertiary);
+	padding: var(--tl-sp-20) var(--tl-sp-12);
+	line-height: 1.55;
+}
+
+/* ── Respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+	.tl-send-btn,
+	.tl-insights-primary-btn,
+	.tl-review-start-btn,
+	.tl-plan-suggestion-item {
+		transition: none;
+	}
+
+	.tl-send-btn:hover,
+	.tl-insights-primary-btn:hover,
+	.tl-review-start-btn:hover,
+	.tl-plan-suggestion-item:hover {
+		transform: none;
+	}
+}

@@ -506,6 +506,7 @@ export const zh: Record<string, string> = {
 
     // template-manager.ts
     'tmpl.userProfileTitle': '# 用户画像',
+    'tmpl.profilePortrait': '随着记录积累，这里会浮现一句对你此刻的画像。',
     'tmpl.basicInfo': '## 基本信息',
     'tmpl.basicInfoComment': '<!-- 填写你的基本信息，帮助 AI 更好地理解你 -->',
     'tmpl.ageRange': '**年龄段**',

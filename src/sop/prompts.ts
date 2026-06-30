@@ -921,6 +921,10 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 
 <profile_update>
 # User Profile
+
+> [!tl-quote]
+> <one plain, evidence-grounded sentence portraying who the user is right now>
+
 ## Three recurring themes in past records
 ...
 
@@ -1015,6 +1019,10 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 
 <profile_update>
 # 用户画像
+
+> [!tl-quote]
+> <一句平实、有证据支撑的话，描绘用户此刻是怎样的人>
+
 ## 过去记录里的三个高频主题
 ...
 

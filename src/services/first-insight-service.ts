@@ -289,6 +289,10 @@ The updated profile must preserve still-evidence-backed existing profile content
 
 <profile_update>
 # User Profile
+
+> [!tl-quote]
+> <one plain, evidence-grounded sentence portraying who the user is right now>
+
 ...
 </profile_update>
 </output_format>`;
@@ -386,6 +390,10 @@ ${journalContext}
 
 <profile_update>
 # 用户画像
+
+> [!tl-quote]
+> <一句平实、有证据支撑的话，描绘用户此刻是怎样的人>
+
 ...
 </profile_update>
 </output_format>`;

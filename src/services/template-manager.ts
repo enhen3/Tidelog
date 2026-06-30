@@ -34,6 +34,9 @@ export class TemplateManager {
         if (!exists) {
             const content = `${t('tmpl.userProfileTitle')}
 
+> [!tl-quote]
+> ${t('tmpl.profilePortrait')}
+
 ${t('tmpl.basicInfo')}
 
 ${t('tmpl.basicInfoComment')}

@@ -526,6 +526,7 @@ export const en: Record<string, string> = {
 
     // template-manager.ts
     'tmpl.userProfileTitle': '# user profile',
+    'tmpl.profilePortrait': 'As records accumulate, a one-line portrait of you will surface here.',
     'tmpl.basicInfo': '## basic information',
     'tmpl.basicInfoComment': '<!-- fill in your basic info to help AI understand you better -->',
     'tmpl.ageRange': '**age range**',
