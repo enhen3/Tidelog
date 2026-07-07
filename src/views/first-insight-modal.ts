@@ -180,13 +180,21 @@ export class FirstInsightModal extends Modal {
         defaultFolder: string,
         selectedEl: HTMLElement,
     ): void {
+        containerEl.setAttr('role', 'tree');
+        containerEl.setAttr('aria-label', t('firstInsight.folderTreeLabel'));
+
         const nodeEls = new Map<string, HTMLElement>();
+        const setSelectedDisplay = (folderPath: string) => {
+            selectedEl.empty();
+            selectedEl.createSpan({ cls: 'tl-first-insight-folder-selected-label', text: t('firstInsight.selectedFolderLabel') });
+            selectedEl.createSpan({ cls: 'tl-first-insight-folder-selected-path', text: folderPath });
+        };
         const selectFolder = (folderPath: string, notify = true) => {
             this.folderInputEl.value = folderPath;
-            selectedEl.setText(folderPath);
+            setSelectedDisplay(folderPath);
             nodeEls.forEach((nodeEl, path) => {
                 nodeEl.classList.toggle('is-selected', path === folderPath);
-                nodeEl.setAttr('aria-pressed', path === folderPath ? 'true' : 'false');
+                nodeEl.setAttr('aria-selected', path === folderPath ? 'true' : 'false');
             });
             if (notify) {
                 this.folderInputEl.dispatchEvent(new Event('change', { bubbles: true }));
@@ -196,17 +204,23 @@ export class FirstInsightModal extends Modal {
         const renderNode = (node: FolderTreeNode, parentEl: HTMLElement, depth: number) => {
             const isDefaultPath = defaultFolder === node.path || defaultFolder.startsWith(`${node.path}/`);
             if (node.children.length > 0) {
-                const detailsEl = parentEl.createEl('details', { cls: 'tl-first-insight-folder-branch' });
+                const detailsEl = parentEl.createEl('details', {
+                    cls: 'tl-first-insight-folder-branch',
+                    attr: { 'data-folder-path': node.path },
+                });
                 if (isDefaultPath) detailsEl.setAttr('open', 'true');
-                const summaryEl = detailsEl.createEl('summary', { cls: 'tl-first-insight-folder-summary' });
-                const nodeEl = this.createFolderNode(summaryEl, node, depth, selectFolder);
+                const summaryEl = detailsEl.createEl('summary', { cls: 'tl-first-insight-folder-row tl-first-insight-folder-summary' });
+                summaryEl.style.setProperty('--tl-first-insight-folder-depth', String(depth));
+                const nodeEl = this.createFolderNode(summaryEl, node, selectFolder, detailsEl);
                 nodeEls.set(node.path, nodeEl);
                 const childrenEl = detailsEl.createDiv('tl-first-insight-folder-children');
                 node.children.forEach(child => renderNode(child, childrenEl, depth + 1));
                 return;
             }
 
-            const nodeEl = this.createFolderNode(parentEl, node, depth, selectFolder);
+            const rowEl = parentEl.createDiv('tl-first-insight-folder-row tl-first-insight-folder-leaf');
+            rowEl.style.setProperty('--tl-first-insight-folder-depth', String(depth));
+            const nodeEl = this.createFolderNode(rowEl, node, selectFolder);
             nodeEls.set(node.path, nodeEl);
         };
 
@@ -215,29 +229,82 @@ export class FirstInsightModal extends Modal {
     }
 
     private createFolderNode(
-        containerEl: HTMLElement,
+        rowEl: HTMLElement,
         node: FolderTreeNode,
-        depth: number,
         onSelect: (folderPath: string) => void,
+        detailsEl?: HTMLDetailsElement,
     ): HTMLElement {
-        const nodeEl = containerEl.createEl('button', {
+        let updateBranchState = () => {};
+        if (detailsEl) {
+            const toggleEl = rowEl.createEl('button', {
+                cls: 'tl-first-insight-folder-toggle',
+                attr: {
+                    type: 'button',
+                    'aria-label': t('firstInsight.folderExpandLabel', node.path),
+                },
+            });
+            toggleEl.createSpan({ cls: 'tl-first-insight-folder-chevron', text: '›' });
+            toggleEl.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                detailsEl.open = !detailsEl.open;
+                updateBranchState();
+            });
+        } else {
+            rowEl.createSpan({ cls: 'tl-first-insight-folder-spacer', attr: { 'aria-hidden': 'true' } });
+        }
+
+        const nodeEl = rowEl.createEl('button', {
             cls: 'tl-first-insight-folder-node',
             attr: {
                 type: 'button',
+                role: 'treeitem',
                 'data-folder-path': node.path,
-                'aria-pressed': 'false',
+                'aria-selected': 'false',
             },
         });
-        nodeEl.style.setProperty('--tl-first-insight-folder-depth', String(depth));
+        if (detailsEl) {
+            nodeEl.setAttr('aria-expanded', detailsEl.open ? 'true' : 'false');
+        }
+        nodeEl.createSpan({ cls: 'tl-first-insight-folder-icon', attr: { 'aria-hidden': 'true' } });
         nodeEl.createSpan({ cls: 'tl-first-insight-folder-name', text: node.name });
         if (node.path !== node.name) {
             nodeEl.createSpan({ cls: 'tl-first-insight-folder-path', text: node.path });
         }
+
+        if (detailsEl) {
+            const toggleEl = rowEl.querySelector('.tl-first-insight-folder-toggle');
+            updateBranchState = () => {
+                const isOpen = detailsEl.open;
+                nodeEl.setAttr('aria-expanded', isOpen ? 'true' : 'false');
+                toggleEl?.setAttr('aria-label', t(isOpen ? 'firstInsight.folderCollapseLabel' : 'firstInsight.folderExpandLabel', node.path));
+            };
+            detailsEl.addEventListener('toggle', updateBranchState);
+        }
+
         nodeEl.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
+            if (detailsEl && !detailsEl.open) {
+                detailsEl.open = true;
+                updateBranchState();
+            }
             onSelect(node.path);
         });
+        nodeEl.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (!detailsEl) return;
+            if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                detailsEl.open = true;
+                updateBranchState();
+            }
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                detailsEl.open = false;
+                updateBranchState();
+            }
+        });
+        updateBranchState();
         return nodeEl;
     }
 

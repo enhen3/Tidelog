@@ -753,6 +753,54 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     check(chatSource.includes("this.shouldStartAtFirstInsight() ? 'profile' : 'weekly'"), 'clicking the Insights tab keeps fresh users on the profile entry until first insight is completed');
 }
 
+console.log('\nTest 9b: first insight folder tree has clear desktop-style navigation');
+{
+    const harness = createVaultHarness();
+    harness.ensureFolder('Legacy');
+    harness.ensureFolder('Other-Journals/2025/June');
+    harness.ensureFolder('Other-Journals/2026');
+
+    const plugin = makePlugin(harness);
+    plugin.legacyImportService = new LegacyImportService(plugin);
+    plugin.firstInsightService = new FirstInsightService(plugin);
+
+    const modal = new FirstInsightModal(plugin.app, plugin);
+    modal.onOpen();
+    document.body.appendChild(modal.contentEl);
+
+    const tree = modal.contentEl.querySelector('.tl-first-insight-folder-tree');
+    const folderInput = modal.contentEl.querySelector('input.tl-first-insight-folder-value, input[type="text"]');
+    const otherBranch = modal.contentEl.querySelector('details[data-folder-path="Other-Journals"]');
+    const otherNode = modal.contentEl.querySelector('.tl-first-insight-folder-node[data-folder-path="Other-Journals"]');
+    const otherToggle = otherBranch?.querySelector('.tl-first-insight-folder-toggle');
+
+    check(tree?.getAttribute('role') === 'tree', 'folder tree exposes tree semantics for desktop-style navigation');
+    check(!!modal.contentEl.querySelector('.tl-first-insight-folder-selected-label'), 'selected folder display has a readable label');
+    check(!!otherToggle, 'branch rows render a real chevron toggle target');
+    check(!!modal.contentEl.querySelector('.tl-first-insight-folder-spacer'), 'leaf rows reserve chevron space so names align with branches');
+    check(otherNode?.getAttribute('role') === 'treeitem', 'folder rows expose treeitem semantics');
+    check(otherBranch && !otherBranch.open, 'non-default branch starts collapsed');
+
+    otherNode?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    check(folderInput?.value === 'Other-Journals', 'clicking a branch row selects that folder');
+    check(otherBranch?.open === true, 'clicking a branch row expands it so child folders become visible');
+    check(otherNode?.getAttribute('aria-selected') === 'true', 'selected branch uses aria-selected rather than toggle-button pressed state');
+    check(otherNode?.getAttribute('aria-expanded') === 'true', 'expanded branch updates aria-expanded');
+
+    selectFolderInModal(modal, 'Legacy');
+    otherToggle?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    check(otherBranch?.open === false, 'clicking the chevron collapses the branch');
+    check(folderInput?.value === 'Legacy', 'chevron collapse only browses the tree and does not change selected folder');
+    check(otherNode?.getAttribute('aria-expanded') === 'false', 'collapsed branch updates aria-expanded');
+
+    otherNode?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    check(otherBranch?.open === true, 'ArrowRight expands a focused branch row');
+    otherNode?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    check(otherBranch?.open === false, 'ArrowLeft collapses a focused branch row');
+
+    modal.contentEl.remove();
+}
+
 console.log('\nTest 10: first insight modal walks through scan, generate, optional import, and confirmed save');
 {
     const harness = createVaultHarness();

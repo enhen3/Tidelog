@@ -16,6 +16,7 @@
 
 ## First Insight And Profile Cleanups
 
+- Redesigned the old-journal folder picker as a clearer desktop-style folder tree with dedicated expand/collapse controls, aligned folder rows, selected-folder labeling, and keyboard expand/collapse support.
 - Hidden machine-readable profile/extraction blocks are stripped more reliably from previews and archived reports.
 - First Insight report previews keep internal profile update tags hidden while the model is still streaming.
 - Old-journal profile generation keeps the original source notes read-only and archives normalized copies for evidence.
