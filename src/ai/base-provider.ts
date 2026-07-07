@@ -138,6 +138,26 @@ export abstract class BaseAIProvider implements AIProvider {
         const decoder = new TextDecoder();
         let buffer = '';
         let full = '';
+        const consumeSSELine = (rawLine: string) => {
+            const line = rawLine.trim();
+            if (!line.startsWith('data:')) return;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === '[DONE]') return;
+            try {
+                const json = JSON.parse(payload) as {
+                    choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>;
+                };
+                const delta = json.choices?.[0]?.delta?.content
+                    ?? json.choices?.[0]?.message?.content
+                    ?? '';
+                if (delta) {
+                    full += delta;
+                    onChunk(delta);
+                }
+            } catch {
+                // keep-alive comment or partial JSON — ignore
+            }
+        };
 
         try {
             for (;;) {
@@ -147,25 +167,12 @@ export abstract class BaseAIProvider implements AIProvider {
                 const lines = buffer.split('\n');
                 buffer = lines.pop() ?? '';
                 for (const rawLine of lines) {
-                    const line = rawLine.trim();
-                    if (!line.startsWith('data:')) continue;
-                    const payload = line.slice(5).trim();
-                    if (!payload || payload === '[DONE]') continue;
-                    try {
-                        const json = JSON.parse(payload) as {
-                            choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>;
-                        };
-                        const delta = json.choices?.[0]?.delta?.content
-                            ?? json.choices?.[0]?.message?.content
-                            ?? '';
-                        if (delta) {
-                            full += delta;
-                            onChunk(delta);
-                        }
-                    } catch {
-                        // keep-alive comment or partial JSON — ignore
-                    }
+                    consumeSSELine(rawLine);
                 }
+            }
+            buffer += decoder.decode();
+            if (buffer.trim()) {
+                consumeSSELine(buffer);
             }
         } catch (e) {
             // Mid-stream drop: fall back only if nothing arrived yet; otherwise
@@ -174,7 +181,10 @@ export abstract class BaseAIProvider implements AIProvider {
             throw classifyNetworkError(e);
         }
 
-        return full;
+        // Some OpenAI-compatible proxies return HTTP 200 with a stream-shaped
+        // body but no parseable chat deltas. Do not surface a blank report;
+        // retry through the non-streaming requestUrl path instead.
+        return full.length > 0 ? full : null;
     }
 
     /**

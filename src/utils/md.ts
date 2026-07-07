@@ -35,6 +35,6 @@ export function isSectionHeading(line: string, ...names: string[]): boolean {
  */
 export function stripExtractionTags(content: string): string {
     return content
-        .replace(/<(profile_update|new_patterns|new_principles)>[\s\S]*?(?:<\/\1>|$)/gi, '')
+        .replace(/<(extraction|profile_update|new_patterns|new_principles)>[\s\S]*?(?:<\/\1>|$)/gi, '')
         .trim();
 }
