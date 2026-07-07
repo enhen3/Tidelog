@@ -5,6 +5,7 @@
 
 import { requestUrl } from 'obsidian';
 import { AIProvider, ChatMessage, StreamCallback } from '../types';
+import { classifyHTTPError, classifyNetworkError, TideLogError } from '../utils/error-formatter';
 
 /**
  * Base class for AI providers with common functionality
@@ -47,6 +48,133 @@ export abstract class BaseAIProvider implements AIProvider {
             text: response.text,
             json: response.json,
         };
+    }
+
+    /**
+     * Send a chat completion to an OpenAI-compatible endpoint.
+     *
+     * Prefers real SSE streaming: a long generation (e.g. the first-insight
+     * report) can run for many minutes, and a single non-streaming request is
+     * often dropped by the server/proxy as an idle connection
+     * (net::ERR_CONNECTION_CLOSED). Streaming keeps bytes flowing so the
+     * connection stays alive — and gives live progress in the UI.
+     *
+     * If streaming is unavailable (e.g. fetch blocked by CORS on some
+     * providers/platforms), it transparently falls back to a single
+     * non-streaming request via Obsidian's CORS-free requestUrl.
+     */
+    protected async sendOpenAICompatible(
+        url: string,
+        authHeaders: Record<string, string>,
+        messages: ChatMessage[],
+        systemPrompt: string,
+        onChunk: StreamCallback,
+    ): Promise<string> {
+        const formattedMessages = this.formatMessages(messages, systemPrompt);
+        const headers = { ...authHeaders, 'Content-Type': 'application/json' };
+
+        // 1) Try real streaming.
+        try {
+            const streamed = await this.streamChatCompletion(url, headers, formattedMessages, onChunk);
+            if (streamed !== null) return streamed;
+        } catch (e) {
+            if (e instanceof TideLogError) throw e;
+            throw classifyNetworkError(e);
+        }
+
+        // 2) Fallback: non-streaming request + simulated typewriter.
+        try {
+            const response = await this.makeRequest(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ model: this.model, messages: formattedMessages }),
+            });
+            if (response.status >= 400) {
+                throw classifyHTTPError(response.status, response.text, this.name, this.model);
+            }
+            const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
+            const fullContent = data.choices?.[0]?.message?.content || '';
+            return this.simulateStream(fullContent, onChunk);
+        } catch (e) {
+            if (e instanceof TideLogError) throw e;
+            throw classifyNetworkError(e);
+        }
+    }
+
+    /**
+     * Stream an OpenAI-compatible chat completion via fetch (SSE).
+     * Returns the full text, or `null` to signal the caller should fall back
+     * to a non-streaming request (e.g. when fetch is blocked before any
+     * response, or the body cannot be streamed).
+     */
+    private async streamChatCompletion(
+        url: string,
+        headers: Record<string, string>,
+        formattedMessages: Array<{ role: string; content: string }>,
+        onChunk: StreamCallback,
+    ): Promise<string | null> {
+        // Obsidian normally prefers requestUrl (CORS-free), but it cannot stream
+        // a response body. Streaming is required so long generations keep the
+        // connection alive; on any fetch failure we fall back to requestUrl.
+        // eslint-disable-next-line no-restricted-globals
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { ...headers, Accept: 'text/event-stream' },
+            body: JSON.stringify({ model: this.model, messages: formattedMessages, stream: true }),
+        }).catch(() => null);
+
+        // fetch rejected before a response (CORS / offline / not permitted).
+        if (response === null) return null;
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw classifyHTTPError(response.status, text, this.name, this.model);
+        }
+
+        const body = response.body;
+        if (!body || typeof body.getReader !== 'function') return null;
+
+        const reader = body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let full = '';
+
+        try {
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() ?? '';
+                for (const rawLine of lines) {
+                    const line = rawLine.trim();
+                    if (!line.startsWith('data:')) continue;
+                    const payload = line.slice(5).trim();
+                    if (!payload || payload === '[DONE]') continue;
+                    try {
+                        const json = JSON.parse(payload) as {
+                            choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>;
+                        };
+                        const delta = json.choices?.[0]?.delta?.content
+                            ?? json.choices?.[0]?.message?.content
+                            ?? '';
+                        if (delta) {
+                            full += delta;
+                            onChunk(delta);
+                        }
+                    } catch {
+                        // keep-alive comment or partial JSON — ignore
+                    }
+                }
+            }
+        } catch (e) {
+            // Mid-stream drop: fall back only if nothing arrived yet; otherwise
+            // surface it as a network error so the user can retry.
+            if (full.length === 0) return null;
+            throw classifyNetworkError(e);
+        }
+
+        return full;
     }
 
     /**

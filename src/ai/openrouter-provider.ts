@@ -15,30 +15,17 @@ export class OpenRouterProvider extends BaseAIProvider {
         systemPrompt: string,
         onChunk: StreamCallback
     ): Promise<string> {
-        const formattedMessages = this.formatMessages(messages, systemPrompt);
-
-        const response = await this.makeRequest(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
+        return this.sendOpenAICompatible(
+            `${this.baseUrl}/chat/completions`,
+            {
                 'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json',
                 'HTTP-Referer': 'https://obsidian.md',
                 'X-Title': 'TideLog',
             },
-            body: JSON.stringify({
-                model: this.model,
-                messages: formattedMessages,
-            }),
-        });
-
-        if (response.status >= 400) {
-            throw classifyHTTPError(response.status, response.text, this.name, this.model);
-        }
-
-        const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
-        const fullContent = data.choices?.[0]?.message?.content || '';
-
-        return this.simulateStream(fullContent, onChunk);
+            messages,
+            systemPrompt,
+            onChunk,
+        );
     }
 
     async testConnection(): Promise<boolean> {

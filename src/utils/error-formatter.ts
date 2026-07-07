@@ -84,10 +84,27 @@ export function classifyHTTPError(
  */
 export function classifyNetworkError(err: unknown): TideLogError {
     const msg = String(err).toLowerCase();
-    if (msg.includes('timeout')) {
+    // Timeouts first (more specific).
+    if (
+        msg.includes('timeout') || msg.includes('timed out') ||
+        msg.includes('err_timed_out') || msg.includes('err_connection_timed_out') ||
+        msg.includes('etimedout')
+    ) {
         return new TideLogError(ErrorCode.NETWORK_TIMEOUT, String(err));
     }
-    if (msg.includes('network') || msg.includes('fetch') || msg.includes('econnrefused') || msg.includes('failed to fetch')) {
+    // Transport-level connection failures, including Chromium `net::ERR_*` codes
+    // (e.g. net::ERR_CONNECTION_CLOSED when a long request is dropped) and Node
+    // socket errors — none of which contain the word "network".
+    if (
+        msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') ||
+        msg.includes('load failed') || msg.includes('net::') ||
+        msg.includes('err_connection') || msg.includes('err_network') ||
+        msg.includes('err_internet_disconnected') || msg.includes('err_name_not_resolved') ||
+        msg.includes('err_address_unreachable') || msg.includes('err_empty_response') ||
+        msg.includes('connection closed') || msg.includes('connection reset') ||
+        msg.includes('socket hang up') || msg.includes('econnrefused') ||
+        msg.includes('econnreset') || msg.includes('enotfound') || msg.includes('eai_again')
+    ) {
         return new TideLogError(ErrorCode.NETWORK_FAILED, String(err));
     }
     return new TideLogError(ErrorCode.UNKNOWN, String(err));
@@ -124,7 +141,15 @@ export function formatAPIError(error: unknown, providerName: string): string {
     if (errMsg.includes('500') || errMsg.includes('502') || errMsg.includes('503') || errMsg.includes('internal')) {
         return formatByCode(ErrorCode.SERVER_ERROR, label);
     }
-    if (errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('failed to fetch') || errMsg.includes('econnrefused') || errMsg.includes('timeout')) {
+    if (
+        errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('failed to fetch') ||
+        errMsg.includes('econnrefused') || errMsg.includes('econnreset') || errMsg.includes('enotfound') ||
+        errMsg.includes('timeout') || errMsg.includes('timed out') ||
+        errMsg.includes('net::') || errMsg.includes('err_connection') || errMsg.includes('err_network') ||
+        errMsg.includes('err_timed_out') || errMsg.includes('err_internet_disconnected') ||
+        errMsg.includes('connection closed') || errMsg.includes('connection reset') ||
+        errMsg.includes('socket hang up') || errMsg.includes('load failed')
+    ) {
         return formatByCode(ErrorCode.NETWORK_FAILED, label);
     }
     return formatByCode(ErrorCode.UNKNOWN, label);

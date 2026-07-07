@@ -323,7 +323,10 @@ export class FirstInsightModal extends Modal {
             return true;
         } catch (error) {
             notice.addClass('tl-insights-notice-stale');
-            notice.setText(error instanceof Error ? error.message : t('firstInsight.generateFailed'));
+            notice.empty();
+            const message = error instanceof Error ? error.message : t('firstInsight.generateFailed');
+            void MarkdownRenderer.render(this.app, message, notice, '', this.markdownComponent)
+                .catch(() => notice.setText(message));
             return false;
         } finally {
             window.clearInterval(progressTimer);

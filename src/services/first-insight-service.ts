@@ -91,9 +91,10 @@ export class FirstInsightService {
                 dateRange: session.scan.dateRange,
             };
         } catch (error) {
-            const message = formatAPIError(error, this.plugin.settings.activeProvider);
-            onChunk?.(`\n\n${message}`);
-            throw error;
+            // Surface a single, friendly, classified message (e.g. a network
+            // drop on a long generation) instead of dumping a raw net:: code
+            // into the report preview.
+            throw new Error(formatAPIError(error, this.plugin.settings.activeProvider));
         }
     }
 
