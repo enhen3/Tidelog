@@ -11,6 +11,8 @@ import { ChatMessage } from '../types';
 import { getLanguage, t } from '../i18n';
 import { replaceFile } from '../utils/vault-write';
 import { formatAPIError } from '../utils/error-formatter';
+import { stripExtractionTags } from '../utils/md';
+import { formatFirstInsightReportDocument, formatProfileDocument } from '../utils/document-format';
 import type { LegacyImportSession, NormalizedLegacyJournal } from './legacy-import-service';
 
 export const AHA_MODULE_HEADINGS_ZH = [
@@ -77,8 +79,8 @@ export class FirstInsightService {
                 }
             });
 
-            const report = stripProfileTags(fullResponse);
-            const profileUpdate = extractProfileUpdate(fullResponse) || report;
+            const report = formatFirstInsightReportDocument(stripProfileTags(fullResponse));
+            const profileUpdate = formatProfileDocument(extractProfileUpdate(fullResponse) || report);
 
             return {
                 importId: session.importId,
@@ -126,14 +128,15 @@ export class FirstInsightService {
         // The model already emits its own "# …" title. Insert the meta callout
         // right after that H1 instead of prepending a second title (which would
         // duplicate the heading).
-        const reportLines = draft.report.trim().split('\n');
+        const formattedReport = formatFirstInsightReportDocument(draft.report.trim());
+        const reportLines = formattedReport.split('\n');
         const h1Idx = reportLines.findIndex((l) => /^#\s+/.test(l));
         let composed: string;
         if (h1Idx >= 0) {
             reportLines.splice(h1Idx + 1, 0, '', meta);
             composed = reportLines.join('\n');
         } else {
-            composed = `${t('firstInsight.reportTitle')}\n\n${meta}\n\n${draft.report.trim()}`;
+            composed = `${t('firstInsight.reportTitle')}\n\n${meta}\n\n${formattedReport}`;
         }
         const body = `${composed}\n\n---\n\n${t('firstInsight.reportArchiveNote', draft.importId, draft.normalizedFolderPath)}\n`;
 
@@ -146,7 +149,7 @@ export class FirstInsightService {
     }
 
     private async saveProfileUpdate(profileUpdate: string): Promise<TFile | null> {
-        const content = ensureProfileAhaStructure(profileUpdate.trim());
+        const content = formatProfileDocument(ensureProfileAhaStructure(profileUpdate.trim()));
         if (!content) return null;
 
         const profilePath = `${this.plugin.settings.archiveFolder}/user_profile.md`;
@@ -195,7 +198,10 @@ export function buildFirstInsightPrompt(input: {
     importId: string;
     dateRange: { start: string; end: string };
 }): string {
-    const journalContext = input.entries.map(formatJournalForPrompt).join('\n\n');
+    const bodyExcerptLimit = getFirstInsightBodyExcerptLimit(input.entries.length);
+    const journalContext = input.entries
+        .map(entry => formatJournalForPrompt(entry, bodyExcerptLimit))
+        .join('\n\n');
 
     if (getLanguage() === 'en') {
         return `<task>Generate the first TideLog profile insight report</task>
@@ -231,6 +237,7 @@ Write a visible report titled "# First Insight Profile Report". It must contain 
 - In "One small experiment", recommend only one core experiment for the next 7 days, with at most 1-3 concrete actions, and explicitly connect the experiment to the cited evidence.
 - In "Evidence references", map every key claim back to 2-3 original records using date, source path, and short evidence. Do not leave evidence only in the final section; each analytic section also needs citations.
 - Prefer fewer, deeper claims over many shallow claims. Make the user feel "this found something I usually miss about myself."
+- Use TideLog document callouts in the visible report and profile: > [!tl-report], > [!tl-profile], > [!tl-evidence], > [!tl-pattern], > [!tl-caution], > [!tl-experiment]. Use at most 1-2 emoji in section headings, never as bullet decoration.
 </quality_bar>
 
 <required_section_template>
@@ -332,6 +339,7 @@ ${journalContext}
 - 在「下周一个小实验」里，只推荐未来 7 天的 1 个核心实验，最多 1-3 条具体行动，并说明它如何回应前面的证据。
 - 在「引用证据」里，把每个关键判断映射回 2-3 条原始记录，包含日期、源文件链接、短摘录或简短证据说明。不要只在最后列证据；每个分析模块内部也要有引用。
 - 宁愿少写几个判断，也要把每个判断写深。目标是让用户产生“它发现了我平时没注意到的自己”的感觉。
+- 可见报告和画像使用 TideLog 文档 callout：> [!tl-report]、> [!tl-profile]、> [!tl-evidence]、> [!tl-pattern]、> [!tl-caution]、> [!tl-experiment]。emoji 最多只放 1-2 个在分区标题里，不要把 emoji 当项目符号装饰。
 </quality_bar>
 
 <required_section_template>
@@ -406,11 +414,7 @@ export function extractProfileUpdate(response: string): string {
 }
 
 export function stripProfileTags(response: string): string {
-    return response
-        .replace(/<profile_update>[\s\S]*?<\/profile_update>/gi, '')
-        .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/gi, '')
-        .replace(/<new_principles>[\s\S]*?<\/new_principles>/gi, '')
-        .trim();
+    return stripExtractionTags(response);
 }
 
 export function hasRequiredAhaModules(content: string): boolean {
@@ -432,7 +436,14 @@ export function ensureProfileAhaStructure(content: string): string {
     return `${trimmed}\n\n${additions}`.trim();
 }
 
-function formatJournalForPrompt(entry: NormalizedLegacyJournal): string {
+export function getFirstInsightBodyExcerptLimit(entryCount: number): number {
+    if (entryCount >= 50) return 420;
+    if (entryCount >= 30) return 650;
+    if (entryCount >= 15) return 900;
+    return 1600;
+}
+
+function formatJournalForPrompt(entry: NormalizedLegacyJournal, bodyExcerptLimit: number): string {
     return `--- ${entry.date} · ${entry.sourcePath} ---
 date: ${entry.date}
 source_path: [[${entry.sourcePath}]]
@@ -449,7 +460,7 @@ reflection_signals:
 ${formatPromptList(entry.signals.reflections)}
 
 body_excerpt:
-${entry.analyzableBody.slice(0, 1600)}`;
+${entry.analyzableBody.slice(0, bodyExcerptLimit)}`;
 }
 
 function formatPromptList(items: string[]): string {

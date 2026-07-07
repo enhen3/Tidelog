@@ -701,6 +701,7 @@ Name the friction directly. Avoid blame; explain the mechanism.
 - Do not invent facts, emotions, motivations, dates, or outcomes.
 - If the source data is sparse, state the limit and only make cautious observations.
 - Avoid cliches such as "in conclusion", "journey", "unlock your potential", or generic encouragement.
+- Use TideLog document callouts in the visible report: > [!tl-report], > [!tl-evidence], > [!tl-pattern], > [!tl-caution], > [!tl-experiment]. Use at most 1-2 emoji in section headings, never as bullet decoration.
 </writing_rules>
 
 <extraction>
@@ -751,6 +752,7 @@ At the end, keep these machine-readable tags exactly:
 - 不得编造事实、情绪、动机、日期、结果。
 - 数据少就承认证据不足，只做谨慎观察。
 - 避免套话，比如"总的来说""在这个过程中""赋能""开启新篇章"。
+- 可见报告使用 TideLog 文档 callout：> [!tl-report]、> [!tl-evidence]、> [!tl-pattern]、> [!tl-caution]、> [!tl-experiment]。emoji 最多只放 1-2 个在分区标题里，不要把 emoji 当项目符号装饰。
 </writing_rules>
 
 <extraction>
@@ -808,6 +810,7 @@ Say what should be updated in the user profile and why.
 - Do not invent facts, dates, emotions, or causal explanations.
 - Every important claim needs evidence from notes or plans.
 - If data is thin, explain the limitation before giving cautious advice.
+- Use TideLog document callouts in the visible report: > [!tl-report], > [!tl-evidence], > [!tl-pattern], > [!tl-caution], > [!tl-experiment]. Use at most 1-2 emoji in section headings, never as bullet decoration.
 </writing_rules>
 
 <extraction>
@@ -861,6 +864,7 @@ At the end, keep these machine-readable tags exactly:
 - 不得编造事实、日期、情绪、动机或因果。
 - 重要判断必须能在日记或计划中找到证据。
 - 数据少就先说明限制，再给谨慎建议。
+- 可见报告使用 TideLog 文档 callout：> [!tl-report]、> [!tl-evidence]、> [!tl-pattern]、> [!tl-caution]、> [!tl-experiment]。emoji 最多只放 1-2 个在分区标题里，不要把 emoji 当项目符号装饰。
 </writing_rules>
 
 <extraction>
@@ -975,6 +979,7 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 - Do not invent traits, diagnoses, identities, motivations, or life events.
 - Avoid AI cliches and motivational slogans.
 - Make uncertainty visible instead of pretending to know.
+- Use TideLog document callouts in the visible analysis and saved profile: > [!tl-report], > [!tl-profile], > [!tl-evidence], > [!tl-pattern], > [!tl-caution], > [!tl-experiment]. Use at most 1-2 emoji in section headings, never as bullet decoration.
 </writing_rules>`;
     }
 
@@ -1073,6 +1078,7 @@ Then output the complete updated profile inside <profile_update> tags. Preserve 
 - 不得编造性格、诊断、身份、动机或人生事件。
 - 避免 AI 套话和励志口号。
 - 不确定就写出不确定，不要装作知道。
+- 可见分析和保存画像使用 TideLog 文档 callout：> [!tl-report]、> [!tl-profile]、> [!tl-evidence]、> [!tl-pattern]、> [!tl-caution]、> [!tl-experiment]。emoji 最多只放 1-2 个在分区标题里，不要把 emoji 当项目符号装饰。
 </writing_rules>`;
 }
 

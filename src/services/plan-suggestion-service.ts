@@ -10,6 +10,7 @@ import type TideLogPlugin from '../main';
 import type { ChatMessage, SOPContext } from '../types';
 import { getLanguage } from '../i18n';
 import { replaceFile } from '../utils/vault-write';
+import { formatPlanSuggestionsDocument } from '../utils/document-format';
 
 export type PlanSuggestionScope = 'day' | 'week' | 'month';
 
@@ -145,16 +146,13 @@ export class PlanSuggestionService {
         const folder = path.substring(0, path.lastIndexOf('/'));
         await this.ensureFolder(folder);
 
-        const content = [
-            '---',
-            `scope: ${scope}`,
-            `target: ${this.getCacheKey(scope, date)}`,
-            `updated: ${new Date().toISOString()}`,
-            `source: ${source}`,
-            '---',
-            ...lines,
-            '',
-        ].join('\n');
+        const content = formatPlanSuggestionsDocument({
+            scope,
+            target: this.getCacheKey(scope, date),
+            updated: new Date().toISOString(),
+            source,
+            lines,
+        });
 
         const file = this.plugin.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) {
@@ -307,14 +305,19 @@ export class PlanSuggestionService {
     }
 
     private normalizeSuggestionLines(content: string): string[] {
-        return content
+        const candidates = content
             .replace(/<!--[\s\S]*?-->/g, '')
             .split('\n')
             .map(line => line.trim())
+            .map(line => line.replace(/^>\s?/, '').trim())
             .filter(Boolean)
             .filter(line => !line.startsWith('---'))
+            .filter(line => !line.startsWith('#'))
+            .filter(line => !line.startsWith('[!'))
+            .filter(line => !/^(scope|target|updated|source):\s+/i.test(line))
             .map(line => line.replace(/^[-*]\s*/, '').replace(/^\d+[.)、]\s*/, '').trim())
-            .filter(Boolean)
+            .filter(Boolean);
+        return candidates
             .map(line => line.startsWith('💡') ? line : `💡 ${line}`)
             .slice(0, 4);
     }

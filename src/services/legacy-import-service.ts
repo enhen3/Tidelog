@@ -9,6 +9,7 @@
 import { TFile, TFolder, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
 import { t, getLanguage } from '../i18n';
+import { formatDailyNoteDocument, formatTideLogCallout } from '../utils/document-format';
 
 export type LegacyDateSource = 'frontmatter' | 'filename' | 'body' | 'mtime';
 export type LegacyExclusionReason = 'outside_range' | 'missing_date' | 'too_short' | 'read_error';
@@ -520,7 +521,7 @@ export function buildSystemDailyNoteFromLegacy(entry: NormalizedLegacyJournal): 
         ? (getLanguage() === 'en' ? date.format('dddd, MMMM D, YYYY') : `${date.format('YYYY年M月D日')} ${weekday}`)
         : entry.date;
 
-    return `---
+    const rawContent = `---
 type: daily
 date: ${entry.date}
 weekday: ${weekday}
@@ -547,29 +548,30 @@ ${t('legacyImport.systemPlanPlaceholder')}
 
 ${buildSystemDailyImportSection(entry)}
 `;
+    return formatDailyNoteDocument(rawContent);
 }
 
 export function buildSystemDailyImportSection(entry: NormalizedLegacyJournal): string {
     const mtimeText = entry.sourceMtime > 0 ? moment(entry.sourceMtime).format('YYYY-MM-DD HH:mm:ss') : t('legacyImport.unknownMtime');
-    return `### ${t('legacyImport.systemSection')}
+    const metadata = [
+        `- ${t('legacyImport.systemDate')}: ${entry.date}`,
+        `- ${t('legacyImport.systemSource')}: [[${entry.sourcePath}]]`,
+        `- ${t('legacyImport.systemSourceMtime')}: ${mtimeText}`,
+        `- ${t('legacyImport.systemNormalized')}: [[${entry.normalizedPath}]]`,
+    ].join('\n');
 
-- ${t('legacyImport.systemDate')}: ${entry.date}
-- ${t('legacyImport.systemSource')}: [[${entry.sourcePath}]]
-- ${t('legacyImport.systemSourceMtime')}: ${mtimeText}
-- ${t('legacyImport.systemNormalized')}: [[${entry.normalizedPath}]]
-
-### ${t('legacyImport.systemSummary')}
-
-${entry.summary || t('legacyImport.emptySummary')}
-
-### ${t('legacyImport.systemBody')}
-
-${entry.analyzableBody}
-
-### ${t('legacyImport.systemTopics')}
-
-${formatBulletList(entry.candidateTopics)}
-`;
+    return [
+        `### ${t('legacyImport.systemSection')}`,
+        '',
+        formatTideLogCallout('tl-meta', t('legacyImport.systemSection'), metadata),
+        '',
+        formatTideLogCallout('tl-report', t('legacyImport.systemSummary'), entry.summary || t('legacyImport.emptySummary')),
+        '',
+        formatTideLogCallout('tl-evidence', t('legacyImport.systemBody'), entry.analyzableBody),
+        '',
+        formatTideLogCallout('tl-pattern', t('legacyImport.systemTopics'), formatBulletList(entry.candidateTopics)),
+        '',
+    ].join('\n');
 }
 
 function parseFrontmatterDate(content: string): string | null {

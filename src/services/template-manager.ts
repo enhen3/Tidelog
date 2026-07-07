@@ -5,6 +5,13 @@
 import { App } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
+import {
+    formatMonthlyPlanDocument,
+    formatPatternsDocument,
+    formatPrinciplesDocument,
+    formatProfileDocument,
+    formatWeeklyPlanDocument,
+} from '../utils/document-format';
 
 export class TemplateManager {
     private app: App;
@@ -32,7 +39,7 @@ export class TemplateManager {
         const exists = this.app.vault.getAbstractFileByPath(path);
 
         if (!exists) {
-            const content = `${t('tmpl.userProfileTitle')}
+            const rawContent = `${t('tmpl.userProfileTitle')}
 
 > [!tl-quote]
 > ${t('tmpl.profilePortrait')}
@@ -147,6 +154,7 @@ ${t('tmpl.panicComment')}
 
 ${t('tmpl.profileFooter')}
 `;
+            const content = formatProfileDocument(rawContent);
             await this.app.vault.create(path, content);
         }
     }
@@ -159,7 +167,7 @@ ${t('tmpl.profileFooter')}
         const exists = this.app.vault.getAbstractFileByPath(path);
 
         if (!exists) {
-            const content = `${t('tmpl.principlesTitle')}
+            const rawContent = `${t('tmpl.principlesTitle')}
 
 ${t('tmpl.principlesDesc')}
 
@@ -203,6 +211,7 @@ ${t('tmpl.principleGeneralComment')}
 
 ${t('tmpl.principlesFooter')}
 `;
+            const content = formatPrinciplesDocument(rawContent);
             await this.app.vault.create(path, content);
         }
     }
@@ -215,7 +224,7 @@ ${t('tmpl.principlesFooter')}
         const exists = this.app.vault.getAbstractFileByPath(path);
 
         if (!exists) {
-            const content = `${t('tmpl.patternsTitle')}
+            const rawContent = `${t('tmpl.patternsTitle')}
 
 ${t('tmpl.patternsDesc')}
 
@@ -259,6 +268,7 @@ ${t('tmpl.patternSuccessComment')}
 
 ${t('tmpl.patternsFooter')}
 `;
+            const content = formatPatternsDocument(rawContent);
             await this.app.vault.create(path, content);
         }
     }
@@ -268,7 +278,7 @@ ${t('tmpl.patternsFooter')}
      */
     getWeeklyPlanTemplate(weekNumber: string, monthRef?: string): string {
         const mRef = monthRef || '';
-        return `---
+        const rawContent = `---
 type: weekly
 week_number: ${weekNumber}
 monthly_ref: "${mRef ? `[[${mRef}]]` : ''}"
@@ -303,13 +313,14 @@ ${t('tmpl.weeklyNextWeek')}
 
 ---
 `;
+        return formatWeeklyPlanDocument(rawContent);
     }
 
     /**
      * Get monthly plan template
      */
     getMonthlyPlanTemplate(yearMonth: string): string {
-        return `${t('tmpl.monthlyPlanTitle', yearMonth)}
+        const rawContent = `${t('tmpl.monthlyPlanTitle', yearMonth)}
 
 ${t('tmpl.monthlyTheme')}
 
@@ -362,5 +373,6 @@ ${t('tmpl.monthlyOutlook')}
 
 ---
 `;
+        return formatMonthlyPlanDocument(rawContent);
     }
 }

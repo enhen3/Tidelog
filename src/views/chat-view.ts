@@ -24,6 +24,7 @@ import { loadDayLoopData } from './loop-utils';
 import { ChatController } from './chat-controller';
 import { replaceFile } from '../utils/vault-write';
 import { isSectionHeading } from '../utils/md';
+import { formatMonthlyPlanDocument, formatWeeklyPlanDocument } from '../utils/document-format';
 
 type SidebarTab = 'chat' | 'kanban' | 'review';
 type ReviewMode = 'home' | 'dialogue';
@@ -650,7 +651,11 @@ export class ChatView extends ItemView {
                     await this.app.vault.createFolder(folder);
                 }
                 const basename = targetPlanPath.split('/').pop()?.replace('.md', '') || 'Plan';
-                targetFile = await this.app.vault.create(targetPlanPath, `# ${basename}\n\n`);
+                const rawContent = `# ${basename}\n\n`;
+                const content = targetPlanPath.includes('/Monthly/')
+                    ? formatMonthlyPlanDocument(`${rawContent}## Monthly goals\n\n`)
+                    : formatWeeklyPlanDocument(`${rawContent}## Weekly goals\n\n`);
+                targetFile = await this.app.vault.create(targetPlanPath, content);
             }
 
             if (targetFile instanceof TFile) {

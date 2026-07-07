@@ -8,6 +8,7 @@ import type { App, Component } from 'obsidian';
 import { t, getLanguage } from '../i18n';
 import { ProModal } from './pro-modal';
 import { loadDayLoopData } from './loop-utils';
+import { stripExtractionTags } from '../utils/md';
 
 export type InsightsMode = 'weekly' | 'monthly' | 'profile';
 
@@ -193,14 +194,12 @@ export class InsightsRenderer {
     private buildReportPreview(content: string): string {
         const clean = content
             .replace(/^---[\s\S]*?---\s*/m, '')
-            .replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '')
-            .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
-            .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
             .trim();
+        const cleanPreview = stripExtractionTags(clean);
 
-        if (!clean) return '';
+        if (!cleanPreview) return '';
 
-        const lines = clean.split(/\r?\n/);
+        const lines = cleanPreview.split(/\r?\n/);
         const output: string[] = [];
         let titleSeen = false;
         let sectionCount = 0;
@@ -366,11 +365,7 @@ export class InsightsRenderer {
         await this.host.plugin.insightService.generateProfileSuggestions(
             (chunk: string) => {
                 fullContent += chunk;
-                const displayContent = fullContent
-                    .replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '')
-                    .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
-                    .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
-                    .trim();
+                const displayContent = stripExtractionTags(fullContent);
                 stream.empty();
                 void MarkdownRenderer.render(this.host.app, displayContent, stream, '', this.host);
             },

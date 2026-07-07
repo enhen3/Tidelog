@@ -201,6 +201,17 @@ function flush(ms = 0) {
     return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
+function selectFolderInModal(modal, folderPath) {
+    const node = [...modal.contentEl.querySelectorAll('.tl-first-insight-folder-node')]
+        .find(el => el.getAttribute('data-folder-path') === folderPath);
+    if (!node) {
+        check(false, `folder tree contains ${folderPath}`);
+        return false;
+    }
+    node.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    return true;
+}
+
 async function waitFor(predicate, label, timeoutMs = 1000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -560,6 +571,36 @@ console.log('\nTest 6: prompt/report standard requires the five Aha modules and 
     check(emptyProfilePrompt.includes('暂无已有画像'), 'empty profile is handled explicitly in first insight prompt');
 }
 
+console.log('\nTest 6b: large first insight imports keep prompt excerpts compact');
+{
+    const entries = Array.from({ length: 66 }, (_, index) => {
+        const i = index + 1;
+        const overflowMarker = `SHOULD_NOT_APPEAR_${i}`;
+        return {
+            date: `2026-06-${String((i % 28) + 1).padStart(2, '0')}`,
+            sourcePath: `Legacy/Nested/2026-06-${String(i).padStart(2, '0')}.md`,
+            sourceCopyPath: `Archive/Imports/x/source/${i}.md`,
+            normalizedPath: `Archive/Imports/x/normalized/${i}.md`,
+            sourceMtime: moment('2026-06-01').valueOf(),
+            dateSource: 'filename',
+            summary: `摘要${i}`,
+            analyzableBody: `${'批量导入正文'.repeat(80)}${overflowMarker}`,
+            candidateTopics: ['验证', '焦虑', '反馈'],
+            signals: { tasks: ['任务：找用户反馈'], emotions: ['情绪：焦虑'], reflections: ['反思：准备替代行动'] },
+        };
+    });
+    const prompt = buildFirstInsightPrompt({
+        currentProfile: '',
+        entries,
+        importId: 'legacy-large-import',
+        dateRange: { start: '2026-06-01', end: '2026-06-30' },
+    });
+
+    check(prompt.includes('Legacy/Nested/2026-06-01.md'), 'large-import prompt keeps source paths for citations');
+    check(!prompt.includes('SHOULD_NOT_APPEAR_1'), 'large-import prompt trims long body excerpts before late content');
+    check(prompt.length < 65000, 'large-import prompt stays below a compact prompt budget', `actual length: ${prompt.length}`);
+}
+
 console.log('\nTest 7: generation is preview-only until user confirms profile save');
 {
     const harness = createVaultHarness();
@@ -627,6 +668,7 @@ console.log('\nTest 7: generation is preview-only until user confirms profile sa
     check(streamWarningCaptured, 'preview stream callback errors are reported without hanging');
     check(extractProfileUpdate(aiResponse).includes('# 用户画像'), 'profile update is extracted from hidden tag');
     check(!stripProfileTags(aiResponse).includes('profile_update'), 'visible report strips hidden profile tag');
+    check(!stripProfileTags(`${draft.report}\n\n<profile_update>\n# 用户画像\n\n- 流式内部画像`).includes('流式内部画像'), 'streaming preview hides incomplete internal profile blocks');
     check(!harness.nodes.has('Archive/user_profile.md'), 'generation preview does not write user_profile.md');
 
     await firstInsight.saveInitialProfile(draft);
@@ -634,7 +676,10 @@ console.log('\nTest 7: generation is preview-only until user confirms profile sa
     const report = [...harness.nodes.values()].find(node => node instanceof TFile && node.path.includes('首次洞察画像报告'));
     check(!!profile, 'confirmed save writes user_profile.md');
     check(profile.content.includes('过去记录里的三个高频主题'), 'saved profile contains Aha modules');
+    check(profile.content.includes('> [!tl-profile]') && profile.content.includes('> [!tl-evidence]') && profile.content.includes('> [!tl-experiment]'), 'saved profile uses the optimized TideLog document callouts');
+    check(/^##\s+🧭\s+Aha Moment/m.test(profile.content), 'saved profile uses a sparse emoji section marker');
     check(!!report && report.content.includes('导入 ID'), 'confirmed save archives the first insight report');
+    check(!!report && report.content.includes('> [!tl-report]') && report.content.includes('> [!tl-pattern]') && report.content.includes('> [!tl-evidence]'), 'first insight report archive uses optimized TideLog document callouts');
     check(plugin.settings.firstInsightCompleted === true, 'confirmed save marks first insight as completed');
 }
 
@@ -664,6 +709,8 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     check(modalSource.includes('tl-first-insight-stepper'), 'first insight modal renders a compact three-step flow');
     check(modalSource.includes('importSessionToDailyNotes') && modalSource.includes('tl-first-insight-system-import-option'), 'first insight modal exposes optional one-click system import');
     check(!modalSource.includes("type: 'date'") && !modalSource.includes('startInputEl') && !modalSource.includes('endInputEl'), 'first insight modal asks for folder only and does not render date inputs');
+    check(modalSource.includes('tl-first-insight-folder-tree') && modalSource.includes('renderFolderTree'), 'first insight modal renders a hierarchical folder tree instead of a flat folder list');
+    check(!modalSource.includes("createEl('select', { cls: 'tl-first-insight-folder-select'"), 'first insight modal no longer renders all vault folders as one flat select');
     check(modalSource.includes('resetGeneratedStateForFolderChange') && modalSource.includes("addEventListener('change', resetGeneratedState"), 'folder changes reset generated state for another first insight run');
     check(onboardingSource.includes('tl-onboarding-first-insight'), 'onboarding contains a dedicated first insight CTA');
     check(onboardingSource.includes('hasConfiguredAI'), 'onboarding first insight entry is aware of API configuration');
@@ -691,7 +738,12 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
         validCount: 7,
         validEntries: Array.from({ length: 7 }, () => ({ analyzableBody: 'x'.repeat(226) })),
     });
-    check(sevenShortJournalEstimate.label.includes('6-9 分钟'), 'seven short journals are no longer underestimated as a three-minute generation');
+    check(sevenShortJournalEstimate.maxSeconds <= 480, 'seven short journals receive a compact but realistic estimate');
+    const sixtySixShortJournalEstimate = estimateModal.buildGenerationEstimate({
+        validCount: 66,
+        validEntries: Array.from({ length: 66 }, () => ({ analyzableBody: 'x'.repeat(173) })),
+    });
+    check(sixtySixShortJournalEstimate.maxSeconds <= 720, '66 short journals no longer show a 20-minute upper estimate', JSON.stringify(sixtySixShortJournalEstimate));
     check(zhSource.includes('系统正在读取大量信息、提取证据并组织成专业报告') && enSource.includes('organizing a professional report'), 'first insight wait copy explains why the wait is valuable');
     check(zhSource.includes('TideLog 不会保存你的个人数据') && enSource.includes('does not store your personal data'), 'first insight copy reassures users about local privacy');
     check(css.includes('.tl-first-insight-privacy-note') && css.includes('.tl-onboarding-privacy-note'), 'privacy notes reuse lightweight card styling');
@@ -759,14 +811,15 @@ console.log('\nTest 10: first insight modal walks through scan, generate, option
     modal.onOpen();
     document.body.appendChild(modal.contentEl);
 
-    const folderInput = modal.contentEl.querySelector('select.tl-first-insight-folder-select, input[type="text"]');
+    const folderInput = modal.contentEl.querySelector('input.tl-first-insight-folder-value, input[type="text"]');
     const systemImportToggle = modal.contentEl.querySelector('.tl-first-insight-system-import-option input');
     const dateInputs = modal.contentEl.querySelectorAll('input[type="date"]');
-    folderInput.value = 'Legacy';
-    folderInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    selectFolderInModal(modal, 'Legacy');
     systemImportToggle.checked = true;
     systemImportToggle.dispatchEvent(new window.Event('change', { bubbles: true }));
     check(dateInputs.length === 0, 'modal setup does not ask users to enter dates');
+    check(!!modal.contentEl.querySelector('.tl-first-insight-folder-tree'), 'modal setup renders a folder tree');
+    check(folderInput?.value === 'Legacy', 'folder tree click selects the old-journal folder');
     check(modal.contentEl.textContent.includes('同时纳入 TideLog 日记库'), 'modal offers optional one-click system import');
 
     const generateButton = [...modal.contentEl.querySelectorAll('button')]
@@ -815,7 +868,9 @@ console.log('\nTest 10: first insight modal walks through scan, generate, option
     const profile = harness.nodes.get('Archive/user_profile.md');
     const report = [...harness.nodes.values()].find(node => node instanceof TFile && node.path.includes('首次洞察画像报告'));
     check(profile.content.includes('过去记录里的三个高频主题'), 'modal saved profile keeps five-module standard');
+    check(profile.content.includes('> [!tl-profile]') && profile.content.includes('> [!tl-caution]'), 'modal saved profile keeps optimized document callouts');
     check(!!report && report.content.includes('导入 ID'), 'modal confirmed save archives report with import id');
+    check(!!report && report.content.includes('> [!tl-report]') && report.content.includes('> [!tl-experiment]'), 'modal archived report keeps optimized document callouts');
     check(plugin.__opened.includes('Archive/user_profile.md'), 'modal opens saved user profile after confirmation');
 
     modal.contentEl.remove();
@@ -878,9 +933,8 @@ console.log('\nTest 11: first insight completed button resets when the folder ch
     modal.onOpen();
     document.body.appendChild(modal.contentEl);
 
-    const folderInput = modal.contentEl.querySelector('select.tl-first-insight-folder-select, input[type="text"]');
-    folderInput.value = 'Legacy';
-    folderInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    const folderInput = modal.contentEl.querySelector('input.tl-first-insight-folder-value, input[type="text"]');
+    selectFolderInModal(modal, 'Legacy');
     const generateButton = [...modal.contentEl.querySelectorAll('button')]
         .find(button => button.textContent.includes('生成我的首次画像'));
     generateButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
@@ -889,9 +943,9 @@ console.log('\nTest 11: first insight completed button resets when the folder ch
         () => generateButton.textContent.includes('已经生成完成'),
         'modal marks button completed before folder reset',
     );
-    folderInput.value = 'Other-Journals';
-    folderInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    selectFolderInModal(modal, 'Other-Journals');
 
+    check(folderInput?.value === 'Other-Journals', 'folder tree click updates the selected folder path');
     check(generateButton.textContent.includes('生成我的首次画像') && !generateButton.disabled, 'changing the old-journal folder restores the generate button');
     check(!modal.contentEl.textContent.includes('报告草稿已生成'), 'changing the old-journal folder clears the previous report state');
     modal.contentEl.remove();

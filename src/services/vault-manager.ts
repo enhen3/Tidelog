@@ -7,6 +7,12 @@ import { TideLogSettings } from '../types';
 import { t, getLanguage } from '../i18n';
 import { replaceFile, updateFile } from '../utils/vault-write';
 import { isSectionHeading } from '../utils/md';
+import {
+    formatDailyNoteDocument,
+    formatMonthlyPlanDocument,
+    formatQuickCaptureDocument,
+    formatWeeklyPlanDocument,
+} from '../utils/document-format';
 
 /** Quiet, thematic section markers for the daily note (morning / evening). */
 const PLAN_EMOJI = '☀️';
@@ -112,6 +118,7 @@ export class VaultManager {
 
                     // Ensure TideLog YAML fields & sections exist
                     await this.ensureTideLogFields(file, d);
+                    await this.ensureDailyNoteDocumentFormat(file);
                 }
             } else {
                 // No user template — use TideLog's built-in default
@@ -123,6 +130,7 @@ export class VaultManager {
         if (!(file instanceof TFile)) {
             throw new Error(`Expected TFile at path: ${path}`);
         }
+        await this.ensureDailyNoteDocumentFormat(file);
         return file;
     }
 
@@ -271,7 +279,7 @@ export class VaultManager {
             ? date.format('dddd, MMMM D, YYYY')
             : `${date.format('YYYY年M月D日')} ${weekday}`;
 
-        return `---
+        const rawContent = `---
 type: daily
 date: ${dateStr}
 weekday: ${weekday}
@@ -291,6 +299,15 @@ ${t('vault.dailyNoteTitle', titleText)}
 
 ## ${REVIEW_EMOJI} ${t('vault.sectionReview')}
 `;
+        return formatDailyNoteDocument(rawContent);
+    }
+
+    private async ensureDailyNoteDocumentFormat(file: TFile): Promise<void> {
+        const content = await this.app.vault.read(file);
+        const formatted = formatDailyNoteDocument(content);
+        if (formatted.trim() !== content.trim()) {
+            await replaceFile(this.app, file, formatted);
+        }
     }
 
     /**
@@ -454,7 +471,7 @@ ${t('vault.dailyNoteTitle', titleText)}
                 await this.app.vault.createFolder(folder);
             }
 
-            const content = template || `# Weekly Plan\n\n- [ ] \n`;
+            const content = template || formatWeeklyPlanDocument(`# Weekly Plan\n\n## Weekly goals\n\n- [ ] \n`);
             file = await this.app.vault.create(path, content);
         }
 
@@ -478,7 +495,7 @@ ${t('vault.dailyNoteTitle', titleText)}
                 await this.app.vault.createFolder(folder);
             }
 
-            const content = template || `# Monthly Plan\n\n- [ ] \n`;
+            const content = template || formatMonthlyPlanDocument(`# Monthly Plan\n\n## Monthly goals\n\n- [ ] \n`);
             file = await this.app.vault.create(path, content);
         }
 
@@ -834,16 +851,16 @@ ${t('vault.dailyNoteTitle', titleText)}
      */
     async addQuickCaptureItem(text: string): Promise<void> {
         const path = this.getQuickCapturePath();
-        const line = `- ${text}`;
         let file = this.app.vault.getAbstractFileByPath(path);
 
         if (!file) {
             // Ensure folder exists
             await this.ensureFolder(this.settings.archiveFolder);
-            await this.app.vault.create(path, line + '\n');
+            await this.app.vault.create(path, formatQuickCaptureDocument([text]));
         } else if (file instanceof TFile) {
             // Prepend new item so latest appears first
-            await updateFile(this.app, file, (content) => line + '\n' + content);
+            const existing = await this.getQuickCaptureItems();
+            await replaceFile(this.app, file, formatQuickCaptureDocument([text, ...existing]));
         }
     }
 
@@ -855,13 +872,11 @@ ${t('vault.dailyNoteTitle', titleText)}
         const file = this.app.vault.getAbstractFileByPath(path);
         if (!file || !(file instanceof TFile)) return;
 
-        const content = await this.app.vault.read(file);
-        const lines = content.split('\n');
-        const target = `- ${text}`;
-        const idx = lines.findIndex(l => l.trim() === target.trim());
+        const items = await this.getQuickCaptureItems();
+        const idx = items.findIndex(item => item.trim() === text.trim());
         if (idx >= 0) {
-            lines.splice(idx, 1);
-            await replaceFile(this.app, file, lines.join('\n'));
+            items.splice(idx, 1);
+            await replaceFile(this.app, file, formatQuickCaptureDocument(items));
         }
     }
 
@@ -873,12 +888,11 @@ ${t('vault.dailyNoteTitle', titleText)}
         const file = this.app.vault.getAbstractFileByPath(path);
         if (!file || !(file instanceof TFile)) return;
 
-        const content = await this.app.vault.read(file);
-        const oldLine = `- ${oldText}`;
-        const newLine = `- ${newText}`;
-        const updated = content.replace(oldLine, newLine);
-        if (updated !== content) {
-            await replaceFile(this.app, file, updated);
+        const items = await this.getQuickCaptureItems();
+        const idx = items.findIndex(item => item.trim() === oldText.trim());
+        if (idx >= 0) {
+            items[idx] = newText;
+            await replaceFile(this.app, file, formatQuickCaptureDocument(items));
         }
     }
 }

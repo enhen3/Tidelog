@@ -3168,6 +3168,102 @@
 	cursor: pointer;
 }
 
+.tl-first-insight-folder-selected {
+	min-height: 34px;
+	display: flex;
+	align-items: center;
+	padding: 7px 10px;
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--tl-insight-light) 18%, var(--tl-surface-raised));
+	border: 0.5px solid color-mix(in srgb, var(--tl-insight) 16%, var(--tl-border));
+	color: var(--tl-text-primary);
+	font-size: var(--tl-fs-caption);
+	font-weight: var(--tl-fw-semibold);
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+}
+
+.tl-first-insight-folder-tree {
+	max-height: 260px;
+	overflow: auto;
+	padding: 6px;
+	border-radius: 8px;
+	border: 0.5px solid color-mix(in srgb, var(--tl-insight) 14%, var(--tl-border));
+	background: color-mix(in srgb, var(--tl-surface-card) 88%, white 12%);
+}
+
+.tl-first-insight-folder-branch {
+	margin: 1px 0;
+}
+
+.tl-first-insight-folder-summary {
+	list-style: none;
+}
+
+.tl-first-insight-folder-summary::-webkit-details-marker {
+	display: none;
+}
+
+.tl-first-insight-folder-summary::before {
+	content: "›";
+	display: inline-block;
+	width: 14px;
+	color: var(--tl-text-muted);
+	font-size: 14px;
+	transform: rotate(0deg);
+	transition: transform 0.14s ease;
+}
+
+.tl-first-insight-folder-branch[open] > .tl-first-insight-folder-summary::before {
+	transform: rotate(90deg);
+}
+
+.tl-first-insight-folder-node {
+	width: calc(100% - (var(--tl-first-insight-folder-depth, 0) * 14px));
+	margin-left: calc(var(--tl-first-insight-folder-depth, 0) * 14px);
+	min-height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	padding: 6px 8px;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--tl-text-primary);
+	font-size: var(--tl-fs-caption);
+	text-align: left;
+	cursor: pointer;
+}
+
+.tl-first-insight-folder-node:hover {
+	background: color-mix(in srgb, var(--tl-insight-light) 18%, transparent);
+}
+
+.tl-first-insight-folder-node.is-selected {
+	background: color-mix(in srgb, var(--tl-insight) 16%, var(--tl-surface-raised));
+	color: var(--tl-text-primary);
+	font-weight: var(--tl-fw-semibold);
+}
+
+.tl-first-insight-folder-name {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tl-first-insight-folder-path {
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--tl-text-muted);
+	font-size: 11px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .tl-first-insight-folder-note {
 	margin: 0 0 14px;
 	color: var(--tl-text-secondary);
@@ -8387,6 +8483,7 @@ body .tl-onboarding-modal {
    ============================================================================= */
 
 .callout[data-callout^="tl-"] {
+	--callout-color: 122, 132, 144;
 	margin: 1.1em 0;
 	padding: 0.7em 0.95em;
 	border: 1px solid color-mix(in srgb, rgb(var(--callout-color)) 16%, transparent);
@@ -8437,14 +8534,65 @@ body .tl-onboarding-modal {
 	--callout-icon: lucide-compass;
 }
 
+.callout[data-callout="tl-day"] {
+	--callout-color: 74, 123, 138;
+	--callout-icon: lucide-sun-medium;
+}
+
+.callout[data-callout="tl-plan"] {
+	--callout-color: 74, 123, 138;
+	--callout-icon: lucide-list-todo;
+}
+
+.callout[data-callout="tl-review"] {
+	--callout-color: 154, 126, 72;
+	--callout-icon: lucide-moon;
+}
+
 .callout[data-callout="tl-question"] {
 	--callout-color: 122, 132, 144;  /* neutral slate */
 	--callout-icon: lucide-message-circle;
 }
 
+.callout[data-callout="tl-capture"] {
+	--callout-color: 104, 116, 132;
+	--callout-icon: lucide-inbox;
+}
+
 .callout[data-callout="tl-meta"] {
 	--callout-color: 130, 138, 148;  /* quiet gray */
 	--callout-icon: lucide-calendar-days;
+}
+
+.callout[data-callout="tl-profile"] {
+	--callout-color: 74, 123, 138;
+	--callout-icon: lucide-user-round-search;
+	padding: 0.85em 1em;
+}
+
+.callout[data-callout="tl-report"] {
+	--callout-color: 104, 116, 132;
+	--callout-icon: lucide-file-text;
+}
+
+.callout[data-callout="tl-pattern"] {
+	--callout-color: 105, 116, 168;
+	--callout-icon: lucide-repeat-2;
+}
+
+.callout[data-callout="tl-evidence"] {
+	--callout-color: 88, 134, 126;
+	--callout-icon: lucide-list-checks;
+}
+
+.callout[data-callout="tl-experiment"] {
+	--callout-color: 92, 137, 90;
+	--callout-icon: lucide-flask-conical;
+}
+
+.callout[data-callout="tl-caution"] {
+	--callout-color: 154, 126, 72;
+	--callout-icon: lucide-lightbulb;
 }
 
 /* ── Quote — editorial: a single italic line behind a hairline rule ── */
@@ -8475,9 +8623,19 @@ body .tl-onboarding-modal {
 /* ── Dark mode: lift the inks so they read on dark backgrounds ── */
 
 .theme-dark .callout[data-callout="tl-overview"] { --callout-color: 120, 170, 184; }
+.theme-dark .callout[data-callout="tl-day"]      { --callout-color: 120, 170, 184; }
+.theme-dark .callout[data-callout="tl-plan"]     { --callout-color: 120, 170, 184; }
+.theme-dark .callout[data-callout="tl-review"]   { --callout-color: 202, 170, 104; }
 .theme-dark .callout[data-callout="tl-question"] { --callout-color: 150, 160, 172; }
+.theme-dark .callout[data-callout="tl-capture"]  { --callout-color: 152, 162, 176; }
 .theme-dark .callout[data-callout="tl-meta"]     { --callout-color: 150, 158, 168; }
 .theme-dark .callout[data-callout="tl-quote"]    { --callout-color: 188, 170, 142; }
+.theme-dark .callout[data-callout="tl-profile"]  { --callout-color: 120, 170, 184; }
+.theme-dark .callout[data-callout="tl-report"]   { --callout-color: 152, 162, 176; }
+.theme-dark .callout[data-callout="tl-pattern"]  { --callout-color: 158, 166, 218; }
+.theme-dark .callout[data-callout="tl-evidence"] { --callout-color: 126, 178, 168; }
+.theme-dark .callout[data-callout="tl-experiment"] { --callout-color: 134, 184, 132; }
+.theme-dark .callout[data-callout="tl-caution"]  { --callout-color: 202, 170, 104; }
 
 /* =============================================================================
    Premium UI polish — interaction & empty states

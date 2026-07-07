@@ -27,3 +27,14 @@ export function isSectionHeading(line: string, ...names: string[]): boolean {
     const name = headingName(trimmed);
     return names.some((n) => n.length > 0 && (name === n || name.includes(n)));
 }
+
+/**
+ * Remove machine-readable extraction blocks before showing generated markdown.
+ * During streaming, a block may have opened but not closed yet; hide the
+ * unfinished tail so preview content cannot later appear to "disappear".
+ */
+export function stripExtractionTags(content: string): string {
+    return content
+        .replace(/<(profile_update|new_patterns|new_principles)>[\s\S]*?(?:<\/\1>|$)/gi, '')
+        .trim();
+}

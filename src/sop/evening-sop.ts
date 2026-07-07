@@ -19,6 +19,7 @@ import {
 import { formatAPIError } from '../utils/error-formatter';
 import { t, getLanguage } from '../i18n';
 import { isSectionHeading } from '../utils/md';
+import { formatDailyReviewEntry } from '../utils/document-format';
 import { moment } from 'obsidian';
 
 interface QuestionConfig {
@@ -410,7 +411,7 @@ ${emotionQ}`
             }
         } else {
             // First response for this section — normal format with heading
-            formattedContent = `\n### ${question.sectionName}\n\n${content}\n`;
+            formattedContent = `\n${formatDailyReviewEntry(question.sectionName, content)}`;
         }
 
         await this.plugin.vaultManager.appendToSection(

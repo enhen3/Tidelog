@@ -8,6 +8,8 @@ import TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import { formatAPIError } from '../utils/error-formatter';
 import { replaceFile } from '../utils/vault-write';
+import { stripExtractionTags } from '../utils/md';
+import { formatGeneratedInsightDocument, formatProfileDocument, formatTideLogTitle } from '../utils/document-format';
 import { t, getLanguage } from '../i18n';
 import {
     getBaseContextPrompt,
@@ -327,15 +329,11 @@ ${t('insight.generateMonthlyReport')}`;
             await this.plugin.vaultManager.ensureInsightsFolder();
             const date = moment().format('YYYY-MM-DD');
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${t('insight.profileUpdateFile', date)}`;
-            const header = `${t('insight.profileUpdateTitle')}\n\n${this.buildReportInfoCallout()}\n\n`;
+            const header = `${formatTideLogTitle(t('insight.profileUpdateTitle'))}\n\n${this.buildReportInfoCallout()}\n\n`;
 
             // Remove <profile_update> and extraction tags from the saved analysis
             // (profile goes to user_profile.md, patterns/principles to their files)
-            const analysisOnly = content
-                .replace(/<profile_update>[\s\S]*?<\/profile_update>/g, '')
-                .replace(/<new_patterns>[\s\S]*?<\/new_patterns>/g, '')
-                .replace(/<new_principles>[\s\S]*?<\/new_principles>/g, '')
-                .trim();
+            const analysisOnly = formatGeneratedInsightDocument(stripExtractionTags(content));
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {
@@ -355,7 +353,7 @@ ${t('insight.generateMonthlyReport')}`;
         const match = response.match(/<profile_update>([\s\S]*?)<\/profile_update>/);
         if (!match || !match[1].trim()) return;
 
-        const newProfileContent = match[1].trim();
+        const newProfileContent = formatProfileDocument(match[1].trim());
 
         try {
             const profilePath = `${this.plugin.settings.archiveFolder}/user_profile.md`;
@@ -404,19 +402,21 @@ ${t('insight.generateMonthlyReport')}`;
                 : t('insight.monthlyFileName', date.format('YYYY-MM'));
 
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${fileName}`;
-            const title = type === 'weekly'
+            const rawTitle = type === 'weekly'
                 ? t('insight.weeklyReportTitle', date.format('YYYY'), String(date.isoWeek()))
                 : t('insight.monthlyReportTitle', getLanguage() === 'en' ? date.format('YYYY-MM') : date.format('YYYY年MM月'));
+            const title = formatTideLogTitle(rawTitle);
             const start = type === 'weekly' ? date.clone().startOf('isoWeek') : date.clone().startOf('month');
             const end = type === 'weekly' ? date.clone().endOf('isoWeek') : date.clone().endOf('month');
             const header = `${title}\n\n${this.buildReportInfoCallout(start, end)}\n\n`;
+            const formattedContent = formatGeneratedInsightDocument(content);
 
             const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (existingFile instanceof TFile) {
                 // Overwrite existing report
-                await replaceFile(this.plugin.app, existingFile, header + content);
+                await replaceFile(this.plugin.app, existingFile, header + formattedContent);
             } else {
-                await this.plugin.app.vault.create(filePath, header + content);
+                await this.plugin.app.vault.create(filePath, header + formattedContent);
             }
         } catch (error) {
             console.error(`Failed to save ${type} insight report:`, error);

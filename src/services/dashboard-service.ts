@@ -6,6 +6,7 @@ import { App, TFile } from 'obsidian';
 import { TideLogSettings } from '../types';
 import { t } from '../i18n';
 import { replaceFile } from '../utils/vault-write';
+import { formatTideLogCallout } from '../utils/document-format';
 
 export class DashboardService {
     private app: App;
@@ -106,11 +107,11 @@ LIMIT 7
 
 ## 💡 ${t('dashSvc.todayPrinciple')}
 
-> ${principle || t('dashSvc.noPrinciple')}
+${formatTideLogCallout('tl-experiment', t('dashSvc.todayPrinciple'), principle || t('dashSvc.noPrinciple'))}
 
 ## 🔍 ${t('dashSvc.activePattern')}
 
-> ${pattern || t('dashSvc.noPattern')}
+${formatTideLogCallout('tl-pattern', t('dashSvc.activePattern'), pattern || t('dashSvc.noPattern'))}
 
 ---
 

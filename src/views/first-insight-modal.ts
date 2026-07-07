@@ -10,10 +10,16 @@ import type TideLogPlugin from '../main';
 import { t } from '../i18n';
 import type { LegacyDailyImportResult, LegacyImportScanResult } from '../services/legacy-import-service';
 import type { FirstInsightReportDraft } from '../services/first-insight-service';
-import { stripProfileTags } from '../services/first-insight-service';
+import { getFirstInsightBodyExcerptLimit, stripProfileTags } from '../services/first-insight-service';
+
+interface FolderTreeNode {
+    name: string;
+    path: string;
+    children: FolderTreeNode[];
+}
 
 export class FirstInsightModal extends Modal {
-    private folderInputEl!: HTMLInputElement | HTMLSelectElement;
+    private folderInputEl!: HTMLInputElement;
     private scanPreviewEl!: HTMLElement;
     private actionEl!: HTMLElement;
     private reportEl!: HTMLElement;
@@ -73,19 +79,18 @@ export class FirstInsightModal extends Modal {
         const folderField = fieldsEl.createDiv('tl-first-insight-field tl-first-insight-field-wide');
         folderField.createEl('label', { text: t('firstInsight.folderLabel') });
 
-        const folderOptions = this.plugin.legacyImportService.listVaultFolders();
+        const folderOptions = this.getImportableFolderOptions(this.plugin.legacyImportService.listVaultFolders());
         if (folderOptions.length > 0) {
-            const folderSelectEl = folderField.createEl('select', { cls: 'tl-first-insight-folder-select' });
-            const defaultFolder = this.pickDefaultFolder(folderOptions);
-            folderOptions.forEach((folderPath) => {
-                const optionEl = folderSelectEl.createEl('option', { text: folderPath });
-                optionEl.value = folderPath;
-                if (folderPath === defaultFolder) optionEl.selected = true;
+            this.folderInputEl = folderField.createEl('input', {
+                cls: 'tl-first-insight-folder-value',
+                attr: { type: 'hidden' },
             });
-            folderSelectEl.value = defaultFolder;
-            this.folderInputEl = folderSelectEl;
+            const selectedEl = folderField.createDiv('tl-first-insight-folder-selected');
+            const treeEl = folderField.createDiv('tl-first-insight-folder-tree');
+            this.renderFolderTree(treeEl, folderOptions, this.pickDefaultFolder(folderOptions), selectedEl);
         } else {
             this.folderInputEl = folderField.createEl('input', {
+                cls: 'tl-first-insight-folder-text-input',
                 attr: {
                     type: 'text',
                     placeholder: t('firstInsight.folderPlaceholder'),
@@ -158,6 +163,107 @@ export class FirstInsightModal extends Modal {
         }
 
         return folderOptions[0] ?? '';
+    }
+
+    private getImportableFolderOptions(folderOptions: string[]): string[] {
+        const archiveFolder = this.plugin.settings.archiveFolder;
+        const filtered = folderOptions.filter(folderPath => {
+            return folderPath !== archiveFolder
+                && !folderPath.startsWith(`${archiveFolder}/`);
+        });
+        return (filtered.length > 0 ? filtered : folderOptions).sort((a, b) => a.localeCompare(b));
+    }
+
+    private renderFolderTree(
+        containerEl: HTMLElement,
+        folderOptions: string[],
+        defaultFolder: string,
+        selectedEl: HTMLElement,
+    ): void {
+        const nodeEls = new Map<string, HTMLElement>();
+        const selectFolder = (folderPath: string, notify = true) => {
+            this.folderInputEl.value = folderPath;
+            selectedEl.setText(folderPath);
+            nodeEls.forEach((nodeEl, path) => {
+                nodeEl.classList.toggle('is-selected', path === folderPath);
+                nodeEl.setAttr('aria-pressed', path === folderPath ? 'true' : 'false');
+            });
+            if (notify) {
+                this.folderInputEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        };
+
+        const renderNode = (node: FolderTreeNode, parentEl: HTMLElement, depth: number) => {
+            const isDefaultPath = defaultFolder === node.path || defaultFolder.startsWith(`${node.path}/`);
+            if (node.children.length > 0) {
+                const detailsEl = parentEl.createEl('details', { cls: 'tl-first-insight-folder-branch' });
+                if (isDefaultPath) detailsEl.setAttr('open', 'true');
+                const summaryEl = detailsEl.createEl('summary', { cls: 'tl-first-insight-folder-summary' });
+                const nodeEl = this.createFolderNode(summaryEl, node, depth, selectFolder);
+                nodeEls.set(node.path, nodeEl);
+                const childrenEl = detailsEl.createDiv('tl-first-insight-folder-children');
+                node.children.forEach(child => renderNode(child, childrenEl, depth + 1));
+                return;
+            }
+
+            const nodeEl = this.createFolderNode(parentEl, node, depth, selectFolder);
+            nodeEls.set(node.path, nodeEl);
+        };
+
+        this.buildFolderTree(folderOptions).forEach(node => renderNode(node, containerEl, 0));
+        selectFolder(defaultFolder, false);
+    }
+
+    private createFolderNode(
+        containerEl: HTMLElement,
+        node: FolderTreeNode,
+        depth: number,
+        onSelect: (folderPath: string) => void,
+    ): HTMLElement {
+        const nodeEl = containerEl.createEl('button', {
+            cls: 'tl-first-insight-folder-node',
+            attr: {
+                type: 'button',
+                'data-folder-path': node.path,
+                'aria-pressed': 'false',
+            },
+        });
+        nodeEl.style.setProperty('--tl-first-insight-folder-depth', String(depth));
+        nodeEl.createSpan({ cls: 'tl-first-insight-folder-name', text: node.name });
+        if (node.path !== node.name) {
+            nodeEl.createSpan({ cls: 'tl-first-insight-folder-path', text: node.path });
+        }
+        nodeEl.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onSelect(node.path);
+        });
+        return nodeEl;
+    }
+
+    private buildFolderTree(folderOptions: string[]): FolderTreeNode[] {
+        const rootNodes: FolderTreeNode[] = [];
+        const nodes = new Map<string, FolderTreeNode>();
+
+        for (const folderPath of folderOptions) {
+            const parts = folderPath.split('/').filter(Boolean);
+            let currentPath = '';
+            let siblings = rootNodes;
+
+            for (const part of parts) {
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                let node = nodes.get(currentPath);
+                if (!node) {
+                    node = { name: part, path: currentPath, children: [] };
+                    nodes.set(currentPath, node);
+                    siblings.push(node);
+                    siblings.sort((a, b) => a.name.localeCompare(b.name));
+                }
+                siblings = node.children;
+            }
+        }
+
+        return rootNodes;
     }
 
     private async startFirstInsight(button: HTMLButtonElement): Promise<void> {
@@ -364,11 +470,12 @@ export class FirstInsightModal extends Modal {
         journalCount: number;
     } {
         const evidenceChars = scan.validEntries.reduce((sum, entry) => {
-            return sum + Math.min(entry.analyzableBody.length, 1600);
+            return sum + Math.min(entry.analyzableBody.length, getFirstInsightBodyExcerptLimit(scan.validCount));
         }, 0);
-        const expectedSeconds = 300 + (scan.validCount * 18) + (Math.ceil(evidenceChars / 1000) * 30);
-        const minSeconds = Math.min(960, Math.max(300, Math.ceil((expectedSeconds * 0.65) / 60) * 60));
-        const maxSeconds = Math.min(1200, Math.max(minSeconds + 120, Math.ceil((expectedSeconds * 1.05) / 60) * 60));
+        const perJournalSeconds = scan.validCount <= 12 ? 18 : 4;
+        const expectedSeconds = 180 + (scan.validCount * perJournalSeconds) + (Math.ceil(evidenceChars / 1000) * 15);
+        const minSeconds = Math.min(720, Math.max(240, Math.ceil((expectedSeconds * 0.75) / 60) * 60));
+        const maxSeconds = Math.min(900, Math.max(minSeconds + 120, Math.ceil((expectedSeconds * 1.1) / 60) * 60));
 
         return {
             label: this.formatEstimateRange(minSeconds, maxSeconds),

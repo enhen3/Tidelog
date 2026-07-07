@@ -153,6 +153,7 @@ fs.writeFileSync(entryPath, `
 export { PeriodicRenderer } from ${JSON.stringify(path.join(__dirname, 'src/views/periodic-renderer.ts'))};
 export { ChatView } from ${JSON.stringify(path.join(__dirname, 'src/views/chat-view.ts'))};
 export { InsightsRenderer } from ${JSON.stringify(path.join(__dirname, 'src/views/insights-renderer.ts'))};
+export { formatGeneratedInsightDocument } from ${JSON.stringify(path.join(__dirname, 'src/utils/document-format.ts'))};
 `);
 
 const bundled = await esbuild.build({
@@ -167,7 +168,7 @@ const bundled = await esbuild.build({
 });
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(mod, mod.exports, require);
-const { PeriodicRenderer, ChatView, InsightsRenderer } = mod.exports;
+const { PeriodicRenderer, ChatView, InsightsRenderer, formatGeneratedInsightDocument } = mod.exports;
 
 let pass = 0;
 let fail = 0;
@@ -410,6 +411,7 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     const promptSource = fs.readFileSync(path.join(__dirname, 'src/sop/prompts.ts'), 'utf8');
     const insightSource = fs.readFileSync(path.join(__dirname, 'src/services/insight-service.ts'), 'utf8');
     const insightRendererSource = fs.readFileSync(path.join(__dirname, 'src/views/insights-renderer.ts'), 'utf8');
+    const templateSource = fs.readFileSync(path.join(__dirname, 'src/services/template-manager.ts'), 'utf8');
     const zhSource = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
     const sourceFiles = readSourceFiles(path.join(__dirname, 'src'));
     const actionBlocks = [...css.matchAll(/^\.tl-task-actions\s*\{[\s\S]*?\n\}/gm)].map(match => match[0]);
@@ -480,6 +482,9 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     check(insightRendererSource.includes('await this.renderReportPreview(card, existing);'), 'AI profile also renders an inline preview when the monthly profile exists');
     check(insightSource.includes('options.force') && insightSource.includes('readWeeklyPlanContext') && insightSource.includes('readMonthlyPlanContext'), 'Insight generation supports forced refresh and includes plan context');
     check(promptSource.includes('<new_patterns>') && promptSource.includes('<new_principles>') && promptSource.includes('<profile_update>'), 'Insight prompts preserve machine-readable extraction tags');
+    check(promptSource.includes('> [!tl-report]') && promptSource.includes('> [!tl-pattern]') && promptSource.includes('> [!tl-evidence]') && promptSource.includes('> [!tl-experiment]'), 'Insight prompts ask weekly/monthly/profile pages to use optimized TideLog document callouts');
+    check(insightSource.includes('formatGeneratedInsightDocument') && insightSource.includes('formatProfileDocument'), 'Insight service formats saved reports and user profiles with the document system');
+    check(templateSource.includes('formatProfileDocument'), 'fresh user profile template uses the optimized document system');
     check(promptSource.includes('不得编造') && promptSource.includes('Do not invent'), 'Insight prompts include no-fabrication constraints');
     check(promptSource.includes('证据') && promptSource.includes('Evidence'), 'Insight prompts require evidence-led analysis');
     check(promptSource.includes('避免套话') && promptSource.includes('Avoid cliches'), 'Insight prompts explicitly reject obvious AI/cliche wording');
@@ -503,6 +508,54 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     files.set(`Daily/${today}.md`, new TFile(`Daily/${today}.md`, '## 计划\n- [ ] Today task\n\n## 复盘\n<!-- empty -->\n'));
     const defaultDate = await view.getDefaultPlanDate();
     check(defaultDate.isSame(moment(), 'day'), 'Plan defaults to today before review completion');
+}
+
+{
+    const formattedLegacyMonthly = formatGeneratedInsightDocument(`## 这个月最重要的洞察
+本月重点是重新收束任务。
+
+## 行为节律地图
+### 什么时候容易拖延
+周中容易分散。
+
+### 什么时候效率更高
+早上更稳定。
+
+## 产品视角下的用户画像
+更适合少量高质量目标。
+
+## 下个月应该怎么改计划
+先固定每日第一件事。`);
+    check(formattedLegacyMonthly.includes('> [!tl-report] 这个月最重要的洞察'), 'legacy monthly report headings map to report callout');
+    check(formattedLegacyMonthly.includes('> [!tl-pattern] 行为节律地图'), 'legacy monthly rhythm heading maps to pattern callout');
+    check(formattedLegacyMonthly.includes('> [!tl-profile] 产品视角下的用户画像'), 'legacy monthly profile heading maps to profile callout');
+    check(formattedLegacyMonthly.includes('> [!tl-experiment] 下个月应该怎么改计划'), 'legacy monthly action heading maps to experiment callout');
+
+    const formattedLegacyWeekly = formatGeneratedInsightDocument(`## 📊 本周深度洞察
+### 1. 执行力分析
+完成了核心任务。
+
+### 2. 情绪分析
+压力有波动。
+
+### 3. 关键成就
+推进了重要事项。
+
+### 4. 注意信号
+周中容易拖延。
+
+### 5. 下周建议
+先固定第一件事。`);
+    check(formattedLegacyWeekly.includes('> [!tl-report] 本周深度洞察') && !formattedLegacyWeekly.includes('[!tl-report] 📊'), 'legacy weekly report heading maps to report callout without preserving old heading emoji');
+    check(formattedLegacyWeekly.includes('> [!tl-evidence] 1. 执行力分析'), 'legacy weekly execution heading maps to evidence callout');
+    check(formattedLegacyWeekly.includes('> [!tl-profile] 2. 情绪分析'), 'legacy weekly emotion heading maps to profile callout');
+    check(formattedLegacyWeekly.includes('> [!tl-caution] 4. 注意信号'), 'legacy weekly caution heading maps to caution callout');
+    check(formattedLegacyWeekly.includes('> [!tl-experiment] 5. 下周建议'), 'legacy weekly advice heading maps to experiment callout');
+    const cleanedOptimized = formatGeneratedInsightDocument(`## 🧭 洞察结构
+
+> [!tl-report] 📊 本周深度洞察
+> 已经优化过但标题里还有旧 emoji。`);
+    check(cleanedOptimized.includes('> [!tl-report] 本周深度洞察') && !cleanedOptimized.includes('[!tl-report] 📊'), 'already optimized reports still clean old callout title emoji');
 }
 
 {
@@ -610,7 +663,7 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
 
 <profile_update>
 internal tag
-</profile_update>
+unfinished internal tag
 `);
     files.set(profile.path, profile);
     insightChildren.push(profile);
@@ -622,7 +675,7 @@ internal tag
     check(btn.classList.contains('tl-insights-open-doc-btn'), 'profile full-report action uses the compact document button style');
     check(!!panel.querySelector('.tl-insights-report-preview'), 'profile insight renders inline preview in the plugin page');
     check(panel.textContent.includes('事实证据') && panel.textContent.includes('下一步'), 'profile insight preview includes readable key sections');
-    check(!panel.textContent.includes('internal tag') && !panel.textContent.includes('profile_update'), 'profile insight preview strips internal extraction tags');
+    check(!panel.textContent.includes('internal tag') && !panel.textContent.includes('unfinished internal tag') && !panel.textContent.includes('profile_update'), 'profile insight preview strips internal extraction tags');
     check(!panel.textContent.includes('每月一次') && !panel.textContent.includes('Once per month'), 'profile insight omits separate monthly-once badge');
     check(!panel.textContent.includes('本周期已生成') && !panel.textContent.includes('Generated once'), 'profile insight omits redundant generated-period notice');
     btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
