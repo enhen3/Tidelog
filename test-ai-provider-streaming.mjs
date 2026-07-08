@@ -61,7 +61,7 @@ new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(mod, m
 const { BaseAIProvider, stripExtractionTags } = mod.exports;
 const obsidianMock = require(mockPath);
 
-global.window = { setTimeout };
+global.window = { setTimeout, fetch: (...args) => global.fetch(...args) };
 
 class TestProvider extends BaseAIProvider {
     name = 'Test Provider';

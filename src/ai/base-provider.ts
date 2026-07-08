@@ -116,8 +116,7 @@ export abstract class BaseAIProvider implements AIProvider {
         // Obsidian normally prefers requestUrl (CORS-free), but it cannot stream
         // a response body. Streaming is required so long generations keep the
         // connection alive; on any fetch failure we fall back to requestUrl.
-        // eslint-disable-next-line no-restricted-globals
-        const response = await fetch(url, {
+        const response = await window.fetch(url, {
             method: 'POST',
             headers: { ...headers, Accept: 'text/event-stream' },
             body: JSON.stringify({ model: this.model, messages: formattedMessages, stream: true }),
