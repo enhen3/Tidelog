@@ -18,6 +18,12 @@ export interface LicenseInfo {
     expiresAt?: number; // epoch ms, null for lifetime
 }
 
+export interface TrialInfo {
+    startedAt?: number;
+    expiresAt?: number;
+    offerShownAt?: number;
+}
+
 // =============================================================================
 // Plugin Settings
 // =============================================================================
@@ -34,6 +40,7 @@ export interface ProviderConfig {
 export interface TideLogSettings {
     // License
     proLicense: LicenseInfo;
+    trial: TrialInfo;
 
     // Language
     language: Language;

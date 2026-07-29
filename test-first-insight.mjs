@@ -701,6 +701,8 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     const onboardingSource = fs.readFileSync(path.join(__dirname, 'src/views/onboarding-modal.ts'), 'utf8');
     const insightsSource = fs.readFileSync(path.join(__dirname, 'src/views/insights-renderer.ts'), 'utf8');
     const settingsSource = fs.readFileSync(path.join(__dirname, 'src/settings/settings-tab.ts'), 'utf8');
+    const mainSource = fs.readFileSync(path.join(__dirname, 'src/main.ts'), 'utf8');
+    const eveningSource = fs.readFileSync(path.join(__dirname, 'src/sop/evening-sop.ts'), 'utf8');
     const zhSource = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
     const enSource = fs.readFileSync(path.join(__dirname, 'src/i18n/en.ts'), 'utf8');
     const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
@@ -719,6 +721,9 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     check(renderProfileSource.indexOf('if (this.shouldShowFirstInsightEntry())') < renderProfileSource.indexOf("const card = body.createDiv('tl-insights-card');"), 'profile Insights shows old-journal entry instead of the default AI profile card before initial profile is saved');
     check(insightsSource.includes("this.host.insightsMode === 'profile'") && insightsSource.includes('this.renderFirstInsightEntry(panel);'), 'locked profile Insights also uses the old-journal entry as the single card');
     check(settingsSource.includes('tl-settings-legacy-import') && settingsSource.includes('openFirstInsight'), 'settings keeps a folded legacy import entry for later imports');
+    check(mainSource.includes('this.settings.firstInsightCompleted && !this.licenseManager.isPro()'), 'initial profile stays free once while later old-journal profile runs require trial or Pro');
+    check(modalSource.includes('showTrialOfferOnce') && eveningSource.includes('showTrialOfferOnce'), 'initial profile save and first review both feed the one-time contextual trial offer');
+    check(insightsSource.includes("this.host.openInsights('profile')") && insightsSource.includes('insights.valueWeekly'), 'weekly value card guides trial users to update AI view of you without adding a new report type');
     check(css.includes('.modal.tl-first-insight-shell') && css.includes('.tl-first-insight-stats') && css.includes('.tl-first-insight-system-import-option') && css.includes('.tl-first-insight-report-card .tl-insights-stream'), 'first insight CSS covers modal shell, scan stats, optional import, and report preview scrolling');
     check(css.includes('.tl-first-insight-modal {') && css.includes('.tl-chat-container,') && css.includes('.tl-first-insight-modal {'), 'first insight modal receives TideLog design tokens');
     check(!modalSource.toLowerCase().includes('token') && !modalSource.includes('费用'), 'first insight UI does not show token or cost estimates');

@@ -10,20 +10,41 @@ export interface DayLoopData {
     hasReview: boolean;
 }
 
+function normalizeLoopSectionTitle(line: string): string {
+    return line
+        .replace(/^##\s+/, '')
+        .replace(/^[^\p{L}\p{N}]+/u, '')
+        .trim()
+        .toLowerCase();
+}
+
+function hasLoopSection(content: string, names: string[]): boolean {
+    const accepted = new Set(names.map(name => name.toLowerCase()));
+    return content
+        .split(/\r?\n/)
+        .some(line => line.startsWith('## ') && accepted.has(normalizeLoopSectionTitle(line)));
+}
+
 export function extractReviewContent(content: string): string {
-    const reviewHeaders = ['## 复盘', '## Review'];
-    for (const hdr of reviewHeaders) {
-        const idx = content.indexOf(hdr);
-        if (idx < 0) continue;
-        let sectionText = content.substring(idx + hdr.length);
-        const nextH = sectionText.search(/\n## /);
-        if (nextH > 0) sectionText = sectionText.substring(0, nextH);
-        const cleaned = sectionText
-            .replace(/<!--[\s\S]*?-->/g, '')
-            .replace(/^---$/gm, '')
-            .trim();
-        if (cleaned.length > 0) return cleaned;
+    const lines = content.split(/\r?\n/);
+    const start = lines.findIndex(line =>
+        line.startsWith('## ')
+        && ['复盘', 'review'].includes(normalizeLoopSectionTitle(line))
+    );
+    if (start < 0) return '';
+
+    const section: string[] = [];
+    for (let index = start + 1; index < lines.length; index++) {
+        if (lines[index].startsWith('## ')) break;
+        section.push(lines[index]);
     }
+
+    const cleaned = section
+        .join('\n')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/^---$/gm, '')
+        .trim();
+    if (cleaned.length > 0) return cleaned;
     return '';
 }
 
@@ -52,7 +73,7 @@ export async function loadDayLoopData(
             date: dateStr,
             filePath: file.path,
             tasks,
-            hasPlan: (content.includes('## 计划') || content.includes('## Plan')) && tasks.length > 0,
+            hasPlan: hasLoopSection(content, ['计划', 'plan']) && tasks.length > 0,
             hasReview: extractReviewContent(content).length > 0,
         };
     } catch {

@@ -14,7 +14,7 @@ import TideLogPlugin from '../main';
 import { t } from '../i18n';
 import { KANBAN_VIEW_TYPE } from './kanban-view';
 import { CALENDAR_VIEW_TYPE } from './calendar-view';
-import { renderProPurchaseGuidance } from './pro-purchase-guidance';
+import { ProModal } from './pro-modal';
 
 export const DASHBOARD_VIEW_TYPE = 'tl-dashboard-view';
 
@@ -59,17 +59,33 @@ export class DashboardView extends ItemView {
         const locked = container.createDiv('tl-pro-locked-view');
         locked.createDiv({ cls: 'tl-pro-locked-icon', text: '🔒' });
         locked.createEl('h3', { cls: 'tl-pro-locked-title', text: `🔒 ${featureName}` });
-        locked.createEl('p', { cls: 'tl-pro-locked-desc', text: t('settings.purchaseDesc') });
-
-        const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
-        const btnGroup = locked.createDiv('tl-pro-locked-buttons');
-        const buyBtn = btnGroup.createEl('a', {
-            cls: 'tl-pro-cta-btn tl-pro-cta-cn',
-            text: t('pro.purchase'),
-            href: purchaseUrl,
+        locked.createEl('p', {
+            cls: 'tl-pro-locked-desc',
+            text: this.plugin.licenseManager.getAccessState() === 'trial-expired'
+                ? t('trial.expiredDesc')
+                : this.plugin.licenseManager.getAccessState() === 'license-inactive'
+                    ? t('trial.licenseInactiveDesc')
+                    : t('trial.offerDesc'),
         });
-        buyBtn.setAttr('target', '_blank');
-        renderProPurchaseGuidance(locked, 'tl-pro-purchase-guidance-locked');
+
+        const btnGroup = locked.createDiv('tl-pro-locked-buttons');
+        const trialBtn = btnGroup.createEl('button', {
+            cls: 'tl-pro-cta-btn tl-pro-cta-cn',
+            text: this.plugin.licenseManager.getAccessState() === 'trial-expired'
+                ? t('trial.expiredAction')
+                : this.plugin.licenseManager.getAccessState() === 'license-inactive'
+                    ? t('trial.licenseInactiveAction')
+                    : t('trial.start'),
+            attr: { type: 'button' },
+        });
+        trialBtn.addEventListener('click', () => {
+            new ProModal(
+                this.app,
+                featureName,
+                this.plugin.licenseManager,
+                () => { void this.onOpen(); },
+            ).open();
+        });
     }
 
     async onClose(): Promise<void> {

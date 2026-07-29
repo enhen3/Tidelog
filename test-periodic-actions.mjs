@@ -340,7 +340,11 @@ function createInsightsHarness(mode = 'monthly', loopCount = 8, serviceDelayMs =
             firstInsightCompleted: true,
         },
         manifest: { id: 'tidelog' },
-        licenseManager: { isPro: () => true },
+        licenseManager: {
+            isPro: () => true,
+            getAccessState: () => 'paid',
+            getTrialDaysRemaining: () => 0,
+        },
         hasConfiguredAI: () => true,
         openFirstInsight: async () => {},
         insightService: {
@@ -411,6 +415,7 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     const promptSource = fs.readFileSync(path.join(__dirname, 'src/sop/prompts.ts'), 'utf8');
     const insightSource = fs.readFileSync(path.join(__dirname, 'src/services/insight-service.ts'), 'utf8');
     const insightRendererSource = fs.readFileSync(path.join(__dirname, 'src/views/insights-renderer.ts'), 'utf8');
+    const loopUtilsSource = fs.readFileSync(path.join(__dirname, 'src/views/loop-utils.ts'), 'utf8');
     const templateSource = fs.readFileSync(path.join(__dirname, 'src/services/template-manager.ts'), 'utf8');
     const zhSource = fs.readFileSync(path.join(__dirname, 'src/i18n/zh.ts'), 'utf8');
     const sourceFiles = readSourceFiles(path.join(__dirname, 'src'));
@@ -480,6 +485,9 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     check(!chatViewSource.includes('tl-review-loop-today-label') && css.includes('.tl-review-loop-day-today::after'), 'Review calendar marks today graphically instead of visible text');
     check(insightRendererSource.includes('renderReportPreview') && css.includes('.tl-insights-report-preview'), 'existing Insights reports render an inline preview');
     check(insightRendererSource.includes('await this.renderReportPreview(card, existing);'), 'AI profile also renders an inline preview when the monthly profile exists');
+    check(insightRendererSource.includes("t('insights.updateProfile')") && insightRendererSource.includes('{ force: true }'), 'AI profile can refresh with newer journal records');
+    check(insightSource.includes('existingProfile && !options.force'), 'forced AI profile refresh bypasses the once-per-month guard');
+    check(loopUtilsSource.includes("replace(/^[^\\p{L}\\p{N}]+/u, '')"), 'loop detection normalizes emoji-prefixed Plan and Review headings');
     check(insightSource.includes('options.force') && insightSource.includes('readWeeklyPlanContext') && insightSource.includes('readMonthlyPlanContext'), 'Insight generation supports forced refresh and includes plan context');
     check(promptSource.includes('<new_patterns>') && promptSource.includes('<new_principles>') && promptSource.includes('<profile_update>'), 'Insight prompts preserve machine-readable extraction tags');
     check(promptSource.includes('> [!tl-report]') && promptSource.includes('> [!tl-pattern]') && promptSource.includes('> [!tl-evidence]') && promptSource.includes('> [!tl-experiment]'), 'Insight prompts ask weekly/monthly/profile pages to use optimized TideLog document callouts');

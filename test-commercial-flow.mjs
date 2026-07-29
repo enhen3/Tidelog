@@ -185,9 +185,14 @@ function check(condition, label, extra = '') {
 
 function makeLicensePlugin() {
     return {
-        settings: { proLicense: { key: '', activated: false } },
+        settings: {
+            proLicense: { key: '', activated: false },
+            trial: {},
+            language: 'zh',
+        },
         app: { vault: { getName: () => 'Commercial Flow Test Vault' } },
         saveSettings: async () => {},
+        hasConfiguredAI: () => true,
     };
 }
 
@@ -239,7 +244,64 @@ console.log('\nTest 2: transient license server 5xx is retried');
     check(result.success === true, 'activation succeeds after retry');
 }
 
-console.log('\nTest 3: free users see standalone Kanban Pro lock');
+console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days');
+{
+    let saveCount = 0;
+    const plugin = makeLicensePlugin();
+    plugin.saveSettings = async () => { saveCount++; };
+    const manager = new LicenseManager(plugin);
+
+    check(manager.isTrialEligible() === true, 'new users are eligible before starting');
+    check(await manager.startTrial() === true, 'configured users can start the trial');
+    check(manager.getAccessState() === 'trial', 'started trial becomes the current access state');
+    check(manager.isPro() === true, 'active trial unlocks existing Pro gates');
+    check(manager.getTrialDaysRemaining() === 7, 'new trial reports seven days remaining');
+    check(saveCount === 1, 'trial timestamps are persisted');
+    check(await manager.startTrial() === false, 'trial cannot be started twice');
+    await manager.markTrialOfferShown();
+    await manager.markTrialOfferShown();
+    check(saveCount === 2, 'contextual trial offer is persisted only once');
+
+    plugin.settings.trial.expiresAt = Date.now() - 1;
+    check(manager.getAccessState() === 'trial-expired', 'expired trial has a distinct state');
+    check(manager.isPro() === false, 'expired trial no longer unlocks Pro');
+    check(manager.isTrialEligible() === false, 'expired trial cannot be restarted');
+
+    const needsAiPlugin = makeLicensePlugin();
+    needsAiPlugin.hasConfiguredAI = () => false;
+    const needsAiManager = new LicenseManager(needsAiPlugin);
+    check(needsAiManager.needsAISetupForTrial() === true, 'trial protects users from starting before AI setup');
+    check(await needsAiManager.startTrial() === false, 'missing AI configuration does not consume the trial');
+
+    const paidPlugin = makeLicensePlugin();
+    paidPlugin.settings.proLicense = {
+        key: 'TL-PAID',
+        activated: true,
+        activatedAt: Date.now(),
+        lastVerified: Date.now(),
+        licenseType: 'lifetime',
+    };
+    paidPlugin.settings.trial = {
+        startedAt: Date.now(),
+        expiresAt: Date.now() + 1000,
+    };
+    const paidManager = new LicenseManager(paidPlugin);
+    check(paidManager.getAccessState() === 'paid', 'paid license takes precedence over trial state');
+
+    const inactiveLicensePlugin = makeLicensePlugin();
+    inactiveLicensePlugin.settings.proLicense = {
+        key: 'TL-EXPIRED',
+        activated: true,
+        activatedAt: Date.now() - 1000,
+        licenseType: 'annual',
+        expiresAt: Date.now() - 1,
+    };
+    const inactiveLicenseManager = new LicenseManager(inactiveLicensePlugin);
+    check(inactiveLicenseManager.getAccessState() === 'license-inactive', 'expired paid access is not presented as a fresh trial');
+    check(inactiveLicenseManager.isTrialEligible() === false, 'previously paid users cannot consume a new-user trial');
+}
+
+console.log('\nTest 4: free users see standalone Kanban trial entry');
 {
     const plugin = {
         settings: {
@@ -249,6 +311,7 @@ console.log('\nTest 3: free users see standalone Kanban Pro lock');
         },
         licenseManager: {
             isPro: () => false,
+            getAccessState: () => 'free',
             getPurchaseUrl: () => 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
         },
     };
@@ -257,18 +320,38 @@ console.log('\nTest 3: free users see standalone Kanban Pro lock');
     await view.onOpen();
 
     const locked = view.contentEl.querySelector('.tl-pro-locked-view');
-    const link = view.contentEl.querySelector('a.tl-pro-cta-btn');
+    const button = view.contentEl.querySelector('button.tl-pro-cta-btn');
 
     check(!!locked, 'Kanban view renders a Pro lock for free users');
-    check(
-        link?.getAttribute('href') === plugin.licenseManager.getPurchaseUrl(),
-        'Kanban lock links to purchase URL',
-    );
+    check(button?.textContent?.includes('7 天'), 'Kanban lock leads with the seven-day trial');
 }
 
-console.log('\nTest 4: Pro modal explains Afdian sign-in purchase friction');
+console.log('\nTest 5: eligible Pro modal leads with trial and no automatic charge');
 {
     const licenseManager = {
+        getAccessState: () => 'free',
+        needsAISetupForTrial: () => false,
+        getTrialDaysRemaining: () => 0,
+        startTrial: async () => true,
+        getPurchaseUrl: () => 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
+    };
+    const modal = new ProModal({}, 'Commercial Flow Test Feature', licenseManager);
+    modal.onOpen();
+
+    const text = modal.contentEl.textContent || '';
+    const startButton = modal.contentEl.querySelector('button.tl-pro-cta-cn');
+
+    check(startButton?.textContent?.includes('7 天'), 'trial is the primary CTA');
+    check(text.includes('无需绑定支付方式'), 'trial explains that no payment method is required');
+    check(text.includes('不会自动续费'), 'trial explains that it does not auto-renew');
+}
+
+console.log('\nTest 6: expired-trial modal explains Afdian sign-in purchase friction');
+{
+    const licenseManager = {
+        getAccessState: () => 'trial-expired',
+        needsAISetupForTrial: () => false,
+        getTrialDaysRemaining: () => 0,
         getPurchaseUrl: () => 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
     };
     const modal = new ProModal({}, 'Commercial Flow Test Feature', licenseManager);

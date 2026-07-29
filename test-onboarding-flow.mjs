@@ -201,6 +201,37 @@ console.log('\nTest 3: onboarding is a scrollable long guide, not a dead one-scr
     check(!modal.contentEl.textContent.includes('Plan') && !modal.contentEl.textContent.includes('Review') && !modal.contentEl.textContent.includes('Insights'), 'Chinese onboarding avoids English surface names');
 }
 
+console.log('\nTest 3b: the seven-day trial is explained in the first visible section');
+{
+    setLanguage('zh');
+    const plugin = makePlugin();
+    const modal = new OnboardingModal(plugin.app, plugin);
+    modal.onOpen();
+    const hero = modal.contentEl.querySelector('.tl-onboarding-hero');
+    const trialIntro = hero?.querySelector('.tl-onboarding-trial-intro');
+    check(!!trialIntro, 'trial explanation renders inside the onboarding hero');
+    check(trialIntro?.textContent.includes('7 天'), 'trial explanation states the seven-day duration');
+    check(trialIntro?.textContent.includes('由你主动开启'), 'trial explanation says the user chooses when to start');
+    check(trialIntro?.textContent.includes('安装和阅读引导不会开始计时'), 'trial explanation says onboarding does not consume the trial');
+    check(trialIntro?.textContent.includes('无需绑定支付方式'), 'trial explanation says no payment method is required');
+    check(trialIntro?.textContent.includes('不会自动续费'), 'trial explanation says there is no automatic renewal');
+    check(!modal.contentEl.querySelector('.tl-onboarding-trial-footer'), 'old bottom-only trial notice is removed');
+}
+
+console.log('\nTest 3c: English onboarding carries the same trial contract');
+{
+    setLanguage('en');
+    const plugin = makePlugin();
+    const modal = new OnboardingModal(plugin.app, plugin);
+    modal.onOpen();
+    const trialIntro = modal.contentEl.querySelector('.tl-onboarding-hero .tl-onboarding-trial-intro');
+    check(trialIntro?.textContent.includes('7 days'), 'English onboarding states the trial duration');
+    check(trialIntro?.textContent.includes('you choose when to start'), 'English onboarding says the user controls trial start');
+    check(trialIntro?.textContent.includes('do not start the clock'), 'English onboarding says reading the guide does not consume the trial');
+    check(trialIntro?.textContent.includes('No payment method is required'), 'English onboarding explains no payment method is required');
+    check(trialIntro?.textContent.includes('no automatic renewal'), 'English onboarding explains there is no automatic renewal');
+}
+
 console.log('\nTest 4: onboarding exposes the first insight path without replacing review');
 {
     setLanguage('zh');

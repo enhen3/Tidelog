@@ -530,16 +530,16 @@ ${emotionQ}`
             ? `\n\nAll saved to your journal. Good night! 🌙`
             : `\n\n已保存到日记中，晚安 🌙`;
 
-        // Pro upsell for free users
+        // After the first Free review, explain the full experience instead of
+        // sending the user directly to a payment page.
         if (!this.plugin.licenseManager.isPro()) {
             const totalEnabled = this.plugin.settings.eveningQuestions
                 .filter((q: EveningQuestionConfig) => q.enabled !== false)
                 .length;
             if (totalEnabled > 2) {
-                const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
                 summary += getLanguage() === 'en'
-                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. [Upgrade to Pro](${purchaseUrl}) to unlock all questions and deeper insights.*`
-                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。[升级 Pro 版](${purchaseUrl})解锁全部问题和更深入的洞察。*`;
+                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. Connect AI, then start the 7-day full trial to use the complete Review and Insights flow.*`
+                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。配置好 AI 后，可开启 7 天完整体验，使用完整复盘和洞察流程。*`;
             }
         }
 
@@ -554,6 +554,7 @@ ${emotionQ}`
         }
 
         onMessage(summary);
+        void this.plugin.showTrialOfferOnce?.(t('chat.tabInsights'));
 
         // Sync to kanban board if service available
         try {

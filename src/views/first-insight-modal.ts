@@ -607,6 +607,7 @@ export class FirstInsightModal extends Modal {
                 await this.app.workspace.getLeaf().openFile(profileFile);
             }
             this.close();
+            void this.plugin.showTrialOfferOnce?.(t('chat.insightProfile'));
         } catch (error) {
             new Notice(error instanceof Error ? error.message : t('firstInsight.saveFailed'));
             saveButton.disabled = false;

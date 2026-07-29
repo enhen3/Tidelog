@@ -179,11 +179,17 @@ function check(cond, label) {
 
 // Build a plugin stub
 function makePlugin(eveningQuestions, { isPro = true, purchaseUrl = '' } = {}) {
+    const accessState = isPro ? 'paid' : 'free';
     return {
         settings: { ...DEFAULT_SETTINGS, eveningQuestions },
         saveSettings: async () => {},
         licenseManager: {
             isPro: () => isPro,
+            getAccessState: () => accessState,
+            getTrialDaysRemaining: () => 0,
+            getTrialExpiryDate: () => null,
+            needsAISetupForTrial: () => false,
+            startTrial: async () => true,
             getPurchaseUrl: () => purchaseUrl,
             getLicenseLabel: () => '',
             getExpiryDate: () => null,
@@ -250,7 +256,7 @@ console.log('\nTest 1b: free Pro card omits blank-page recovery helper');
 
     const proCard = tab.containerEl.querySelector('.tl-settings-pro-card');
     check(!!proCard, 'settings Pro card renders for free users');
-    check(proCard?.querySelector('.tl-settings-pro-purchase-note')?.textContent?.includes('爱发电'), 'settings Pro card keeps the purchase/login/license note');
+    check(proCard?.querySelector('.tl-settings-pro-purchase-panel .tl-settings-pro-purchase-note')?.textContent?.includes('爱发电'), 'settings Pro card keeps the purchase/login/license note');
     check(proCard?.querySelector('.tl-settings-pro-trouble-note') === null, 'settings Pro card omits the blank-page recovery helper line');
     check(!proCard?.textContent?.includes('页面空白'), 'settings Pro card copy no longer contains 页面空白');
 }
@@ -514,8 +520,8 @@ console.log('\nTest 9: onboarding modal renders and completes');
 
     check(modal.contentEl.querySelectorAll('.tl-onboarding-step').length === 3, 'onboarding shows three setup steps');
     check(modal.contentEl.querySelectorAll('.tl-onboarding-method-card').length === 3, 'onboarding explains product philosophy, method, and Pro value');
-    check(modal.contentEl.querySelector('.tl-onboarding-pro-link')?.getAttribute('href') === plugin.licenseManager.getPurchaseUrl(), 'onboarding Pro link uses license manager URL');
-    check(modal.contentEl.querySelector('.tl-onboarding-pro-footer'), 'onboarding Pro link is demoted into a lightweight footer');
+    check(!modal.contentEl.querySelector('.tl-onboarding-pro-link'), 'onboarding does not ask users to purchase before value');
+    check(modal.contentEl.querySelector('.tl-onboarding-trial-intro')?.textContent?.includes('7 天'), 'onboarding explains the seven-day trial in the first viewport');
 
     click(modal.contentEl.querySelector('.tl-onboarding-primary'));
     check(plugin.settings.onboardingCompleted === true, 'configure action marks onboarding completed');
@@ -608,7 +614,7 @@ console.log('\nTest 10: settings polish regression guards');
     check(zhSrc.includes('把日记变成行动闭环') && enSrc.includes('Turn notes into an action loop'), 'settings hero uses a concise action-loop slogan');
     check(zhSrc.includes("'settings.openGettingStarted': '查看完整说明'") && enSrc.includes("'settings.openGettingStarted': 'View details'"), 'getting-started action uses user-facing detail wording');
     check(!zhSrc.includes("'settings.openGettingStarted': '打开引导'") && !enSrc.includes("'settings.openGettingStarted': 'Open guide'"), 'getting-started action avoids clumsy open-guide wording');
-    check(cssSrc.includes('tl-onboarding-pro-footer') && cssSrc.includes('tl-onboarding-pro-link') && !onboardingSrc.includes('tl-pro-purchase-guidance-onboarding') && !onboardingSrc.includes('renderProPurchaseGuidance'), 'onboarding Pro CTA uses lightweight footer styling');
+    check(cssSrc.includes('tl-onboarding-trial-intro') && !onboardingSrc.includes('tl-onboarding-pro-link') && !onboardingSrc.includes('renderProPurchaseGuidance'), 'onboarding explains trial timing without an early purchase CTA');
     check(settingsSrc.includes('reviewProRequiredNotice'), 'free users get a Pro requirement notice when enabling extra review questions');
     check(cssSrc.includes('tl-onboarding-method-grid'), 'onboarding includes richer method/value cards');
     check(cssSrc.includes('color: #071417') || cssSrc.includes('color: #0B1B1F'), 'settings hero copy uses dark readable text on the light hero background');

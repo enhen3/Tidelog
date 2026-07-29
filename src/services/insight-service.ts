@@ -255,13 +255,14 @@ ${t('insight.generateMonthlyReport')}`;
      */
     async generateProfileSuggestions(
         onChunk: (chunk: string) => void,
-        onComplete?: (fullResponse: string) => void
+        onComplete?: (fullResponse: string) => void,
+        options: { force?: boolean } = {},
     ): Promise<void> {
         const today = moment();
         const twoWeeksAgo = today.clone().subtract(14, 'days');
 
         const existingProfile = this.findProfileAnalysisForMonth(today.format('YYYY-MM'));
-        if (existingProfile) {
+        if (existingProfile && !options.force) {
             onChunk(t('insights.alreadyGenerated'));
             onComplete?.('');
             return;

@@ -275,6 +275,10 @@ export default class TideLogPlugin extends Plugin {
         this.settings = {
             ...DEFAULT_SETTINGS,
             ...saved,
+            trial: {
+                ...DEFAULT_SETTINGS.trial,
+                ...saved.trial,
+            },
             providers: mergedProviders,
             eveningQuestions,
         };
@@ -394,8 +398,26 @@ export default class TideLogPlugin extends Plugin {
     }
 
     async openFirstInsight(): Promise<void> {
+        if (this.settings.firstInsightCompleted && !this.licenseManager.isPro()) {
+            this.showProRequired(t('chat.insightProfile'));
+            return;
+        }
         await this.initializeVaultStructure();
         new FirstInsightModal(this.app, this).open();
+    }
+
+    async showTrialOfferOnce(featureName: string): Promise<void> {
+        if (
+            !this.licenseManager.isTrialEligible()
+            || this.settings.trial.offerShownAt
+        ) {
+            return;
+        }
+
+        await this.licenseManager.markTrialOfferShown();
+        window.setTimeout(() => {
+            new ProModal(this.app, featureName, this.licenseManager).open();
+        }, 250);
     }
 
     hasConfiguredAI(): boolean {

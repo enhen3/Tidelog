@@ -12,6 +12,9 @@ const API_BASE = 'https://tidelog-api.mydreamchronicle.com';
 /** Offline grace period: 7 days in milliseconds */
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** One-time full-product trial: 7 days in milliseconds */
+const TRIAL_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** Purchase URL */
 const PURCHASE_URL = 'https://afdian.com/item/463307362c2f11f1b39d52540025c377';
 
@@ -70,10 +73,10 @@ export class LicenseManager {
     // =========================================================================
 
     /**
-     * Check whether the user has an active Pro license.
+     * Check whether the user has an active paid license.
      * Considers: activation status, expiry, and offline grace period.
      */
-    isPro(): boolean {
+    hasPaidLicense(): boolean {
         const license = this.plugin.settings.proLicense;
         if (!license.activated) return false;
 
@@ -92,12 +95,80 @@ export class LicenseManager {
     }
 
     /**
+     * Check whether the one-time local trial is currently active.
+     */
+    isTrialActive(): boolean {
+        const { startedAt, expiresAt } = this.plugin.settings.trial;
+        return Boolean(startedAt && expiresAt && Date.now() < expiresAt);
+    }
+
+    /**
+     * Compatibility access check used by existing Pro gates.
+     * A paid license and an active trial both unlock the full product.
+     */
+    isPro(): boolean {
+        return this.hasPaidLicense() || this.isTrialActive();
+    }
+
+    getAccessState(): 'free' | 'trial' | 'trial-expired' | 'license-inactive' | 'paid' {
+        if (this.hasPaidLicense()) return 'paid';
+        if (this.isTrialActive()) return 'trial';
+        if (this.plugin.settings.trial.startedAt) return 'trial-expired';
+        if (this.plugin.settings.proLicense.activatedAt) return 'license-inactive';
+        return 'free';
+    }
+
+    isTrialEligible(): boolean {
+        const license = this.plugin.settings.proLicense;
+        return !this.plugin.settings.trial.startedAt
+            && !license.activated
+            && !license.activatedAt;
+    }
+
+    needsAISetupForTrial(): boolean {
+        return this.isTrialEligible() && !this.plugin.hasConfiguredAI();
+    }
+
+    async startTrial(): Promise<boolean> {
+        if (!this.isTrialEligible() || !this.plugin.hasConfiguredAI()) return false;
+
+        const now = Date.now();
+        this.plugin.settings.trial = {
+            ...this.plugin.settings.trial,
+            startedAt: now,
+            expiresAt: now + TRIAL_PERIOD_MS,
+        };
+        await this.plugin.saveSettings();
+        return true;
+    }
+
+    async markTrialOfferShown(): Promise<void> {
+        if (this.plugin.settings.trial.offerShownAt) return;
+        this.plugin.settings.trial.offerShownAt = Date.now();
+        await this.plugin.saveSettings();
+    }
+
+    getTrialDaysRemaining(): number {
+        const expiresAt = this.plugin.settings.trial.expiresAt;
+        if (!expiresAt) return 0;
+        return Math.max(0, Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000)));
+    }
+
+    getTrialExpiryDate(): string | null {
+        const expiresAt = this.plugin.settings.trial.expiresAt;
+        if (!expiresAt) return null;
+        return new Date(expiresAt).toLocaleDateString(
+            this.plugin.settings.language === 'en' ? 'en-US' : 'zh-CN',
+        );
+    }
+
+    /**
      * Get the license type label
      */
     getLicenseLabel(): string {
         const license = this.plugin.settings.proLicense;
         if (!license.activated) return 'Free';
-        return license.licenseType === 'annual' ? 'Pro 年费版' : 'Pro 终身版';
+        return license.licenseType === 'annual' ? 'Pro 年度版' : 'Pro 终身版';
     }
 
     /**

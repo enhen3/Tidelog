@@ -37,6 +37,15 @@ export class OnboardingModal extends Modal {
         });
         heroEl.createDiv({ cls: 'tl-onboarding-privacy-note', text: t('onboarding.privacyNote') });
 
+        const trialIntroEl = heroEl.createDiv('tl-onboarding-trial-intro');
+        const trialBadgeEl = trialIntroEl.createDiv('tl-onboarding-trial-badge');
+        trialBadgeEl.createSpan({ cls: 'tl-onboarding-trial-days', text: t('onboarding.trialDays') });
+        trialBadgeEl.createSpan({ cls: 'tl-onboarding-trial-kicker', text: t('onboarding.trialKicker') });
+        const trialCopyEl = trialIntroEl.createDiv('tl-onboarding-trial-intro-copy');
+        trialCopyEl.createDiv({ cls: 'tl-onboarding-trial-title', text: t('onboarding.trialTitle') });
+        trialCopyEl.createDiv({ cls: 'tl-onboarding-trial-desc', text: t('onboarding.trialDesc') });
+        trialCopyEl.createDiv({ cls: 'tl-onboarding-trial-timing', text: t('onboarding.trialTiming') });
+
         const productEl = contentEl.createDiv('tl-onboarding-product-card');
         const productHeaderEl = productEl.createDiv('tl-onboarding-product-header');
         productHeaderEl.createSpan({ cls: 'tl-onboarding-product-dot tl-onboarding-product-dot-plan' });
@@ -126,18 +135,6 @@ export class OnboardingModal extends Modal {
             void this.plugin.completeOnboarding();
             this.close();
             void this.plugin.activateChatView('evening');
-        });
-
-        const proFooter = contentEl.createDiv('tl-onboarding-pro-footer');
-        proFooter.createSpan({ cls: 'tl-onboarding-pro-copy', text: t('onboarding.proFooterText') });
-        const buyLink = proFooter.createEl('a', {
-            cls: 'tl-onboarding-pro-link',
-            text: t('onboarding.buyLink'),
-            href: this.plugin.licenseManager.getPurchaseUrl(),
-        });
-        buyLink.setAttr('target', '_blank');
-        buyLink.addEventListener('click', () => {
-            void this.plugin.completeOnboarding();
         });
 
         const laterButton = contentEl.createEl('button', {

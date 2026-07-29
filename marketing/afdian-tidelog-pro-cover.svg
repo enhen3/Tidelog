@@ -16,7 +16,7 @@
     <text x="0" y="210" class="title">变成反馈系统</text>
     <text x="0" y="294" class="sub">Plan 计划 · Review 复盘 · Insights 洞察</text>
     <g transform="translate(0 378)"><rect width="608" height="74" rx="24" fill="#FFFFFF" fill-opacity=".055" stroke="#FFFFFF" stroke-opacity=".11"/><text x="30" y="47" class="pill">Plan → Review → Insights</text></g>
-    <g transform="translate(0 514)"><rect width="284" height="96" rx="28" fill="url(#accent)"/><text x="34" y="62" class="price">¥49/年</text><rect x="310" width="332" height="96" rx="28" fill="#F5F3EA"/><text x="344" y="62" class="price">¥99 终身</text></g>
+    <g transform="translate(0 514)"><rect width="284" height="96" rx="28" fill="url(#accent)"/><text x="34" y="62" class="price">¥39/年</text><rect x="310" width="332" height="96" rx="28" fill="#F5F3EA"/><text x="344" y="62" class="price">¥78 终身版</text></g>
   </g>
   <g transform="translate(900 136)" filter="url(#shadow)">
     <rect width="560" height="628" rx="42" fill="#0B1417" stroke="#FFFFFF" stroke-opacity=".12"/>

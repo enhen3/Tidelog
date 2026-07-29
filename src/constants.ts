@@ -87,6 +87,7 @@ export function getDefaultEveningQuestions(): EveningQuestionConfig[] {
 
 export const DEFAULT_SETTINGS: TideLogSettings = {
     proLicense: { key: '', activated: false },
+    trial: {},
     language: 'zh',
     onboardingCompleted: false,
     firstInsightCompleted: false,

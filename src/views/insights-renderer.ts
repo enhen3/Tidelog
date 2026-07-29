@@ -36,6 +36,7 @@ export interface InsightsHost extends Component {
     app: App;
     insightsMode: InsightsMode;
     switchTab(tab: string): void;
+    openInsights(type?: InsightsMode): void;
     invalidateTabCache(tab: string): void;
 }
 
@@ -52,6 +53,9 @@ export class InsightsRenderer {
         }
 
         const body = panel.createDiv('tl-insights-body');
+        if (this.host.plugin.licenseManager.getAccessState() === 'trial') {
+            this.renderTrialBanner(body);
+        }
         if (this.host.insightsMode === 'weekly') {
             await this.renderWeekly(body);
         } else if (this.host.insightsMode === 'monthly') {
@@ -72,11 +76,36 @@ export class InsightsRenderer {
         card.createDiv({ cls: 'tl-insights-card-desc', text: t('insights.lockedDesc') });
         const btn = card.createEl('button', {
             cls: 'tl-insights-primary-btn',
-            text: t('settings.reviewUpgradeBtn'),
+            text: this.host.plugin.licenseManager.getAccessState() === 'trial-expired'
+                ? t('trial.expiredAction')
+                : this.host.plugin.licenseManager.getAccessState() === 'license-inactive'
+                    ? t('trial.licenseInactiveAction')
+                    : t('trial.start'),
             attr: { type: 'button' },
         });
         btn.addEventListener('click', () => {
-            new ProModal(this.host.app, t('chat.tabInsights'), this.host.plugin.licenseManager).open();
+            new ProModal(
+                this.host.app,
+                t('chat.tabInsights'),
+                this.host.plugin.licenseManager,
+                () => this.host.openInsights(this.host.insightsMode),
+            ).open();
+        });
+    }
+
+    private renderTrialBanner(body: HTMLElement): void {
+        const banner = body.createDiv('tl-insights-trial-banner');
+        const copy = banner.createDiv('tl-insights-trial-copy');
+        copy.createDiv({
+            cls: 'tl-insights-trial-title',
+            text: t(
+                'insights.trialBannerTitle',
+                String(this.host.plugin.licenseManager.getTrialDaysRemaining()),
+            ),
+        });
+        copy.createDiv({
+            cls: 'tl-insights-trial-desc',
+            text: t('insights.trialBannerDesc'),
         });
     }
 
@@ -152,6 +181,9 @@ export class InsightsRenderer {
                 updateBtn.addEventListener('click', () => {
                     void this.generateReport(opts.kind, opts.status.target.ref, card, updateBtn, notice, { force: true });
                 });
+            }
+            if (this.host.plugin.licenseManager.getAccessState() === 'trial') {
+                this.renderEarnedValue(card, opts.kind, opts.status.loops);
             }
             return;
         }
@@ -300,6 +332,23 @@ export class InsightsRenderer {
             btn.addEventListener('click', () => {
                 if (existing) void this.host.app.workspace.getLeaf().openFile(existing);
             });
+            const latestInputMtime = this.getLatestProfileInputMtime();
+            if (latestInputMtime > (existing.stat?.mtime ?? 0)) {
+                notice.removeClass('tl-hidden');
+                notice.addClass('tl-insights-notice-stale');
+                notice.setText(t('insights.newProfileDataNotice'));
+                const updateBtn = card.createEl('button', {
+                    cls: 'tl-insights-primary-btn tl-insights-primary-btn-ready tl-insights-primary-btn-update',
+                    text: t('insights.updateProfile'),
+                    attr: { type: 'button' },
+                });
+                updateBtn.addEventListener('click', () => {
+                    void this.generateProfile(card, updateBtn, notice, { force: true });
+                });
+            }
+            if (this.host.plugin.licenseManager.getAccessState() === 'trial') {
+                this.renderEarnedValue(card, 'profile', 0);
+            }
             return;
         }
 
@@ -309,6 +358,15 @@ export class InsightsRenderer {
         btn.addEventListener('click', () => {
             void this.generateProfile(card, btn, notice);
         });
+    }
+
+    private getLatestProfileInputMtime(): number {
+        const today = moment();
+        const recentNotes = this.host.plugin.vaultManager.getDailyNotesInRange(
+            today.clone().subtract(14, 'days'),
+            today,
+        );
+        return Math.max(0, ...recentNotes.map(file => file.stat?.mtime ?? 0));
     }
 
     private async generateReport(
@@ -351,7 +409,12 @@ export class InsightsRenderer {
         });
     }
 
-    private async generateProfile(card: HTMLElement, btn: HTMLButtonElement, notice: HTMLElement): Promise<void> {
+    private async generateProfile(
+        card: HTMLElement,
+        btn: HTMLButtonElement,
+        notice: HTMLElement,
+        options: { force?: boolean } = {},
+    ): Promise<void> {
         btn.disabled = true;
         btn.addClass('tl-insights-primary-btn-loading');
         btn.empty();
@@ -374,7 +437,43 @@ export class InsightsRenderer {
                 this.host.invalidateTabCache('review');
                 this.host.switchTab('review');
             },
+            options,
         );
+    }
+
+    private renderEarnedValue(
+        card: HTMLElement,
+        kind: 'weekly' | 'monthly' | 'profile',
+        loops: number,
+    ): void {
+        const value = card.createDiv('tl-insights-earned-value');
+        value.createDiv({
+            cls: 'tl-insights-earned-value-copy',
+            text: kind === 'weekly'
+                ? t('insights.valueWeekly', String(loops))
+                : kind === 'monthly'
+                    ? t('insights.valueMonthly', String(loops))
+                    : t('insights.valueProfile'),
+        });
+
+        if (kind === 'weekly') {
+            const profileBtn = value.createEl('button', {
+                cls: 'tl-insights-value-btn',
+                text: t('insights.updateProfileNext'),
+                attr: { type: 'button' },
+            });
+            profileBtn.addEventListener('click', () => this.host.openInsights('profile'));
+            return;
+        }
+
+        const purchaseBtn = value.createEl('button', {
+            cls: 'tl-insights-value-btn',
+            text: t('insights.keepUpdating'),
+            attr: { type: 'button' },
+        });
+        purchaseBtn.addEventListener('click', () => {
+            window.open(this.host.plugin.licenseManager.getPurchaseUrl());
+        });
     }
 
     private renderFirstInsightEntry(containerEl: HTMLElement): void {

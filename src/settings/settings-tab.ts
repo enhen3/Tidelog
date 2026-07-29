@@ -18,6 +18,7 @@ import { t } from '../i18n';
 import type { Language } from '../i18n';
 import { formatAPIError } from '../utils/error-formatter';
 import { OnboardingModal } from '../views/onboarding-modal';
+import { ProModal } from '../views/pro-modal';
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;
@@ -663,8 +664,8 @@ export class TideLogSettingTab extends PluginSettingTab {
 
         const questions = this.plugin.settings.eveningQuestions;
         const isPro = this.plugin.licenseManager.isPro();
+        const isTrial = this.plugin.licenseManager.getAccessState() === 'trial';
         const enabledCount = questions.filter((q) => q.enabled !== false).length;
-        const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
 
         const introEl = containerEl.createDiv(`tl-q-intro ${isPro ? 'is-pro' : 'is-free'}`);
         const introCopyEl = introEl.createDiv('tl-q-intro-copy');
@@ -678,11 +679,27 @@ export class TideLogSettingTab extends PluginSettingTab {
         });
         introCopyEl.createDiv({
             cls: `tl-q-plan-status ${isPro ? 'is-pro' : 'is-free'}`,
-            text: isPro ? t('settings.reviewProActiveBadge') : t('settings.reviewFreeBadge'),
+            text: isPro
+                ? t(isTrial ? 'settings.reviewTrialActiveBadge' : 'settings.reviewProActiveBadge')
+                : t('settings.reviewFreeBadge'),
         });
         if (!isPro) {
-            const upgradeBtn = introEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('settings.reviewUpgradeBtn') });
-            upgradeBtn.addEventListener('click', () => { window.open(purchaseUrl); });
+            const upgradeBtn = introEl.createEl('button', {
+                cls: 'mod-cta tl-settings-action-btn',
+                text: this.plugin.licenseManager.getAccessState() === 'trial-expired'
+                    ? t('trial.expiredAction')
+                    : this.plugin.licenseManager.getAccessState() === 'license-inactive'
+                        ? t('trial.licenseInactiveAction')
+                        : t('trial.start'),
+            });
+            upgradeBtn.addEventListener('click', () => {
+                new ProModal(
+                    this.app,
+                    t('settings.reviewFlowTitle'),
+                    this.plugin.licenseManager,
+                    () => this.display(),
+                ).open();
+            });
         }
 
         // Question list container for drag-and-drop
@@ -964,26 +981,62 @@ export class TideLogSettingTab extends PluginSettingTab {
      * Render Pro license section in settings
      */
     private renderProLicense(containerEl: HTMLElement): void {
-        const isPro = this.plugin.licenseManager.isPro();
+        const accessState = this.plugin.licenseManager.getAccessState();
+        const isPaid = accessState === 'paid';
+        const isTrial = accessState === 'trial';
+        const hasAccess = isPaid || isTrial;
         const purchaseUrl = this.plugin.licenseManager.getPurchaseUrl();
+        const trialDays = this.plugin.licenseManager.getTrialDaysRemaining();
+        const trialExpiry = this.plugin.licenseManager.getTrialExpiryDate() ?? '—';
 
         new Setting(containerEl).setName(t('settings.sectionPro')).setHeading();
 
-        const proCardEl = containerEl.createDiv(`tl-settings-pro-card ${isPro ? 'is-pro' : 'is-free'}`);
+        const proCardEl = containerEl.createDiv(`tl-settings-pro-card ${hasAccess ? 'is-pro' : 'is-free'}`);
         const headerEl = proCardEl.createDiv('tl-settings-pro-header');
         const copyEl = headerEl.createDiv('tl-settings-pro-copy');
-        copyEl.createDiv({ cls: 'tl-settings-card-kicker', text: isPro ? 'TideLog Pro active' : 'TideLog Pro' });
+        copyEl.createDiv({
+            cls: 'tl-settings-card-kicker',
+            text: isPaid
+                ? 'TideLog Pro active'
+                : isTrial
+                    ? t('settings.trialKicker')
+                    : 'TideLog Pro',
+        });
         copyEl.createDiv({
             cls: 'tl-settings-card-title',
-            text: isPro ? t('settings.proActiveTitle') : t('settings.proUpgradeTitle'),
+            text: isPaid
+                ? t('settings.proActiveTitle')
+                : isTrial
+                    ? t('trial.activeTitle')
+                    : accessState === 'license-inactive'
+                        ? t('trial.licenseInactiveTitle')
+                    : accessState === 'trial-expired'
+                        ? t('trial.expiredTitle')
+                        : t('settings.trialTitle'),
         });
         copyEl.createDiv({
             cls: 'tl-settings-card-desc',
-            text: isPro ? t('settings.proActiveDesc') : t('settings.proUpgradeDesc'),
+            text: isPaid
+                ? t('settings.proActiveDesc')
+                : isTrial
+                    ? t('settings.trialActiveDesc', String(trialDays), trialExpiry)
+                    : accessState === 'license-inactive'
+                        ? t('trial.licenseInactiveDesc')
+                    : accessState === 'trial-expired'
+                        ? t('settings.trialExpiredDesc', trialExpiry)
+                        : t('settings.trialEligibleDesc'),
         });
         headerEl.createDiv({
-            cls: `tl-settings-pro-status ${isPro ? 'is-pro' : 'is-free'}`,
-            text: isPro ? t('settings.proActive') : t('settings.proFree'),
+            cls: `tl-settings-pro-status ${hasAccess ? 'is-pro' : 'is-free'}`,
+            text: isPaid
+                ? t('settings.proActive')
+                : isTrial
+                    ? t('settings.trialActiveBadge', String(trialDays))
+                    : accessState === 'license-inactive'
+                        ? t('trial.licenseInactiveBadge')
+                    : accessState === 'trial-expired'
+                        ? t('settings.trialExpiredBadge')
+                        : t('settings.proFree'),
         });
 
         const proFeaturesEl = proCardEl.createDiv('tl-settings-pro-benefits');
@@ -995,13 +1048,48 @@ export class TideLogSettingTab extends PluginSettingTab {
             proFeaturesEl.createSpan({ cls: 'tl-settings-pro-benefit', text: feature });
         });
 
-        if (isPro) {
+        if (isPaid) {
             const activeEl = proCardEl.createDiv('tl-settings-pro-active-panel');
             const label = this.plugin.licenseManager.getLicenseLabel();
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
             activeEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
             return;
+        }
+
+        if (accessState === 'free') {
+            const trialPanelEl = proCardEl.createDiv('tl-settings-trial-panel');
+            const trialBtn = trialPanelEl.createEl('button', {
+                cls: 'mod-cta tl-settings-action-btn tl-settings-pro-primary-btn',
+                text: this.plugin.licenseManager.needsAISetupForTrial()
+                    ? t('settings.trialConfigureAi')
+                    : t('settings.trialStart'),
+            });
+            trialBtn.addEventListener('click', () => {
+                if (this.plugin.licenseManager.needsAISetupForTrial()) {
+                    const aiGuide = containerEl.querySelector<HTMLDetailsElement>('.tl-ai-setup-guide');
+                    if (aiGuide) {
+                        aiGuide.open = true;
+                        aiGuide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    new Notice(t('trial.needsAiDesc'));
+                    return;
+                }
+                void (async () => {
+                    trialBtn.disabled = true;
+                    trialBtn.setText(t('trial.starting'));
+                    const started = await this.plugin.licenseManager.startTrial();
+                    if (started) {
+                        new Notice(t('trial.startedNotice'));
+                        this.display();
+                    } else {
+                        trialBtn.disabled = false;
+                        trialBtn.setText(t('settings.trialStart'));
+                        new Notice(t('trial.startFailed'));
+                    }
+                })();
+            });
+            trialPanelEl.createDiv({ cls: 'tl-settings-pro-purchase-note', text: t('trial.noCharge') });
         }
 
         const purchasePanelEl = proCardEl.createDiv('tl-settings-pro-purchase-panel');

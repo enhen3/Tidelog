@@ -1,6 +1,6 @@
 {
 	"name": "tidelog",
-	"version": "1.1.48",
+	"version": "1.1.49",
 	"description": "TideLog — AI-guided daily planning, review, and insight system for Markdown notes",
 	"main": "main.js",
 	"type": "module",
@@ -12,6 +12,8 @@
 		"lint:obsidian": "eslint -c eslint.config.review.mjs src/**/*.ts",
 		"test": "node test-bug-repro.mjs && node test-evening-sop.mjs && node test-save-load.mjs && node test-settings-ui.mjs && node test-onboarding-flow.mjs && node test-commercial-flow.mjs && node test-plan-suggestions.mjs && node test-md-documents.mjs && node test-ai-provider-streaming.mjs && node test-periodic-actions.mjs && node test-first-insight.mjs",
 		"build": "npm run typecheck && node esbuild.config.mjs production",
+		"demo:vault": "npm run build && node scripts/build-demo-vault.mjs",
+		"demo:check": "node scripts/build-demo-vault.mjs --check",
 		"deploy": "cp main.js styles.css manifest.json \"${OBSIDIAN_VAULT:?Set OBSIDIAN_VAULT to your vault path}/.obsidian/plugins/tidelog/\" && echo '✅ Deployed to vault'",
 		"release:check": "node scripts/check-release-assets.mjs",
 		"check": "npm run typecheck && npm run typecheck:api && npm run lint:obsidian && npm test && npm run build && npm run release:check",
