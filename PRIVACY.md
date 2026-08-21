@@ -31,6 +31,8 @@ No AI request is made until you configure an API key or endpoint and trigger an 
 
 If you activate TideLog Pro, TideLog contacts `https://tidelog-api.mydreamchronicle.com`.
 
+This happens when you activate or deactivate a license, and **automatically in the background each time Obsidian starts**, so that an active license can be re-validated. Startup verification runs only for users who have already activated a license; it is skipped entirely when no license is present.
+
 The license service receives:
 
 - License key.

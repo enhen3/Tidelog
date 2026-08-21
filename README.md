@@ -135,6 +135,7 @@ TideLog 的原则很简单：**你的日常记录默认留在你的 vault 里。
 
 - 🔐 AI API Key 和 Pro License key 使用 Obsidian SecretStorage 保存。
 - 🌐 只有当你主动对话、测试连接、生成/更新报告、完成复盘后刷新计划建议、激活 License 或打开购买/License portal 时，才会发起网络请求。
+- 🔁 **有一个请求是自动的**：如果你已激活 TideLog Pro，插件会在 Obsidian 启动时于后台校验一次 License，只发送 License Key 和一个生成的设备标识。未激活 License 的用户，启动时不产生任何网络请求。
 - 📝 AI 功能会把必要提示词和相关笔记内容发送给你自己配置的 AI 服务商。
 - 📁 计划建议和洞察读取相关周期/文件范围，而不是无提示地扫描整个 vault。
 - 🚫 TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。
@@ -192,7 +193,11 @@ Plan tasks → Review loops → Insights → Update the next action
 
 Your daily records stay in your vault by default. TideLog only sends network requests when you explicitly chat with AI, test a connection, generate/update reports, refresh planning suggestions after a review, activate a license, or open purchase/license links.
 
+**One request is automatic:** if you have activated TideLog Pro, the plugin verifies your license in the background when Obsidian starts. That request sends only your license key and a generated device identifier. If you have not activated a license, TideLog makes no network request on startup.
+
 TideLog stores AI API keys and Pro license keys with Obsidian SecretStorage. Suggestions and insights read the relevant period/file scope. TideLog does not include telemetry, analytics SDKs, dynamic ads, or a self-update mechanism.
+
+Full details: [PRIVACY.md](./PRIVACY.md).
 
 ### Support and payment
 
