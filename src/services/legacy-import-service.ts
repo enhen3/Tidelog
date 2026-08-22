@@ -9,6 +9,10 @@
 import { TFile, TFolder, moment } from 'obsidian';
 import type TideLogPlugin from '../main';
 import { t, getLanguage } from '../i18n';
+import {
+    FIRST_INSIGHT_MIN_ANALYZABLE_CHARS,
+    FIRST_INSIGHT_MIN_VALID_ENTRIES,
+} from '../constants';
 import { formatDailyNoteDocument, formatTideLogCallout } from '../utils/document-format';
 
 export type LegacyDateSource = 'frontmatter' | 'filename' | 'body' | 'mtime';
@@ -86,8 +90,6 @@ export interface ExtractedLegacyDate {
     date: string;
     source: LegacyDateSource;
 }
-
-const MIN_ANALYZABLE_CHARS = 120;
 
 export class LegacyImportService {
     constructor(private plugin: TideLogPlugin) { }
@@ -200,7 +202,7 @@ export class LegacyImportService {
             validCount: validEntries.length,
             validEntries,
             excludedEntries,
-            canGenerate: validEntries.length >= 7,
+            canGenerate: validEntries.length >= FIRST_INSIGHT_MIN_VALID_ENTRIES,
         };
     }
 
@@ -398,7 +400,7 @@ export function cleanJournalContent(content: string): string {
 }
 
 export function isLegacyJournalAnalyzable(content: string): boolean {
-    return content.replace(/\s/g, '').length >= MIN_ANALYZABLE_CHARS;
+    return content.replace(/\s/g, '').length >= FIRST_INSIGHT_MIN_ANALYZABLE_CHARS;
 }
 
 export function summarizeLegacyJournal(content: string, maxLength = 240): string {

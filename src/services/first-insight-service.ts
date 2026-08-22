@@ -14,6 +14,7 @@ import { formatAPIError } from '../utils/error-formatter';
 import { stripExtractionTags } from '../utils/md';
 import { formatFirstInsightReportDocument, formatProfileDocument } from '../utils/document-format';
 import type { LegacyImportSession, NormalizedLegacyJournal } from './legacy-import-service';
+import { FIRST_INSIGHT_MIN_VALID_ENTRIES } from '../constants';
 
 export const AHA_MODULE_HEADINGS_ZH = [
     '过去记录里的三个高频主题',
@@ -52,8 +53,12 @@ export class FirstInsightService {
         session: LegacyImportSession,
         onChunk?: (chunk: string) => void,
     ): Promise<FirstInsightReportDraft> {
-        if (session.normalizedEntries.length < 7) {
-            throw new Error(t('firstInsight.errorTooFewValid', String(session.normalizedEntries.length)));
+        if (session.normalizedEntries.length < FIRST_INSIGHT_MIN_VALID_ENTRIES) {
+            throw new Error(t(
+                'firstInsight.errorTooFewValid',
+                String(session.normalizedEntries.length),
+                String(FIRST_INSIGHT_MIN_VALID_ENTRIES),
+            ));
         }
 
         const currentProfile = await this.plugin.vaultManager.getUserProfileContent();

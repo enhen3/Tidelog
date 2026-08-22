@@ -1,3 +1,10 @@
+<a id="中文版本"></a>
+
+<p align="center">
+  <a href="#中文版本"><img src="https://img.shields.io/badge/中文-2F8396?style=for-the-badge" alt="中文版"></a>
+  <a href="#english-version"><img src="https://img.shields.io/badge/English-10252C?style=for-the-badge" alt="English version"></a>
+</p>
+
 <p align="center">
   <img src="assets/tidelog-logo.svg" alt="TideLog logo" width="88">
 </p>
@@ -11,10 +18,6 @@
 <p align="center">
   在 Obsidian 里把 Daily Notes 连接成 Plan → Review → Insights 闭环。<br>
   <em>不是多写一点，而是让写下来的内容回到下一步。</em>
-</p>
-
-<p align="center">
-  <a href="#english-version">English version</a>
 </p>
 
 ![TideLog 产品首图](assets/tidelog-hero.svg)
@@ -151,6 +154,11 @@ TideLog 的原则很简单：**你的日常记录默认留在你的 vault 里。
 ---
 
 ## English version
+
+<p align="center">
+  <a href="#中文版本"><img src="https://img.shields.io/badge/中文-2F8396?style=for-the-badge" alt="中文版"></a>
+  <a href="#english-version"><img src="https://img.shields.io/badge/English-10252C?style=for-the-badge" alt="English version"></a>
+</p>
 
 ![TideLog product hero](assets/tidelog-hero.svg)
 

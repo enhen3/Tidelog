@@ -11,6 +11,7 @@ import { t } from '../i18n';
 import type { LegacyDailyImportResult, LegacyImportScanResult } from '../services/legacy-import-service';
 import type { FirstInsightReportDraft } from '../services/first-insight-service';
 import { getFirstInsightBodyExcerptLimit, stripProfileTags } from '../services/first-insight-service';
+import { FIRST_INSIGHT_MIN_VALID_ENTRIES } from '../constants';
 
 interface FolderTreeNode {
     name: string;
@@ -401,7 +402,11 @@ export class FirstInsightModal extends Modal {
             notice.setText(t('firstInsight.readyNotice', String(scan.candidateCount), String(scan.validCount), estimate.label));
         } else {
             notice.addClass('tl-insights-notice-stale');
-            notice.setText(t('firstInsight.tooFewNotice', String(scan.validCount)));
+            notice.setText(t(
+                'firstInsight.tooFewNotice',
+                String(scan.validCount),
+                String(FIRST_INSIGHT_MIN_VALID_ENTRIES),
+            ));
         }
 
         if (scan.excludedEntries.length > 0) {

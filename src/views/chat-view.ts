@@ -138,14 +138,9 @@ export class ChatView extends ItemView {
         this.reviewHintEl = this.chatPanel.createDiv('tl-review-input-hint');
         this.renderInputArea(this.chatPanel);
 
-        // New users should land on the first-value path: old journals → profile.
-        // Once the initial profile exists, the daily Plan tab becomes the natural home.
-        if (this.shouldStartAtFirstInsight()) {
-            this.insightsMode = 'profile';
-            await this.switchTab('review');
-        } else {
-            await this.switchTab('kanban');
-        }
+        // Plan is immediately usable without AI or a license, so it is the
+        // default home for both new and returning users.
+        await this.switchTab('kanban');
 
         // Live refresh: re-render kanban when vault files change
         this.vaultModifyRef = this.app.vault.on('modify', (file) => {
@@ -287,7 +282,7 @@ export class ChatView extends ItemView {
             this.periodicSelectorOpen = false;
         } else if (animate) {
             if (tab === 'review') {
-                this.insightsMode = this.shouldStartAtFirstInsight() ? 'profile' : 'weekly';
+                this.insightsMode = this.shouldDefaultInsightsToProfile() ? 'profile' : 'weekly';
             } else if (tab === 'chat') {
                 this.reviewSelectedMonth = moment();
                 this.reviewSelectedDate = moment();
@@ -1009,7 +1004,24 @@ export class ChatView extends ItemView {
     // =========================================================================
 
     private async renderKanbanTab(panel: HTMLElement): Promise<void> {
+        this.renderFirstInsightPlanHint(panel);
         await this.periodicRenderer.render(panel);
+    }
+
+    private renderFirstInsightPlanHint(panel: HTMLElement): void {
+        if (this.plugin.settings.firstInsightCompleted) return;
+
+        const hint = panel.createDiv('tl-plan-first-insight-hint');
+        hint.createSpan({
+            cls: 'tl-plan-first-insight-hint-copy',
+            text: t('firstInsight.planHint'),
+        });
+        const button = hint.createEl('button', {
+            cls: 'tl-plan-first-insight-hint-btn',
+            text: t('firstInsight.planHintBtn'),
+            attr: { type: 'button' },
+        });
+        button.addEventListener('click', () => this.openInsights('profile'));
     }
 
     /**
@@ -1060,7 +1072,7 @@ export class ChatView extends ItemView {
         await this.insightsRenderer.render(panel);
     }
 
-    private shouldStartAtFirstInsight(): boolean {
+    private shouldDefaultInsightsToProfile(): boolean {
         return !this.plugin.settings.firstInsightCompleted;
     }
 

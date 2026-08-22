@@ -3572,6 +3572,40 @@
 	margin: 0 0 var(--tl-sp-10);
 }
 
+.tl-plan-first-insight-hint {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--tl-sp-8);
+	margin: 0 var(--tl-sp-12) var(--tl-sp-8);
+	padding: 7px 10px;
+	border: 0.5px solid color-mix(in srgb, var(--tl-insight) 18%, var(--tl-border));
+	border-radius: var(--tl-radius-md);
+	background: color-mix(in srgb, var(--tl-insight-light) 36%, var(--tl-surface-raised));
+	color: var(--tl-text-secondary);
+	font-size: var(--tl-fs-footnote);
+}
+
+.tl-plan-first-insight-hint-copy {
+	min-width: 0;
+}
+
+.tl-plan-first-insight-hint-btn {
+	flex-shrink: 0;
+	padding: 3px 8px;
+	border: none;
+	border-radius: var(--tl-radius-pill);
+	background: transparent;
+	color: var(--tl-insight);
+	font: inherit;
+	font-weight: var(--tl-fw-semibold);
+	cursor: pointer;
+}
+
+.tl-plan-first-insight-hint-btn:hover {
+	background: color-mix(in srgb, var(--tl-insight) 10%, transparent);
+}
+
 .tl-onboarding-modal .tl-onboarding-buttons {
 	flex-wrap: wrap;
 }

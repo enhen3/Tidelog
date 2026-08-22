@@ -4,7 +4,7 @@
  * Covers the first-value path:
  * - non-standard old journals are read-only
  * - source copies and normalized copies are created under Archive/Imports
- * - date extraction priority and 7-journal threshold work
+ * - date extraction priority and shared first-insight thresholds work
  * - the report/profile standard contains the five Aha modules
  * - user_profile.md is written only after confirmation
  */
@@ -114,6 +114,16 @@ class Modal {
     open() { this.onOpen?.(); }
     close() { this.onClose?.(); }
 }
+class ItemView {
+    constructor(leaf) {
+        this.leaf = leaf;
+        this.app = leaf.app;
+        this.containerEl = activeDocument.createElement('div');
+        this.contentEl = activeDocument.createElement('div');
+        this.containerEl.appendChild(this.contentEl);
+    }
+    registerEvent(ref) { return ref; }
+}
 class Notice {
     constructor(message) {
         global.__lastNotice = message;
@@ -122,12 +132,15 @@ class Notice {
 module.exports = {
     App: class {},
     Component: class { load(){} unload(){} },
+    ItemView,
     MarkdownRenderer: { render: async (app, content, el) => { el.textContent = content; } },
     Modal,
     Notice,
+    Platform: { isMobile: false },
     TFile,
     TFolder,
     moment,
+    setIcon: (el, icon) => { el.setAttribute('data-icon', icon); },
 };
 `,
 );
@@ -148,6 +161,10 @@ export {
     isLegacyJournalAnalyzable,
 } from ${JSON.stringify(path.join(__dirname, 'src/services/legacy-import-service.ts'))};
 export {
+    FIRST_INSIGHT_MIN_VALID_ENTRIES,
+    FIRST_INSIGHT_MIN_ANALYZABLE_CHARS,
+} from ${JSON.stringify(path.join(__dirname, 'src/constants.ts'))};
+export {
     FirstInsightService,
     buildFirstInsightPrompt,
     extractProfileUpdate,
@@ -156,7 +173,8 @@ export {
     ensureProfileAhaStructure,
 } from ${JSON.stringify(path.join(__dirname, 'src/services/first-insight-service.ts'))};
 export { FirstInsightModal } from ${JSON.stringify(path.join(__dirname, 'src/views/first-insight-modal.ts'))};
-export { setLanguage } from ${JSON.stringify(path.join(__dirname, 'src/i18n/index.ts'))};
+export { ChatView } from ${JSON.stringify(path.join(__dirname, 'src/views/chat-view.ts'))};
+export { setLanguage, t } from ${JSON.stringify(path.join(__dirname, 'src/i18n/index.ts'))};
 `);
 
 const bundled = await esbuild.build({
@@ -173,6 +191,8 @@ const moduleObj = { exports: {} };
 new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(moduleObj, moduleObj.exports, require);
 const {
     LegacyImportService,
+    FIRST_INSIGHT_MIN_VALID_ENTRIES,
+    FIRST_INSIGHT_MIN_ANALYZABLE_CHARS,
     FirstInsightService,
     buildFirstInsightPrompt,
     extractLegacyJournalDate,
@@ -180,8 +200,11 @@ const {
     stripProfileTags,
     hasRequiredAhaModules,
     ensureProfileAhaStructure,
+    isLegacyJournalAnalyzable,
     FirstInsightModal,
+    ChatView,
     setLanguage,
+    t,
 } = moduleObj.exports;
 const { TFile, TFolder, moment } = require(mockPath);
 
@@ -280,6 +303,7 @@ function createVaultHarness() {
             file.stat.size = file.content.length;
             return file.content;
         },
+        on: () => ({}),
     };
 
     return { nodes, root, vault, ensureFolder, addFile };
@@ -346,26 +370,26 @@ console.log('\nTest 2: scan separates candidate journals, valid journals, and ex
 {
     const harness = createVaultHarness();
     harness.ensureFolder('Legacy');
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 2; i++) {
         harness.addFile(`Legacy/2026-06-0${i}.md`, makeLongBody(`主题${i}`), moment(`2026-06-0${i}`).valueOf());
     }
-    harness.addFile('Legacy/2026-06-07-short.md', '太短', moment('2026-06-07').valueOf());
+    harness.addFile('Legacy/2026-06-03-short.md', '太短', moment('2026-06-03').valueOf());
     harness.addFile('Legacy/2026-05-30.md', makeLongBody('范围外'), moment('2026-05-30').valueOf());
 
     const service = new LegacyImportService(makePlugin(harness));
     const scan = await service.scanFolder('Legacy', { start: '2026-06-01', end: '2026-06-30' });
-    check(scan.candidateCount === 7, 'candidate count includes dated markdown in range');
-    check(scan.validCount === 6, 'valid count excludes too-short content');
-    check(!scan.canGenerate, 'fewer than 7 valid journals cannot generate formal report');
+    check(scan.candidateCount === 3, 'candidate count includes dated markdown in range');
+    check(scan.validCount === 2, 'valid count excludes too-short content');
+    check(!scan.canGenerate, 'fewer than 3 valid journals cannot generate formal report');
     check(scan.excludedEntries.some(item => item.reason === 'too_short'), 'too-short journal is listed as excluded');
     check(scan.excludedEntries.some(item => item.reason === 'outside_range'), 'outside-range journal is listed as excluded');
 
     const autoScan = await service.scanFolder('Legacy');
-    check(autoScan.candidateCount === 8, 'folder-only scan includes all dated markdown candidates');
-    check(autoScan.validCount === 7, 'folder-only scan relies on detected dates instead of manual date inputs');
-    check(autoScan.canGenerate, 'folder-only scan can generate when at least 7 journals are analyzable');
+    check(autoScan.candidateCount === 4, 'folder-only scan includes all dated markdown candidates');
+    check(autoScan.validCount === 3, 'folder-only scan relies on detected dates instead of manual date inputs');
+    check(autoScan.canGenerate, 'folder-only scan can generate when at least 3 journals are analyzable');
     check(
-        autoScan.dateRange.start === '2026-05-30' && autoScan.dateRange.end === '2026-06-07',
+        autoScan.dateRange.start === '2026-05-30' && autoScan.dateRange.end === '2026-06-03',
         'folder-only scan reports the detected date range',
         `actual: ${JSON.stringify(autoScan.dateRange)}`,
     );
@@ -420,7 +444,7 @@ console.log('\nTest 2b: representative Obsidian journal formats import as valid 
     const dates = scan.validEntries.map(entry => entry.date);
 
     check(scan.candidateCount === 7, 'representative Obsidian fixture finds all 7 dated markdown notes');
-    check(scan.validCount === 7 && scan.canGenerate, 'representative Obsidian fixture passes the 7-note generation threshold');
+    check(scan.validCount === 7 && scan.canGenerate, 'representative Obsidian fixture passes the 3-note generation threshold');
     check(
         ['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05', '2026-06-06', '2026-06-07']
             .every(date => dates.includes(date)),
@@ -433,13 +457,13 @@ console.log('\nTest 2b: representative Obsidian journal formats import as valid 
     check(harness.nodes.get('Daily/2026-06-03.md').content.includes('常见 YYYY/MM/DD 路径'), 'system import keeps content from split path date format');
 }
 
-console.log('\nTest 3: threshold allows exactly 7 and more than 7 valid journals');
+console.log('\nTest 3: threshold allows exactly 3 and more than 3 valid journals');
 {
     const harness = createVaultHarness();
     harness.ensureFolder('Legacy');
     harness.ensureFolder('Daily');
     const originals = new Map();
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 3; i++) {
         const file = harness.addFile(`Legacy/2026-06-${String(i).padStart(2, '0')}.md`, makeLongBody(`导入${i}`), moment(`2026-06-${String(i).padStart(2, '0')}`).valueOf());
         originals.set(file.path, file.content);
     }
@@ -448,14 +472,14 @@ console.log('\nTest 3: threshold allows exactly 7 and more than 7 valid journals
     const scan = await service.scanFolder('Legacy', { start: '2026-06-01', end: '2026-06-30' });
     const session = await service.createImport(scan);
 
-    check(scan.canGenerate, 'exactly 7 valid journals can generate');
-    check(session.normalizedEntries.length === 7, 'exactly 7 valid journals are all normalized');
+    check(scan.canGenerate, 'exactly 3 valid journals can generate');
+    check(session.normalizedEntries.length === 3, 'exactly 3 valid journals are all normalized');
 }
 
 {
     const harness = createVaultHarness();
     harness.ensureFolder('Legacy');
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 4; i++) {
         harness.addFile(`Legacy/2026-06-${String(i).padStart(2, '0')}.md`, makeLongBody(`阈值${i}`), moment(`2026-06-${String(i).padStart(2, '0')}`).valueOf());
     }
 
@@ -463,9 +487,34 @@ console.log('\nTest 3: threshold allows exactly 7 and more than 7 valid journals
     const scan = await service.scanFolder('Legacy', { start: '2026-06-01', end: '2026-06-30' });
     const session = await service.createImport(scan);
 
-    check(scan.validCount === 8, 'more than 7 valid journals are counted');
-    check(scan.canGenerate, 'more than 7 valid journals can generate');
-    check(session.normalizedEntries.length === 8, 'more than 7 valid journals are all normalized');
+    check(scan.validCount === 4, 'more than 3 valid journals are counted');
+    check(scan.canGenerate, 'more than 3 valid journals can generate');
+    check(session.normalizedEntries.length === 4, 'more than 3 valid journals are all normalized');
+}
+
+console.log('\nTest 3b: first-insight count and character thresholds share one definition');
+{
+    check(FIRST_INSIGHT_MIN_VALID_ENTRIES === 3, 'first insight requires 3 valid journals');
+    check(FIRST_INSIGHT_MIN_ANALYZABLE_CHARS === 60, 'each first-insight journal requires 60 non-whitespace characters');
+    check(!isLegacyJournalAnalyzable('x'.repeat(59)), '59 non-whitespace characters are rejected');
+    check(isLegacyJournalAnalyzable(` ${'x'.repeat(60)}\n`), '60 non-whitespace characters are accepted');
+
+    const harness = createVaultHarness();
+    harness.ensureFolder('Legacy');
+    for (let i = 1; i <= 2; i++) {
+        harness.addFile(`Legacy/2026-06-0${i}.md`, makeLongBody(`服务校验${i}`), moment(`2026-06-0${i}`).valueOf());
+    }
+    const plugin = makePlugin(harness);
+    const legacy = new LegacyImportService(plugin);
+    const scan = await legacy.scanFolder('Legacy');
+    const session = await legacy.createImport(scan);
+    let thresholdError = '';
+    try {
+        await new FirstInsightService(plugin).generateFirstInsight(session);
+    } catch (error) {
+        thresholdError = error instanceof Error ? error.message : String(error);
+    }
+    check(thresholdError.includes('至少需要 3 篇'), 'service-layer validation reports the shared 3-journal threshold');
 }
 
 console.log('\nTest 4: import copies source files and writes normalized files without mutating originals');
@@ -753,9 +802,95 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     check(zhSource.includes('TideLog 不会保存你的个人数据') && enSource.includes('does not store your personal data'), 'first insight copy reassures users about local privacy');
     check(css.includes('.tl-first-insight-privacy-note') && css.includes('.tl-onboarding-privacy-note'), 'privacy notes reuse lightweight card styling');
 
-    const chatSource = fs.readFileSync(path.join(__dirname, 'src/views/chat-view.ts'), 'utf8');
-    check(chatSource.includes('shouldStartAtFirstInsight') && chatSource.includes("this.insightsMode = 'profile'") && chatSource.includes("await this.switchTab('review')"), 'fresh users land on Insights profile so the old-journal entry is first visible');
-    check(chatSource.includes("this.shouldStartAtFirstInsight() ? 'profile' : 'weekly'"), 'clicking the Insights tab keeps fresh users on the profile entry until first insight is completed');
+    const createChatViewHarness = (firstInsightCompleted) => {
+        const harness = createVaultHarness();
+        const plugin = makePlugin(harness);
+        plugin.settings.firstInsightCompleted = firstInsightCompleted;
+        const view = new ChatView({ app: plugin.app }, plugin);
+        view.getDefaultPlanDate = async () => moment('2026-08-21');
+        view.periodicRenderer = {
+            render: async panel => { panel.createDiv('tl-test-periodic-content'); },
+        };
+        view.insightsRenderer = {
+            render: async panel => { panel.createDiv('tl-test-insights-content'); },
+        };
+        return { plugin, view };
+    };
+
+    const fresh = createChatViewHarness(false);
+    await fresh.view.onOpen();
+    await flush();
+    check(
+        fresh.view.activeTab === 'kanban'
+            && fresh.view.contentEl.querySelector('.tl-tab-bar-wrap')?.getAttribute('data-active-tab') === 'kanban'
+            && fresh.view.contentEl.querySelector('.tl-tab-btn-active')?.getAttribute('data-tab') === 'kanban',
+        'fresh users actually render Plan as the active initial tab',
+    );
+    check(fresh.view.contentEl.querySelectorAll('.tl-plan-first-insight-hint').length === 1, 'fresh users render exactly one first-profile Plan hint');
+
+    const hintButton = fresh.view.contentEl.querySelector('.tl-plan-first-insight-hint-btn');
+    hintButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    check(!!hintButton && fresh.view.insightsMode === 'profile', 'clicking the Plan hint opens Insights in profile mode');
+
+    await fresh.view.switchTab('kanban', false);
+    await flush();
+    fresh.view.insightsMode = 'weekly';
+    fresh.view.contentEl.querySelector('.tl-tab-btn[data-tab="review"]')
+        ?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    check(fresh.view.insightsMode === 'profile', 'the Insights top-level tab defaults incomplete users to profile mode');
+
+    await fresh.view.switchTab('kanban', false);
+    await fresh.view.switchTab('kanban', false);
+    await flush();
+    check(fresh.view.contentEl.querySelectorAll('.tl-plan-first-insight-hint').length === 1, 'rerendering Plan does not duplicate the first-profile hint');
+    fresh.plugin.settings.firstInsightCompleted = true;
+    await fresh.view.switchTab('kanban', false);
+    await flush();
+    check(fresh.view.contentEl.querySelectorAll('.tl-plan-first-insight-hint').length === 0, 'the Plan hint disappears after first insight completion');
+    await fresh.view.onClose();
+
+    const completed = createChatViewHarness(true);
+    completed.view.insightsMode = 'profile';
+    await completed.view.onOpen();
+    await flush();
+    check(
+        completed.view.activeTab === 'kanban'
+            && completed.view.contentEl.querySelector('.tl-tab-bar-wrap')?.getAttribute('data-active-tab') === 'kanban',
+        'completed users actually render Plan as the active initial tab',
+    );
+    check(completed.view.contentEl.querySelectorAll('.tl-plan-first-insight-hint').length === 0, 'completed users do not render the first-profile Plan hint');
+    completed.view.contentEl.querySelector('.tl-tab-btn[data-tab="review"]')
+        ?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    check(completed.view.insightsMode === 'weekly', 'the Insights top-level tab defaults completed users to weekly mode');
+    await completed.view.onClose();
+
+    const belowMinimum = FIRST_INSIGHT_MIN_VALID_ENTRIES - 1;
+    setLanguage('zh');
+    check(
+        t('firstInsight.tooFewNotice', belowMinimum, FIRST_INSIGHT_MIN_VALID_ENTRIES)
+            === `目前只有 ${belowMinimum} 篇内容足够分析。至少需要 ${FIRST_INSIGHT_MIN_VALID_ENTRIES} 篇，才能生成一份像样的画像报告。`,
+        'Chinese first-insight notice interpolates the shared journal threshold',
+    );
+    check(
+        t('firstInsight.errorTooFewValid', belowMinimum, FIRST_INSIGHT_MIN_VALID_ENTRIES)
+            === `有效日记只有 ${belowMinimum} 篇，至少需要 ${FIRST_INSIGHT_MIN_VALID_ENTRIES} 篇。`,
+        'Chinese first-insight error interpolates the shared journal threshold',
+    );
+    setLanguage('en');
+    check(
+        t('firstInsight.tooFewNotice', belowMinimum, FIRST_INSIGHT_MIN_VALID_ENTRIES)
+            === `Only ${belowMinimum} records are strong enough to analyze. At least ${FIRST_INSIGHT_MIN_VALID_ENTRIES} are needed for a useful profile report.`,
+        'English first-insight notice interpolates the shared journal threshold',
+    );
+    check(
+        t('firstInsight.errorTooFewValid', belowMinimum, FIRST_INSIGHT_MIN_VALID_ENTRIES)
+            === `Only ${belowMinimum} valid journals found. At least ${FIRST_INSIGHT_MIN_VALID_ENTRIES} are required.`,
+        'English first-insight error interpolates the shared journal threshold',
+    );
+    setLanguage('zh');
 }
 
 console.log('\nTest 9b: first insight folder tree has clear desktop-style navigation');
