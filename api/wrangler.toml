@@ -16,3 +16,5 @@ database_id = "7930769b-81dd-44ae-a133-ba4150f37742"
 
 # Environment variables (set via wrangler secret)
 # ADMIN_TOKEN — protects /admin/* endpoints
+# DEEPSEEK_API_KEY — set with: npx wrangler secret put DEEPSEEK_API_KEY
+# Do not add the secret value to [vars] or commit it to this file.

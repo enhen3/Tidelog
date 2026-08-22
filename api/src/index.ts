@@ -15,13 +15,15 @@
  */
 
 import type { D1Database, ExportedHandler } from '@cloudflare/workers-types';
+import { handleAIGenerate, handleAIQuota } from './ai';
 
 export interface Env {
 	DB: D1Database;
 	ADMIN_TOKEN: string;
+	DEEPSEEK_API_KEY: string;
 }
 
-interface LicenseRow {
+export interface LicenseRow {
 	id: number;
 	key: string;
 	status: string;
@@ -951,7 +953,7 @@ function checkAdmin(request: Request, env: Env): Response | null {
 }
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx): Promise<Response> {
 		if (request.method === 'OPTIONS') {
 			return new Response(null, {
 				headers: {
@@ -966,6 +968,17 @@ export default {
 		const path = url.pathname;
 
 		try {
+			if (path === '/ai/generate' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'ai-generate', 10, 60);
+				if (limited) return limited;
+				return await handleAIGenerate(request, env, ctx);
+			}
+			if (path === '/ai/quota' && request.method === 'GET') {
+				const limited = await checkRateLimit(request, env, 'ai-quota', 10, 60);
+				if (limited) return limited;
+				return await handleAIQuota(request, env);
+			}
+
 			if (path === '/license/activate' && request.method === 'POST') {
 				const limited = await checkRateLimit(request, env, 'license-activate', 20, 60);
 				if (limited) return limited;
