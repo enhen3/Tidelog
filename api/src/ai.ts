@@ -38,6 +38,9 @@ interface Identity {
 	subjectType: SubjectType;
 	subjectId: string;
 	freeAnchor: string | null;
+	/** 免费档的 IP 级锚点。deviceId 由客户端自填、可随意轮换，
+	 *  只按 deviceId 计额度等于没有额度，故必须叠加一层客户端无法伪造的 IP 级上限。 */
+	ipAnchor: string | null;
 }
 
 interface ProviderRequest {
@@ -95,9 +98,20 @@ function isLicenseExpired(row: LicenseRow, nowSeconds: number): boolean {
 		&& nowSeconds > row.expires_at;
 }
 
-async function makeFreeAnchor(request: Request, deviceId: string): Promise<string> {
+/** 免费档单个 IP 每月可消耗的托管 AI 次数上限。
+ *  高于单设备额度（3），以容纳同一 NAT/办公网下的多个真实用户；
+ *  同时把「轮换 deviceId 无限刷」压到一个可接受的数字。 */
+const FREE_IP_MONTHLY_CAP = 10;
+
+export async function makeFreeAnchor(request: Request, deviceId: string): Promise<string> {
 	const ipHash = await sha256Hex(getClientIp(request));
 	return sha256Hex(`${deviceId}:${ipHash}`);
+}
+
+/** 只由 IP 决定的锚点。客户端无法伪造 CF-Connecting-IP。 */
+export async function makeIpAnchor(request: Request): Promise<string> {
+	const ipHash = await sha256Hex(getClientIp(request));
+	return sha256Hex(`ip:${ipHash}`);
 }
 
 async function resolveIdentity(
@@ -130,6 +144,7 @@ async function resolveIdentity(
 			subjectType: 'license',
 			subjectId: normalizedKey,
 			freeAnchor: null,
+			ipAnchor: null,
 		};
 	}
 
@@ -139,6 +154,7 @@ async function resolveIdentity(
 		subjectType: 'free',
 		subjectId: anchor,
 		freeAnchor: anchor,
+		ipAnchor: await makeIpAnchor(request),
 	};
 }
 
@@ -256,6 +272,32 @@ async function reserveUsage(
 		}, 429);
 	}
 
+	// IP 级上限：先于设备级扣减。deviceId 是客户端自填字符串，可无限轮换，
+	// 只有 IP 锚点是客户端伪造不了的，因此它才是免费档真正的成本护栏。
+	if (identity.tier === 'free' && identity.ipAnchor) {
+		await db.prepare(
+			`INSERT INTO free_quota (anchor, period, used_count, created_at, updated_at)
+			 VALUES (?, ?, 0, ?, ?)
+			 ON CONFLICT(anchor) DO UPDATE SET
+			   period = excluded.period,
+			   used_count = CASE WHEN free_quota.period = excluded.period THEN free_quota.used_count ELSE 0 END,
+			   updated_at = excluded.updated_at`,
+		).bind(identity.ipAnchor, period, nowSeconds, nowSeconds).run();
+
+		const ipIncrement = await db.prepare(
+			'UPDATE free_quota SET used_count = used_count + 1, updated_at = ? WHERE anchor = ? AND period = ? AND used_count < ?',
+		).bind(nowSeconds, identity.ipAnchor, period, FREE_IP_MONTHLY_CAP).run();
+		if ((ipIncrement.meta.changes ?? 0) === 0) {
+			return apiJson({
+				error: 'quota_exceeded',
+				feature,
+				scope: 'ip',
+				limit: FREE_IP_MONTHLY_CAP,
+				resets_at: decision.resetsAt,
+			}, 429);
+		}
+	}
+
 	if (identity.tier === 'free' && identity.freeAnchor) {
 		await db.prepare(
 			`INSERT INTO free_quota (anchor, period, used_count, created_at, updated_at)
@@ -270,6 +312,11 @@ async function reserveUsage(
 			'UPDATE free_quota SET used_count = used_count + 1, updated_at = ? WHERE anchor = ? AND period = ? AND used_count < ?',
 		).bind(nowSeconds, identity.freeAnchor, period, rule.limit).run();
 		if ((increment.meta.changes ?? 0) === 0) {
+			if (identity.ipAnchor) {
+				await db.prepare(
+					'UPDATE free_quota SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE anchor = ? AND period = ?',
+				).bind(nowSeconds, identity.ipAnchor, period).run();
+			}
 			const used = await getUsedCount(db, identity, feature, period, nowMs);
 			return apiJson({
 				error: 'quota_exceeded',
@@ -312,6 +359,11 @@ async function reserveUsage(
 				'UPDATE free_quota SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE anchor = ? AND period = ?',
 			).bind(nowSeconds, identity.freeAnchor, period).run();
 		}
+		if (identity.tier === 'free' && identity.ipAnchor) {
+			await db.prepare(
+				'UPDATE free_quota SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE anchor = ? AND period = ?',
+			).bind(nowSeconds, identity.ipAnchor, period).run();
+		}
 		const used = await getUsedCount(db, identity, feature, period, nowMs);
 		return apiJson({
 			error: 'quota_exceeded',
@@ -332,10 +384,16 @@ async function releaseReservation(
 	period: string,
 ): Promise<void> {
 	await db.prepare('DELETE FROM ai_usage WHERE id = ?').bind(usageId).run();
+	const releasedAt = Math.floor(Date.now() / 1000);
 	if (identity.tier === 'free' && identity.freeAnchor) {
 		await db.prepare(
 			'UPDATE free_quota SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE anchor = ? AND period = ?',
-		).bind(Math.floor(Date.now() / 1000), identity.freeAnchor, period).run();
+		).bind(releasedAt, identity.freeAnchor, period).run();
+	}
+	if (identity.tier === 'free' && identity.ipAnchor) {
+		await db.prepare(
+			'UPDATE free_quota SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE anchor = ? AND period = ?',
+		).bind(releasedAt, identity.ipAnchor, period).run();
 	}
 }
 

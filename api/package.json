@@ -14,7 +14,8 @@
     "test:portal": "node test-portal.mjs",
     "generate-keys": "node scripts/generate-keys.mjs",
     "db:migrate:v4": "wrangler d1 execute tidelog-license-db --remote --file=migration-v4.sql",
-    "test:moderation": "node test-moderation.mjs"
+    "test:moderation": "node test-moderation.mjs",
+    "test:anchor": "node test-anchor.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240529.0",
