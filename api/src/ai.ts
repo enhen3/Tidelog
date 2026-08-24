@@ -1,5 +1,6 @@
 import type { D1Database, ExecutionContext } from '@cloudflare/workers-types';
 import type { Env, LicenseRow } from './index';
+import { moderateMessages } from './moderation';
 import {
 	FEATURES,
 	QUOTA,
@@ -448,6 +449,16 @@ export async function handleAIGenerate(
 	}
 	if (body.licenseKey !== undefined && typeof body.licenseKey !== 'string') {
 		return apiJson({ error: 'invalid_license' }, 403);
+	}
+
+	// 内容合规检查（DeepSeek 服务协议 3.4 条要求）。
+	// 在扣减配额和转发之前执行；只返回类目，不记录任何笔记内容。
+	const moderation = moderateMessages(messages);
+	if (!moderation.allowed) {
+		return apiJson({
+			error: 'content_blocked',
+			categories: moderation.categories,
+		}, 422);
 	}
 
 	const estimatedInputTokens = estimateInputTokens(messages);
