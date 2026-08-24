@@ -567,7 +567,11 @@ export async function handleAIGenerate(
 	}
 
 	if (!upstream.ok) {
-		console.error('[TideLog AI API] DeepSeek rejected request', upstream.status);
+		// 上游错误体通常写明了原因（无效 Key、模型不存在、余额不足等）。
+		// 只写日志、不返回给客户端，避免把上游细节暴露给终端用户。
+		let detail = '';
+		try { detail = (await upstream.clone().text()).slice(0, 500); } catch { /* 忽略 */ }
+		console.error('[TideLog AI API] DeepSeek rejected request', upstream.status, detail);
 		await releaseReservation(env.DB, reservation.id, identity, period);
 		return apiJson({ error: 'provider_error', status: upstream.status }, 502);
 	}
