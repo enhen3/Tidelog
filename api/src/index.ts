@@ -21,6 +21,7 @@ export interface Env {
 	DB: D1Database;
 	ADMIN_TOKEN: string;
 	DEEPSEEK_API_KEY: string;
+	DEEPSEEK_MODEL?: string;
 }
 
 export interface LicenseRow {

@@ -12,7 +12,8 @@ import {
 } from './quota';
 
 const DEEPSEEK_CHAT_COMPLETIONS_URL = 'https://api.deepseek.com/chat/completions';
-const DEEPSEEK_MODEL = 'deepseek-v4-flash';
+/** 默认模型。可用 wrangler secret / vars 的 DEEPSEEK_MODEL 覆盖，避免写死。 */
+const DEEPSEEK_MODEL_DEFAULT = 'deepseek-chat';
 const MAX_INPUT_TOKENS = 32_000;
 
 type SubjectType = 'license' | 'free';
@@ -191,7 +192,7 @@ export function estimateInputTokens(messages: ChatMessage[]): number {
 }
 
 class DeepSeekProvider implements AIProvider {
-	constructor(private readonly apiKey: string) {}
+	constructor(private readonly apiKey: string, private readonly model: string) {}
 
 	generate(request: ProviderRequest): Promise<Response> {
 		return fetch(DEEPSEEK_CHAT_COMPLETIONS_URL, {
@@ -202,7 +203,7 @@ class DeepSeekProvider implements AIProvider {
 				Accept: request.stream ? 'text/event-stream' : 'application/json',
 			},
 			body: JSON.stringify({
-				model: DEEPSEEK_MODEL,
+				model: this.model,
 				messages: request.messages,
 				stream: request.stream,
 				...(request.stream ? { stream_options: { include_usage: true } } : {}),
@@ -212,7 +213,11 @@ class DeepSeekProvider implements AIProvider {
 }
 
 function providerFor(env: Env): AIProvider | null {
-	return env.DEEPSEEK_API_KEY ? new DeepSeekProvider(env.DEEPSEEK_API_KEY) : null;
+	// 防御性 trim：wrangler secret put 经由管道注入时极易混入尾部换行，
+	// 带空白的 Authorization 头会被 DeepSeek 以 401 拒绝，且极难排查。
+	const key = env.DEEPSEEK_API_KEY?.trim();
+	const model = env.DEEPSEEK_MODEL?.trim() || DEEPSEEK_MODEL_DEFAULT;
+	return key ? new DeepSeekProvider(key, model) : null;
 }
 
 async function getUsedCount(
