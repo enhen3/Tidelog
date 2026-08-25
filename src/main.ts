@@ -420,9 +420,14 @@ export default class TideLogPlugin extends Plugin {
         }, 250);
     }
 
+    /**
+     * AI 是否可用。自 1.2 起 AI 能力由 TideLog 服务端统一提供，
+     * 用户不再自备 API Key，因此恒为 true。
+     * 保留此方法而非删除，是因为它是 13 处 UI 分支的判断依据
+     * （试用闸门、首次画像入口、新手引导等），集中在此返回可一次性修正全部路径。
+     */
     hasConfiguredAI(): boolean {
-        const activeProvider = this.settings.activeProvider;
-        return Boolean(this.settings.providers[activeProvider]?.apiKey?.trim());
+        return true;
     }
 
     async completeOnboarding(): Promise<void> {

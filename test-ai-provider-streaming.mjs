@@ -17,18 +17,20 @@ fs.writeFileSync(
     mockPath,
     `
 let requestUrlCalls = [];
+let requestUrlResponse = {
+    status: 200,
+    text: JSON.stringify({ choices: [{ message: { content: 'fallback response' } }] }),
+    json: { choices: [{ message: { content: 'fallback response' } }] },
+};
 module.exports = {
     moment: require('moment'),
     requestUrl: async (options) => {
         requestUrlCalls.push(options);
-        return {
-            status: 200,
-            text: JSON.stringify({ choices: [{ message: { content: 'fallback response' } }] }),
-            json: { choices: [{ message: { content: 'fallback response' } }] },
-        };
+        return requestUrlResponse;
     },
     __getRequestUrlCalls: () => requestUrlCalls,
     __resetRequestUrlCalls: () => { requestUrlCalls = []; },
+    __setRequestUrlResponse: (response) => { requestUrlResponse = response; },
 };
 `,
 );
@@ -43,6 +45,9 @@ Module._resolveFilename = function (req, parent, ...rest) {
 const entryPath = path.join(__dirname, '.test-ai-provider-streaming-entry.ts');
 fs.writeFileSync(entryPath, `
 export { BaseAIProvider } from ${JSON.stringify(path.join(__dirname, 'src/ai/base-provider.ts'))};
+export { TideLogProvider, classifyTideLogProxyError } from ${JSON.stringify(path.join(__dirname, 'src/ai/tidelog-provider.ts'))};
+export { formatAPIError } from ${JSON.stringify(path.join(__dirname, 'src/utils/error-formatter.ts'))};
+export { setLanguage } from ${JSON.stringify(path.join(__dirname, 'src/i18n/index.ts'))};
 export { stripExtractionTags } from ${JSON.stringify(path.join(__dirname, 'src/utils/md.ts'))};
 `);
 
@@ -58,7 +63,14 @@ const bundled = await esbuild.build({
 });
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(mod, mod.exports, require);
-const { BaseAIProvider, stripExtractionTags } = mod.exports;
+const {
+    BaseAIProvider,
+    TideLogProvider,
+    classifyTideLogProxyError,
+    formatAPIError,
+    setLanguage,
+    stripExtractionTags,
+} = mod.exports;
 const obsidianMock = require(mockPath);
 
 global.window = { setTimeout, fetch: (...args) => global.fetch(...args) };
@@ -125,6 +137,71 @@ console.log('\n=== TIDELOG AI STREAMING TESTS ===\n');
     check(requestUrlCalls.length === 1, 'fallback path performs exactly one requestUrl call', String(requestUrlCalls.length));
     const fallbackBody = JSON.parse(requestUrlCalls[0]?.body ?? '{}');
     check(fallbackBody.stream === undefined, 'fallback request is non-streaming');
+}
+
+{
+    const plugin = {
+        settings: { proLicense: { key: 'TL-TEST', deviceId: 'dev-test' } },
+        licenseManager: { getOrCreateDeviceId: () => 'dev-generated' },
+    };
+    const provider = new TideLogProvider(plugin);
+    const chunks = [];
+    let requestUrl = '';
+    let requestInit;
+    global.fetch = async (target, init) => {
+        requestUrl = String(target);
+        requestInit = init;
+        return new Response(makeStream([
+            'data: {"choices":[{"delta":{"content":"Tide"}}]}\n\n',
+            'data: {"choices":[{"delta":{"content":"Log"}}]}',
+        ]), { status: 200 });
+    };
+
+    const result = await provider.sendMessage(
+        [{ role: 'user', content: 'hello', timestamp: Date.now() }],
+        'system prompt',
+        chunk => chunks.push(chunk),
+        'weekly',
+    );
+    const requestBody = JSON.parse(requestInit?.body ?? '{}');
+    check(requestUrl.endsWith('/ai/generate'), 'TideLog provider posts to managed AI endpoint', requestUrl);
+    check(result === 'TideLog' && chunks.join('') === 'TideLog', 'TideLog provider streams SSE chunks', result);
+    check(requestBody.feature === 'weekly' && requestBody.stream === true, 'managed request includes feature and stream=true');
+    check(requestBody.deviceId === 'dev-test' && requestBody.licenseKey === 'TL-TEST', 'managed request includes device and optional license');
+    check(requestBody.messages?.[0]?.role === 'system' && requestBody.messages?.[1]?.role === 'user', 'system prompt is the first proxy message');
+}
+
+{
+    const cases = [
+        [422, { error: 'content_blocked' }, 'TL-7001', '该请求暂时无法处理', 'This request cannot be processed'],
+        [429, { error: 'quota_exceeded', used: 3, limit: 3, resets_at: 1788134400 }, 'TL-4003', '已用：3 / 3', 'Used: 3 / 3'],
+        [403, { error: 'feature_not_available' }, 'TL-7002', '当前版本不支持此功能', 'Feature unavailable'],
+        [502, { error: 'provider_error' }, 'TL-5002', 'AI 服务暂时不可用', 'AI service temporarily unavailable'],
+    ];
+
+    for (const [status, body, code, zhText, enText] of cases) {
+        setLanguage('zh');
+        const zhMessage = formatAPIError(classifyTideLogProxyError(status, JSON.stringify(body)), 'TideLog AI');
+        check(zhMessage.includes(code) && zhMessage.includes(zhText), `${status} proxy error maps to Chinese i18n copy`, zhMessage);
+
+        setLanguage('en');
+        const enMessage = formatAPIError(classifyTideLogProxyError(status, JSON.stringify(body)), 'TideLog AI');
+        check(enMessage.includes(code) && enMessage.includes(enText), `${status} proxy error maps to English i18n copy`, enMessage);
+    }
+    setLanguage('zh');
+}
+
+{
+    obsidianMock.__resetRequestUrlCalls();
+    obsidianMock.__setRequestUrlResponse({ status: 200, text: '{}', json: {} });
+    const plugin = {
+        settings: { proLicense: { key: 'TL A+B', deviceId: 'dev test' } },
+        licenseManager: { getOrCreateDeviceId: () => 'dev-generated' },
+    };
+    const connected = await new TideLogProvider(plugin).testConnection();
+    const quotaCall = obsidianMock.__getRequestUrlCalls()[0];
+    check(connected, 'quota HTTP 200 is treated as connected');
+    check(quotaCall?.url?.includes('/ai/quota?deviceId=dev+test&licenseKey=TL+A%2BB'), 'quota request includes encoded device and license', quotaCall?.url);
 }
 
 {

@@ -32,3 +32,6 @@ api/bun.lock
 
 # Obsidian test vault (local only)
 # Don't commit the vault itself
+
+# wrangler 本地缓存（含账号信息，不应入库）
+api/.wrangler/

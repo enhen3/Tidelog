@@ -563,7 +563,7 @@ console.log('\nTest 10: settings polish regression guards');
     check(settingsSrc.includes('refreshQuestionLimitBadges'), 'question Pro badges refresh immediately after enable toggles');
     check(!zhSrc.includes('Pro 中生效') && zhSrc.includes('Pro 生效中') && zhSrc.includes('需 Pro'), 'review question badges distinguish Pro active vs Pro required');
     check(settingsSrc.includes('saveSettingsPreservingScroll'), 'rerenders preserve current scroll position');
-    check(settingsSrc.includes('renderInlineTestConnection'), 'AI test connection is integrated into the model row');
+    check(!settingsSrc.includes('renderInlineTestConnection'), 'AI test-connection UI is removed (AI is now provided by TideLog)');
     const settingsOrder = [
         'this.renderGettingStarted(containerEl)',
         'this.renderAISettings(containerEl)',
@@ -575,20 +575,15 @@ console.log('\nTest 10: settings polish regression guards');
         'this.renderLanguageSetting(containerEl)',
     ].map(snippet => settingsSrc.indexOf(snippet));
     check(settingsOrder.every(index => index >= 0) && settingsOrder.every((index, i, arr) => i === 0 || arr[i - 1] < index), 'settings sections follow Start, AI, old journals, Pro, review, folders, date, preferences order');
-    check(settingsSrc.includes('renderAISetupGuide') && settingsSrc.includes('tl-ai-config-fields'), 'AI setup is folded together with provider fields');
-    check(settingsSrc.indexOf("guideEl.createDiv('tl-ai-config-fields')") < settingsSrc.indexOf(".setName(t('settings.aiProvider'))"), 'AI provider picker lives inside the folded API setup card');
-    check(settingsSrc.includes("createEl('details'") && settingsSrc.includes('guideEl.open = !hasConfiguredApi'), 'AI setup guide collapses by default after an API key is configured');
+    check(!settingsSrc.includes('renderAISetupGuide') && !settingsSrc.includes('tl-ai-config-fields'), 'AI provider/key/model configuration UI is removed');
+    check(settingsSrc.includes('tl-ai-managed-card') && settingsSrc.includes('settings.aiManagedTitle'), 'settings shows a managed-AI notice instead of provider configuration');
+    check(!settingsSrc.includes("t('settings.aiProvider')"), 'AI provider picker no longer exists');
     check(settingsSrc.includes('guideEl.open = !this.plugin.settings.onboardingCompleted'), 'getting-started guide collapses after onboarding is completed');
     check(!settingsSrc.includes('aiSetupUseSiliconFlow') && !settingsSrc.includes('aiSetupOpenSiliconFlow'), 'API setup removes redundant example preset buttons');
-    check(settingsSrc.includes('tl-ai-help-card') && settingsSrc.includes('https://cloud.siliconflow.cn/account/ak'), 'API setup keeps SiliconFlow guidance in a folded help entry');
     check(DEFAULT_SETTINGS.activeProvider === 'siliconflow' && DEFAULT_SETTINGS.providers.siliconflow.model === 'deepseek-ai/DeepSeek-V3.2' && DEFAULT_SETTINGS.providers.siliconflow.baseUrl === 'https://api.siliconflow.cn/v1', 'new users start from the current SiliconFlow base URL and model');
     check(DEFAULT_SETTINGS.providers.custom.baseUrl === 'https://api.siliconflow.cn/v1' && migrationSrc.includes("version: 3") && migrationSrc.includes("https://api.siliconflow.cn/v1"), 'custom-compatible API Base URL defaults and migrates to SiliconFlow');
-    check(settingsSrc.includes(".setName(t('settings.baseUrl'))") && settingsSrc.includes("btn.addClass('is-active')") && cssSrc.includes('.tl-preset-btn.is-active'), 'custom Base URL uses localized label and marks the selected preset');
     check(migrationSrc.includes("deepseek-ai/DeepSeek-V3.2-Exp") && migrationSrc.includes("deepseek-ai/DeepSeek-V3.2"), 'settings migration upgrades old SiliconFlow V3.2 Exp model IDs');
     check(migrationSrc.includes('updateInactiveProviderDefault') && migrationSrc.includes('gpt-5.4-mini'), 'settings migration refreshes inactive stale provider defaults without overriding the active provider');
-    check(settingsSrc.includes('gpt-5.4-mini') && settingsSrc.includes('gpt-5.5'), 'OpenAI model presets use current model IDs');
-    check(settingsSrc.includes('claude-sonnet-4-6') && settingsSrc.includes('gemini-2.5-flash'), 'Anthropic and Gemini presets use current model IDs');
-    check(settingsSrc.includes('deepseek-ai/DeepSeek-V3.2') && settingsSrc.includes('Qwen/Qwen3.5-35B-A3B') && settingsSrc.includes('modelSetting.addDropdown'), 'SiliconFlow models are selected from presets instead of manual typing');
     check(zhSrc.includes('连接你的 AI 服务') && zhSrc.includes('粘贴 API Key') && zhSrc.includes('测试连接') && zhSrc.includes('不知道怎么获取 API Key？'), 'Chinese AI setup copy uses a compact provider/key/test flow with optional help');
     check(!zhSrc.includes('大陆用户建议') && !enSrc.includes('mainland China users'), 'AI setup guide no longer makes a direct region-based recommendation');
     check(enSrc.includes('Connect your AI service') && enSrc.includes('Paste API key') && enSrc.includes('Test connection'), 'English AI setup copy mirrors the compact provider/key/test flow');

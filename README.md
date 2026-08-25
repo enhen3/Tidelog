@@ -77,7 +77,9 @@ Insights 不是随时乱读整个 vault 的总结按钮，而是基于足够多�
 
 ### 🔐 本地优先，AI 由你触发
 
-TideLog 默认把记录保存在你的 Obsidian vault 里。AI 只在你主动触发时调用：聊天、测试连接、生成/更新报告，或完成复盘后刷新计划建议。
+TideLog 默认把记录保存在你的 Obsidian vault 里。AI 只在你主动触发时调用：聊天、生成/更新报告、生成今日洞察，或完成复盘后刷新计划建议。
+
+AI 功能由 TideLog 内置服务提供，无需选择大模型服务商或配置自己的 API Key。每次调用所必需的提示词和相关笔记内容会先发送至 TideLog 服务端，再由服务端转发给大模型服务商。
 
 计划建议和洞察会读取相关周期/文件范围，不包含客户端遥测、分析 SDK、动态广告或自动更新机制。
 
@@ -96,7 +98,7 @@ TideLog 适合已经在 Obsidian 里生活，并且希望记录真的影响行�
 
 1. 在 Obsidian 里打开 **Settings → Community plugins**，搜索 `TideLog`，安装并启用。
 2. 打开 **Settings → TideLog**。先不要调太多参数，先完成一次 Plan → Review。
-3. 如果需要 AI 功能，选择 AI provider，填入你自己的 API Key 和模型名，然后点击 **测试连接**。
+3. AI 功能由 TideLog 内置服务提供，无需选择大模型服务商、填写 API Key 或配置模型。
 4. 到 TideLog 主界面的 **Plan**，添加今天的 1–3 个任务，也可以把临时想法放进「灵感」。
 5. 晚上到 **Review**，完成今日复盘；如果漏掉某天，可以点击历史日期补复盘。
 6. 积累足够闭环后，再到 **Insights** 生成、预览或更新本周报告、本月报告和 AI 眼中的你。
@@ -117,7 +119,8 @@ TideLog 可以免费安装和试用。Pro 解锁完整的长期复盘系统。
 | 功能 | 免费版 | Pro |
 |---|---:|---:|
 | Plan：日 / 周 / 月任务与灵感 | 支持 | 支持 |
-| 使用自己的 AI API Key 对话 | 支持 | 支持 |
+| 内置 AI：今日洞察 | 每月 3 次 | 不限 |
+| 内置 AI：对话 | — | 每月 200 次 |
 | 基础任务记录与 Markdown 写入 | 支持 | 支持 |
 | Review 问题流 | 前 2 个已启用问题 | 完整问题流 |
 | 历史日期补复盘 | 支持基础闭环 | 支持完整问题流 |
@@ -132,14 +135,21 @@ TideLog 可以免费安装和试用。Pro 解锁完整的长期复盘系统。
 
 购买后，在 **Settings → TideLog → Pro** 输入 TideLog License 即可激活。
 
+按 Obsidian 开发者政策披露：
+
+- **付费要求**：插件可免费安装并使用基础功能；完整 Review、Insights 与 AI 功能需要付费购买 TideLog Pro。
+- **账号 / License**：无需单独创建 TideLog 账号；完整功能需要购买并激活 TideLog Pro License。
+- **服务端数据收集**：AI 与 License 功能会连接 TideLog 服务端并记录提供服务所必需的数据，具体字段与处理方式见 [PRIVACY.md](./PRIVACY.md)。
+
 ## 隐私
 
 TideLog 的原则很简单：**你的日常记录默认留在你的 vault 里。**
 
-- 🔐 AI API Key 和 Pro License key 使用 Obsidian SecretStorage 保存。
-- 🌐 只有当你主动对话、测试连接、生成/更新报告、完成复盘后刷新计划建议、激活 License 或打开购买/License portal 时，才会发起网络请求。
+- 🔐 Pro License Key 使用 Obsidian SecretStorage 保存；AI 功能无需用户提供 API Key。
+- 🌐 只有当你主动使用 AI、激活/停用 License 或打开购买/License Portal 时，才会发起相应网络请求。
 - 🔁 **有一个请求是自动的**：如果你已激活 TideLog Pro，插件会在 Obsidian 启动时于后台校验一次 License，只发送 License Key 和一个生成的设备标识。未激活 License 的用户，启动时不产生任何网络请求。
-- 📝 AI 功能会把必要提示词和相关笔记内容发送给你自己配置的 AI 服务商。
+- 📝 AI 功能会把该次生成所必需的提示词和相关笔记内容先发送至 TideLog 服务端，经瞬时内容合规检查后转发给大模型服务商。
+- 🧾 TideLog 服务端不存储笔记正文或 AI 响应正文，但会记录配额核算、防滥用与故障排查所必需的数据；完整字段见隐私政策。
 - 📁 计划建议和洞察读取相关周期/文件范围，而不是无提示地扫描整个 vault。
 - 🚫 TideLog 不包含客户端遥测、分析 SDK、动态广告或自动更新机制。
 
@@ -148,7 +158,7 @@ TideLog 的原则很简单：**你的日常记录默认留在你的 vault 里。
 ## 支持与协议
 
 - 问题反馈：通过 [TideLog GitHub Issues](https://github.com/enhen3/Tidelog/issues) 提交。
-- 请不要在公开 issue 中粘贴 License Key、API Key 或私人笔记内容。
+- 请不要在公开 issue 中粘贴 License Key、私人笔记内容或其他敏感信息。
 - 源码协议：GNU AGPL v3.0。Pro 授权与付费分发遵循商业产品条款，见 [LICENSE](./LICENSE)。
 
 ---
@@ -192,23 +202,29 @@ Plan tasks → Review loops → Insights → Update the next action
 
 1. Install TideLog from **Obsidian Community plugins**: search for `TideLog`, install, then enable it.
 2. Open **Settings → TideLog**. Do not tune every setting first; complete one Plan → Review first.
-3. If you want AI features, choose an AI provider, enter your own API key/model, and test the connection.
+3. TideLog provides its own managed AI service. You do not need to choose a model provider or configure an API key or model.
 4. Use **Plan** to add 1–3 tasks for today and capture ideas.
 5. Use **Review** for today’s review, or select a past date to catch up.
 6. After enough loops unlock, open **Insights** to generate, preview, or update weekly reports, monthly reports, and AI view of you.
 
+### Access, payment, and server data
+
+- **Payment required:** TideLog can be installed for free and its basic features remain available, but full Review, Insights, and AI functionality requires a paid TideLog Pro purchase.
+- **Account / License:** no separate TideLog account is required; full functionality requires purchasing and activating a TideLog Pro License.
+- **Server-side data collection:** AI and License features connect to TideLog's server and record data necessary to provide the service. See [PRIVACY.md](./PRIVACY.md) for the exact fields and handling practices.
+
 ### Privacy
 
-Your daily records stay in your vault by default. TideLog only sends network requests when you explicitly chat with AI, test a connection, generate/update reports, refresh planning suggestions after a review, activate a license, or open purchase/license links.
+Your daily records stay in your vault by default. TideLog sends the prompts and relevant note content required for an AI request to the TideLog server, which performs a transient content compliance check and forwards the request to a model provider. You do not provide your own AI API key.
 
 **One request is automatic:** if you have activated TideLog Pro, the plugin verifies your license in the background when Obsidian starts. That request sends only your license key and a generated device identifier. If you have not activated a license, TideLog makes no network request on startup.
 
-TideLog stores AI API keys and Pro license keys with Obsidian SecretStorage. Suggestions and insights read the relevant period/file scope. TideLog does not include telemetry, analytics SDKs, dynamic ads, or a self-update mechanism.
+TideLog stores Pro License keys with Obsidian SecretStorage. Its server does not store note bodies or AI response bodies, but it records the data necessary for quota accounting, abuse prevention, and troubleshooting. Suggestions and insights read the relevant period/file scope. TideLog does not include client-side telemetry, analytics SDKs, dynamic ads, or a self-update mechanism.
 
 Full details: [PRIVACY.md](./PRIVACY.md).
 
 ### Support and payment
 
 - Bug reports and feature requests: [TideLog GitHub Issues](https://github.com/enhen3/Tidelog/issues)
-- Please do not paste License keys, API keys, or private note content into public issues.
+- Please do not paste License keys, private note content, or other sensitive information into public issues.
 - International payment is being prepared. If you want TideLog Pro, please leave a note in GitHub Issues so I can prioritize the setup based on real demand.
