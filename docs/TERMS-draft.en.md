@@ -81,8 +81,14 @@ which we will then forward to the large language model service provider for proc
 - We **do not use** your content for model training.
 
 ### 5.4 What We Record
-We record only the information necessary for service operation: License Key, device identifier, time of invocation, feature type, and token count.
-**This does not include the body text of your notes.** This information is used for quota calculation, abuse prevention, and troubleshooting.
+
+We record only the information necessary for service operation. This **does not include the body text of your notes, nor the body text of AI responses**:
+
+- **Pro users**: your License Key and the identifiers of activated devices
+- **Free / Trial users**: a hash anchor derived from your device identifier and your IP address (**the raw IP address is never stored**)
+- **All users**: time of invocation, feature type, billing period, invocation count, and token count
+
+This information is used solely for quota calculation, abuse prevention, and troubleshooting.
 
 ### 5.5 Content Compliance Check
 Pursuant to the requirements of the large language model service provider, we are required to perform necessary content compliance checks on content sent to the model.
