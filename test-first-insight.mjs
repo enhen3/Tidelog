@@ -764,7 +764,7 @@ console.log('\nTest 9: first insight UI reuses existing Insights visual language
     check(!modalSource.includes("createEl('select', { cls: 'tl-first-insight-folder-select'"), 'first insight modal no longer renders all vault folders as one flat select');
     check(modalSource.includes('resetGeneratedStateForFolderChange') && modalSource.includes("addEventListener('change', resetGeneratedState"), 'folder changes reset generated state for another first insight run');
     check(onboardingSource.includes('tl-onboarding-first-insight'), 'onboarding contains a dedicated first insight CTA');
-    check(onboardingSource.includes('hasConfiguredAI'), 'onboarding first insight entry is aware of API configuration');
+    check(!onboardingSource.includes('hasConfiguredAI'), 'onboarding no longer branches on API configuration (AI is provided by TideLog)');
     check(insightsSource.includes('firstInsightCompleted') && insightsSource.includes('return;'), 'Insights hides the first insight entry after the initial profile is saved');
     const renderProfileSource = insightsSource.slice(insightsSource.indexOf('private async renderProfile'), insightsSource.indexOf('private async generateReport'));
     check(renderProfileSource.indexOf('if (this.shouldShowFirstInsightEntry())') < renderProfileSource.indexOf("const card = body.createDiv('tl-insights-card');"), 'profile Insights shows old-journal entry instead of the default AI profile card before initial profile is saved');

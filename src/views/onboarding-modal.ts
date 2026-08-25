@@ -5,6 +5,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../i18n';
 import type TideLogPlugin from '../main';
+import { KANBAN_VIEW_TYPE } from './kanban-view';
 
 export class OnboardingModal extends Modal {
     private plugin: TideLogPlugin;
@@ -97,34 +98,34 @@ export class OnboardingModal extends Modal {
         this.renderStep(
             stepsEl,
             '1',
-            t('onboarding.stepAiTitle'),
-            t('onboarding.stepAiDesc'),
+            t('onboarding.stepTodayTitle'),
+            t('onboarding.stepTodayDesc'),
         );
         this.renderStep(
             stepsEl,
             '2',
-            t('onboarding.stepReviewTitle'),
-            t('onboarding.stepReviewDesc'),
+            t('onboarding.stepProfileTitle'),
+            t('onboarding.stepProfileDesc'),
         );
         this.renderStep(
             stepsEl,
             '3',
-            t('onboarding.stepProTitle'),
-            t('onboarding.stepProDesc'),
+            t('onboarding.stepLongTermTitle'),
+            t('onboarding.stepLongTermDesc'),
         );
 
         this.renderFirstInsightEntry(contentEl);
 
         const buttonRow = contentEl.createDiv('tl-onboarding-buttons');
 
-        const setupButton = buttonRow.createEl('button', {
+        const startButton = buttonRow.createEl('button', {
             cls: 'tl-onboarding-primary',
-            text: t('onboarding.setupBtn'),
+            text: t('onboarding.startBtn'),
         });
-        setupButton.addEventListener('click', () => {
+        startButton.addEventListener('click', () => {
             void this.plugin.completeOnboarding();
             this.close();
-            this.openSettings();
+            void this.plugin.openView(KANBAN_VIEW_TYPE);
         });
 
         const reviewButton = buttonRow.createEl('button', {
@@ -175,7 +176,6 @@ export class OnboardingModal extends Modal {
     }
 
     private renderFirstInsightEntry(containerEl: HTMLElement): void {
-        const hasConfiguredAI = this.plugin.hasConfiguredAI();
         const cardEl = containerEl.createDiv('tl-onboarding-detail-item tl-onboarding-first-insight-card');
         cardEl.createDiv('tl-onboarding-detail-rail');
         const copyEl = cardEl.createDiv('tl-onboarding-detail-copy');
@@ -183,31 +183,19 @@ export class OnboardingModal extends Modal {
         copyEl.createDiv({ cls: 'tl-onboarding-detail-title', text: t('onboarding.firstInsightTitle') });
         copyEl.createDiv({
             cls: 'tl-onboarding-detail-desc',
-            text: hasConfiguredAI ? t('onboarding.firstInsightReadyDesc') : t('onboarding.firstInsightNeedsApiDesc'),
+            text: t('onboarding.firstInsightReadyDesc'),
         });
 
         const actionEl = copyEl.createDiv('tl-onboarding-first-insight-actions');
         const buttonEl = actionEl.createEl('button', {
             cls: 'tl-onboarding-secondary tl-onboarding-first-insight',
-            text: hasConfiguredAI ? t('onboarding.firstInsightReadyBtn') : t('onboarding.firstInsightNeedsApiBtn'),
+            text: t('onboarding.firstInsightReadyBtn'),
             attr: { type: 'button' },
         });
         buttonEl.addEventListener('click', () => {
             void this.plugin.completeOnboarding();
             this.close();
-            if (hasConfiguredAI) {
-                void this.plugin.openFirstInsight();
-            } else {
-                this.openSettings();
-            }
+            void this.plugin.openFirstInsight();
         });
-    }
-
-    private openSettings(): void {
-        const setting = (this.app as unknown as {
-            setting?: { open?: () => void; openTabById?: (id: string) => void };
-        }).setting;
-        setting?.open?.();
-        setting?.openTabById?.(this.plugin.manifest.id);
     }
 }
