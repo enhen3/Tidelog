@@ -479,30 +479,25 @@ export class InsightsRenderer {
     private renderFirstInsightEntry(containerEl: HTMLElement): void {
         if (!this.shouldShowFirstInsightEntry()) return;
 
-        const hasConfiguredAI = this.host.plugin.hasConfiguredAI();
         const card = containerEl.createDiv('tl-insights-card tl-first-insight-entry-card');
         const header = card.createDiv('tl-insights-card-header');
         const titleWrap = header.createDiv('tl-insights-card-title-wrap');
         titleWrap.createDiv({ cls: 'tl-insights-card-title', text: t('firstInsight.entryTitle') });
         titleWrap.createDiv({
             cls: 'tl-insights-card-subtitle',
-            text: hasConfiguredAI ? t('firstInsight.entrySubtitle') : t('firstInsight.entryNeedsApiSubtitle'),
+            text: t('firstInsight.entrySubtitle'),
         });
-        const desc = hasConfiguredAI ? t('firstInsight.entryDesc') : t('firstInsight.entryNeedsApiDesc');
+        const desc = t('firstInsight.entryDesc');
         if (desc.trim()) {
             card.createDiv({ cls: 'tl-insights-card-desc', text: desc });
         }
         const btn = card.createEl('button', {
             cls: 'tl-insights-primary-btn tl-insights-primary-btn-ready',
-            text: hasConfiguredAI ? t('firstInsight.entryBtn') : t('firstInsight.entryApiBtn'),
+            text: t('firstInsight.entryBtn'),
             attr: { type: 'button' },
         });
         btn.addEventListener('click', () => {
-            if (hasConfiguredAI) {
-                void this.host.plugin.openFirstInsight();
-            } else {
-                this.openSettings();
-            }
+            void this.host.plugin.openFirstInsight();
         });
     }
 

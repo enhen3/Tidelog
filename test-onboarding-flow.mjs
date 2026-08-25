@@ -88,6 +88,12 @@ class Modal {
 module.exports = {
   App: class {},
   Modal,
+  ItemView: class {},
+  Notice: class { constructor(){} },
+  TFile: class {},
+  moment: () => ({ format: () => '' }),
+  MarkdownRenderer: { render: async () => {} },
+  Component: class {},
 };
 `,
 );
@@ -135,22 +141,16 @@ function check(condition, label, extra = '') {
     }
 }
 
-function makePlugin({ hasConfiguredAI = true } = {}) {
-    const calls = { complete: 0, activate: [], firstInsight: 0, settingsOpen: 0, settingsTab: [] };
+function makePlugin() {
+    const calls = { complete: 0, activate: [], firstInsight: 0, openView: [] };
     const plugin = {
         __calls: calls,
-        app: {
-            setting: {
-                open: () => { calls.settingsOpen++; },
-                openTabById: (id) => { calls.settingsTab.push(id); },
-            },
-        },
         manifest: { id: 'tidelog' },
         licenseManager: { getPurchaseUrl: () => 'https://example.com' },
         completeOnboarding: async () => { calls.complete++; },
         activateChatView: async (sopType) => { calls.activate.push(sopType); },
         openFirstInsight: async () => { calls.firstInsight++; },
-        hasConfiguredAI: () => hasConfiguredAI,
+        openView: async (viewType) => { calls.openView.push(viewType); },
     };
     return plugin;
 }
@@ -235,33 +235,33 @@ console.log('\nTest 3c: English onboarding carries the same trial contract');
 console.log('\nTest 4: onboarding exposes the first insight path without replacing review');
 {
     setLanguage('zh');
-    const plugin = makePlugin({ hasConfiguredAI: true });
+    const plugin = makePlugin();
     const modal = new OnboardingModal(plugin.app, plugin);
     modal.onOpen();
 
     const firstInsight = modal.contentEl.querySelector('.tl-onboarding-first-insight');
-    check(firstInsight?.textContent === '从旧日记生成画像', 'configured onboarding CTA starts the old-journal profile path', `actual: ${JSON.stringify(firstInsight?.textContent)}`);
-    check(modal.contentEl.textContent.includes('API 已经配置好'), 'configured onboarding copy says the report can start now');
+    check(firstInsight?.textContent === '从旧日记生成画像', 'onboarding CTA starts the old-journal profile path', `actual: ${JSON.stringify(firstInsight?.textContent)}`);
+    check(modal.contentEl.textContent.includes('至少有 3 篇、每篇 60 字以上'), 'onboarding copy states the minimum entry count and length');
+    check(!modal.contentEl.textContent.includes('配置 API') && !modal.contentEl.textContent.includes('API 已经配置好'), 'onboarding copy no longer references API configuration');
     firstInsight?.dispatchEvent(new dom.window.Event('click'));
     await Promise.resolve();
     check(plugin.__calls.firstInsight === 1, 'first insight CTA opens the first insight modal');
     check(plugin.__calls.activate.length === 0, 'first insight CTA does not start daily review');
 }
 
-console.log('\nTest 5: onboarding first insight path guides API setup before AI is configured');
+console.log('\nTest 4b: primary CTA starts users in Plan, not in settings');
 {
     setLanguage('zh');
-    const plugin = makePlugin({ hasConfiguredAI: false });
+    const plugin = makePlugin();
     const modal = new OnboardingModal(plugin.app, plugin);
     modal.onOpen();
 
-    const firstInsight = modal.contentEl.querySelector('.tl-onboarding-first-insight');
-    check(firstInsight?.textContent === '先配置 API', 'unconfigured onboarding CTA points to API setup', `actual: ${JSON.stringify(firstInsight?.textContent)}`);
-    check(modal.contentEl.textContent.includes('旧日记画像需要 AI 生成'), 'unconfigured onboarding copy explains why API is needed');
-    firstInsight?.dispatchEvent(new dom.window.Event('click'));
+    const primary = modal.contentEl.querySelector('.tl-onboarding-buttons .tl-onboarding-primary');
+    check(primary?.textContent === '从今天的计划开始', 'primary CTA points at today\'s plan', `actual: ${JSON.stringify(primary?.textContent)}`);
+    primary?.dispatchEvent(new dom.window.Event('click'));
     await Promise.resolve();
-    check(plugin.__calls.firstInsight === 0, 'unconfigured onboarding CTA does not open generation modal');
-    check(plugin.__calls.settingsOpen === 1 && plugin.__calls.settingsTab[0] === 'tidelog', 'unconfigured onboarding CTA opens plugin settings');
+    check(plugin.__calls.openView[0] === 'tl-kanban-view', 'primary CTA opens the Plan view', `actual: ${JSON.stringify(plugin.__calls.openView)}`);
+    check(plugin.__calls.activate.length === 0, 'primary CTA does not jump straight into review');
 }
 
 console.log('\nTest 6: onboarding CSS enables internal scrolling with a visible scrollbar');

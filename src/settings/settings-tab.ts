@@ -290,20 +290,15 @@ export class TideLogSettingTab extends PluginSettingTab {
     }
 
     private refreshLegacyImportEntryState(): void {
-        const hasConfiguredApi = this.plugin.hasConfiguredAI();
         if (this.legacyImportDescEl) {
             this.legacyImportDescEl.textContent = this.plugin.settings.firstInsightCompleted
                 ? t('settings.legacyImportCompletedDesc')
-                : hasConfiguredApi
-                    ? t('settings.legacyImportReadyDesc')
-                    : t('settings.legacyImportNeedsApiDesc');
+                : t('settings.legacyImportReadyDesc');
         }
         if (this.legacyImportButtonEl) {
-            this.legacyImportButtonEl.textContent = hasConfiguredApi
-                ? this.plugin.settings.firstInsightCompleted
-                    ? t('settings.legacyImportCompletedBtn')
-                    : t('settings.legacyImportBtn')
-                : t('settings.legacyImportApiBtn');
+            this.legacyImportButtonEl.textContent = this.plugin.settings.firstInsightCompleted
+                ? t('settings.legacyImportCompletedBtn')
+                : t('settings.legacyImportBtn');
         }
     }
 

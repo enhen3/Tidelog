@@ -913,10 +913,7 @@ export const en: Record<string, string> = {
     'firstInsight.entryTitle': 'Start from old journals',
     'firstInsight.entrySubtitle': 'Generate an evidence-backed first profile',
     'firstInsight.entryDesc': 'Reads old journals locally and only calls your configured AI service when you click generate.',
-    'firstInsight.entryNeedsApiSubtitle': 'Old-journal profiles need AI first',
-    'firstInsight.entryNeedsApiDesc': 'Original journals stay local; after API setup, generation only starts when you trigger it.',
     'firstInsight.entryBtn': 'Start from old journals',
-    'firstInsight.entryApiBtn': 'Configure API first',
     'firstInsight.planHint': 'Have old journals? You can generate an evidence-backed starting profile anytime.',
     'firstInsight.planHintBtn': 'Explore first profile',
     'firstInsight.stepChoose': 'Choose journals',
@@ -986,7 +983,6 @@ export const en: Record<string, string> = {
 
     'settings.legacyImportKicker': 'Old journal import',
     'settings.legacyImportTitle': 'Build a profile / add old journals',
-    'settings.legacyImportNeedsApiDesc': 'Connect AI first, then choose an old journal folder. TideLog copies originals only and never edits your source notes.',
     'settings.legacyImportReadyDesc': 'Choose an old journal folder, generate a profile, and optionally copy entries into TideLog dated notes.',
     'settings.legacyImportCompletedDesc': 'Your initial profile is ready. If you find more old journals later, import them again from here.',
     'settings.legacyImportStepReadonly': 'Original journals stay read-only and are never moved or overwritten.',
@@ -994,7 +990,6 @@ export const en: Record<string, string> = {
     'settings.legacyImportStepSave': 'Optionally add old journals into TideLog dated notes.',
     'settings.legacyImportBtn': 'Import old journals and build profile',
     'settings.legacyImportCompletedBtn': 'Import more old journals',
-    'settings.legacyImportApiBtn': 'Configure API first',
 
     'legacyImport.systemPlanPlaceholder': '<!-- Legacy import: original content is kept in Review. Plan is left empty. -->',
     'legacyImport.systemSection': 'Legacy journal import',

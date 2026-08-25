@@ -267,11 +267,12 @@ console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days')
     check(manager.isPro() === false, 'expired trial no longer unlocks Pro');
     check(manager.isTrialEligible() === false, 'expired trial cannot be restarted');
 
-    const needsAiPlugin = makeLicensePlugin();
-    needsAiPlugin.hasConfiguredAI = () => false;
-    const needsAiManager = new LicenseManager(needsAiPlugin);
-    check(needsAiManager.needsAISetupForTrial() === true, 'trial protects users from starting before AI setup');
-    check(await needsAiManager.startTrial() === false, 'missing AI configuration does not consume the trial');
+    // 自 1.2 起 AI 由 TideLog 服务端统一提供，试用不再以「用户已配置 AI」为前提。
+    const noAiPlugin = makeLicensePlugin();
+    noAiPlugin.hasConfiguredAI = () => false;
+    const noAiManager = new LicenseManager(noAiPlugin);
+    check(noAiManager.needsAISetupForTrial() === false, 'trial no longer requires user AI setup');
+    check(await noAiManager.startTrial() === true, 'trial starts without any user AI configuration');
 
     const paidPlugin = makeLicensePlugin();
     paidPlugin.settings.proLicense = {

@@ -915,10 +915,7 @@ export const zh: Record<string, string> = {
     'firstInsight.entryTitle': '从旧日记开始',
     'firstInsight.entrySubtitle': '生成带证据的首次画像',
     'firstInsight.entryDesc': '本地读取旧日记，只在你点击生成时调用你配置的 AI 服务。',
-    'firstInsight.entryNeedsApiSubtitle': '旧日记画像需要先连接 AI',
-    'firstInsight.entryNeedsApiDesc': '原始日记留在本地；配置 API 后，才会由你主动发起生成。',
     'firstInsight.entryBtn': '从旧日记开始',
-    'firstInsight.entryApiBtn': '先配置 API',
     'firstInsight.planHint': '有旧日记？可以随时生成一份带证据的初始画像。',
     'firstInsight.planHintBtn': '了解首次画像',
     'firstInsight.stepChoose': '选择日记',
@@ -988,7 +985,6 @@ export const zh: Record<string, string> = {
 
     'settings.legacyImportKicker': '旧日记导入',
     'settings.legacyImportTitle': '从旧日记建立画像 / 纳入系统',
-    'settings.legacyImportNeedsApiDesc': '先连接 AI，再选择旧日记文件夹。TideLog 只复制原文，不改动你的原始日记。',
     'settings.legacyImportReadyDesc': '选择旧日记文件夹，生成画像；也可以一键复制成 TideLog 的日期日记。',
     'settings.legacyImportCompletedDesc': '初始画像已建立。以后还有其他旧日记，可以从这里再次导入。',
     'settings.legacyImportStepReadonly': '原始日记只读，不移动、不覆盖。',
@@ -996,7 +992,6 @@ export const zh: Record<string, string> = {
     'settings.legacyImportStepSave': '可选勾选“纳入日记库”，把旧日记复制成 TideLog 日期日记。',
     'settings.legacyImportBtn': '导入旧日记并建立画像',
     'settings.legacyImportCompletedBtn': '再次导入旧日记',
-    'settings.legacyImportApiBtn': '先配置 API',
 
     'legacyImport.systemPlanPlaceholder': '<!-- 旧日记导入：原文内容放在复盘区，计划区留空。 -->',
     'legacyImport.systemSection': '旧日记导入',

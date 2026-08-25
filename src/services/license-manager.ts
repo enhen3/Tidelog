@@ -125,12 +125,16 @@ export class LicenseManager {
             && !license.activatedAt;
     }
 
+    /**
+     * 自 1.2 起 AI 由 TideLog 服务端统一提供，试用不再需要用户先配置 AI，
+     * 故恒为 false。保留此方法以免调用方（pro-modal 等）编译失败。
+     */
     needsAISetupForTrial(): boolean {
-        return this.isTrialEligible() && !this.plugin.hasConfiguredAI();
+        return false;
     }
 
     async startTrial(): Promise<boolean> {
-        if (!this.isTrialEligible() || !this.plugin.hasConfiguredAI()) return false;
+        if (!this.isTrialEligible()) return false;
 
         const now = Date.now();
         this.plugin.settings.trial = {

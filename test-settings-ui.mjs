@@ -277,7 +277,7 @@ console.log('\nTest 1c: legacy import card updates after API is configured');
 
     const legacyCard = tab.containerEl.querySelector('.tl-settings-legacy-import');
     const legacyButton = legacyCard?.querySelector('button');
-    check(legacyCard?.textContent?.includes('先配置 API'), 'legacy import card asks for API before a key is configured');
+    check(!legacyCard?.textContent?.includes('先配置 API'), 'legacy import card no longer asks for API configuration (AI is provided by TideLog)');
 
     plugin.settings.providers.siliconflow.apiKey = 'sk-test';
     tab.refreshLegacyImportEntryState();
@@ -490,10 +490,9 @@ console.log('\nTest 8: delete still works');
 // Test 9: first-run onboarding renders and actions persist the completion flag
 console.log('\nTest 9: onboarding modal renders and completes');
 {
-    let settingsOpened = false;
-    let openedTabId = '';
     let completedCount = 0;
     let reviewStarted = false;
+    const openedViews = [];
     const plugin = {
         settings: { ...DEFAULT_SETTINGS, onboardingCompleted: false },
         manifest: { id: 'tidelog' },
@@ -505,15 +504,10 @@ console.log('\nTest 9: onboarding modal renders and completes');
         activateChatView: async (type) => {
             if (type === 'evening') reviewStarted = true;
         },
-        hasConfiguredAI: () => false,
+        openView: async (viewType) => { openedViews.push(viewType); },
         openFirstInsight: async () => {},
     };
-    const app = {
-        setting: {
-            open: () => { settingsOpened = true; },
-            openTabById: (id) => { openedTabId = id; },
-        },
-    };
+    const app = {};
 
     const modal = new OnboardingModal(app, plugin);
     modal.open();
@@ -524,9 +518,8 @@ console.log('\nTest 9: onboarding modal renders and completes');
     check(modal.contentEl.querySelector('.tl-onboarding-trial-intro')?.textContent?.includes('7 天'), 'onboarding explains the seven-day trial in the first viewport');
 
     click(modal.contentEl.querySelector('.tl-onboarding-primary'));
-    check(plugin.settings.onboardingCompleted === true, 'configure action marks onboarding completed');
-    check(settingsOpened === true, 'configure action opens settings');
-    check(openedTabId === 'tidelog', 'configure action opens TideLog settings tab');
+    check(plugin.settings.onboardingCompleted === true, 'start action marks onboarding completed');
+    check(openedViews[0] === 'tl-kanban-view', 'primary CTA opens the Plan view instead of settings');
     check(completedCount >= 1, 'completion handler called');
 
     plugin.settings.onboardingCompleted = false;
