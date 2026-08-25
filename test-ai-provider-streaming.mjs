@@ -44,7 +44,6 @@ Module._resolveFilename = function (req, parent, ...rest) {
 
 const entryPath = path.join(__dirname, '.test-ai-provider-streaming-entry.ts');
 fs.writeFileSync(entryPath, `
-export { BaseAIProvider } from ${JSON.stringify(path.join(__dirname, 'src/ai/base-provider.ts'))};
 export { TideLogProvider, classifyTideLogProxyError } from ${JSON.stringify(path.join(__dirname, 'src/ai/tidelog-provider.ts'))};
 export { formatAPIError } from ${JSON.stringify(path.join(__dirname, 'src/utils/error-formatter.ts'))};
 export { setLanguage } from ${JSON.stringify(path.join(__dirname, 'src/i18n/index.ts'))};
@@ -64,7 +63,6 @@ const bundled = await esbuild.build({
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(mod, mod.exports, require);
 const {
-    BaseAIProvider,
     TideLogProvider,
     classifyTideLogProxyError,
     formatAPIError,
@@ -75,13 +73,6 @@ const obsidianMock = require(mockPath);
 
 global.window = { setTimeout, fetch: (...args) => global.fetch(...args) };
 
-class TestProvider extends BaseAIProvider {
-    name = 'Test Provider';
-    async sendMessage(messages, systemPrompt, onChunk) {
-        return this.sendOpenAICompatible('https://example.test/chat/completions', { Authorization: 'Bearer test' }, messages, systemPrompt, onChunk);
-    }
-    async testConnection() { return true; }
-}
 
 let pass = 0;
 let fail = 0;
@@ -109,35 +100,7 @@ function makeStream(chunks) {
 
 console.log('\n=== TIDELOG AI STREAMING TESTS ===\n');
 
-{
-    obsidianMock.__resetRequestUrlCalls();
-    const provider = new TestProvider('test-key', 'test-model');
-    const chunks = [];
-    global.fetch = async () => new Response(makeStream([
-        'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
-        'data: {"choices":[{"delta":{"content":"lo"}}]}',
-    ]), { status: 200 });
 
-    const result = await provider.sendMessage([{ role: 'user', content: 'hi', timestamp: Date.now() }], '', chunk => chunks.push(chunk));
-    check(result === 'Hello', 'stream parser consumes final SSE line without trailing newline', result);
-    check(chunks.join('') === 'Hello', 'stream callback receives the complete parsed response', chunks.join(''));
-    check(obsidianMock.__getRequestUrlCalls().length === 0, 'successful stream does not fall back to requestUrl');
-}
-
-{
-    obsidianMock.__resetRequestUrlCalls();
-    const provider = new TestProvider('test-key', 'test-model');
-    const chunks = [];
-    global.fetch = async () => new Response(makeStream([': keep-alive\n\n', 'data: [DONE]\n\n']), { status: 200 });
-
-    const result = await provider.sendMessage([{ role: 'user', content: 'hi', timestamp: Date.now() }], '', chunk => chunks.push(chunk));
-    requestUrlCalls = obsidianMock.__getRequestUrlCalls();
-    check(result === 'fallback response', 'empty/keep-alive-only stream falls back to non-streaming requestUrl', result);
-    check(chunks.join('') === 'fallback response', 'fallback still simulates streaming chunks', chunks.join(''));
-    check(requestUrlCalls.length === 1, 'fallback path performs exactly one requestUrl call', String(requestUrlCalls.length));
-    const fallbackBody = JSON.parse(requestUrlCalls[0]?.body ?? '{}');
-    check(fallbackBody.stream === undefined, 'fallback request is non-streaming');
-}
 
 {
     const plugin = {

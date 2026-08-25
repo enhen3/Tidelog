@@ -7,7 +7,6 @@ import { AIProvider } from '../types';
 import { TideLogProvider } from './tidelog-provider';
 
 // Re-export BaseAIProvider for backward compatibility
-export { BaseAIProvider } from './base-provider';
 
 /**
  * Create the TideLog managed AI provider.
