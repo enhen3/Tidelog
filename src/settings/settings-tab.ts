@@ -285,17 +285,7 @@ export class TideLogSettingTab extends PluginSettingTab {
         this.refreshLegacyImportEntryState();
 
         openBtn.addEventListener('click', () => {
-            if (this.plugin.hasConfiguredAI()) {
-                void this.plugin.openFirstInsight();
-                return;
-            }
-            const aiGuide = this.containerEl.querySelector('.tl-ai-setup-guide');
-            if (aiGuide instanceof HTMLDetailsElement) {
-                aiGuide.open = true;
-            }
-            if (aiGuide && typeof aiGuide.scrollIntoView === 'function') {
-                aiGuide.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            void this.plugin.openFirstInsight();
         });
     }
 
@@ -733,20 +723,9 @@ export class TideLogSettingTab extends PluginSettingTab {
             const trialPanelEl = proCardEl.createDiv('tl-settings-trial-panel');
             const trialBtn = trialPanelEl.createEl('button', {
                 cls: 'mod-cta tl-settings-action-btn tl-settings-pro-primary-btn',
-                text: this.plugin.licenseManager.needsAISetupForTrial()
-                    ? t('settings.trialConfigureAi')
-                    : t('settings.trialStart'),
+                text: t('settings.trialStart'),
             });
             trialBtn.addEventListener('click', () => {
-                if (this.plugin.licenseManager.needsAISetupForTrial()) {
-                    const aiGuide = containerEl.querySelector<HTMLDetailsElement>('.tl-ai-setup-guide');
-                    if (aiGuide) {
-                        aiGuide.open = true;
-                        aiGuide.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                    new Notice(t('trial.needsAiDesc'));
-                    return;
-                }
                 void (async () => {
                     trialBtn.disabled = true;
                     trialBtn.setText(t('trial.starting'));
