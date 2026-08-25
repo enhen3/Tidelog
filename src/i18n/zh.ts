@@ -390,6 +390,10 @@ export const zh: Record<string, string> = {
     'error.modelNotFound': '🔍 **模型不可用**\n\n当前配置的 AI 模型无法访问。请在 TideLog 设置中检查模型名称是否正确。',
     'error.serverError': '🔧 **AI 服务暂时不可用**\n\n{0} 服务端出现问题，请稍后重试。',
     'error.network': '🌐 **网络连接失败**\n\n请检查网络连接后重试。如果使用代理，请确认代理设置正确。',
+    'error.aiContentBlocked': '🚫 **该请求暂时无法处理**\n\n请调整可能涉及敏感内容的表述后重试。',
+    'error.aiQuotaExceeded': '⏳ **AI 额度已用完**\n\n已用：{0} / {1}\n重置时间：{2}',
+    'error.aiFeatureUnavailable': '🔒 **当前版本不支持此功能**\n\n你当前的 TideLog 版本不包含这项 AI 功能。',
+    'error.aiProviderError': '🔧 **AI 服务暂时不可用**\n\n上游 AI 服务异常，请稍后重试。',
     'error.unknown': '⚠️ **发生了意外错误**\n\n请检查 {0} 的 API 设置是否正确，或尝试切换到其他 AI 提供商。\n\n如果问题持续，请重启 Obsidian 后重试。',
 
     // ─── vault-manager.ts ──────────────────────────────────

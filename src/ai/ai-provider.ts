@@ -2,48 +2,16 @@
  * AI Provider - Factory for AI providers
  */
 
-import { TideLogSettings, AIProvider } from '../types';
-import { OpenRouterProvider } from './openrouter-provider';
-import { AnthropicProvider } from './anthropic-provider';
-import { GeminiProvider } from './gemini-provider';
-import { OpenAIProvider } from './openai-provider';
-import { CustomProvider } from './custom-provider';
+import type TideLogPlugin from '../main';
+import { AIProvider } from '../types';
+import { TideLogProvider } from './tidelog-provider';
 
 // Re-export BaseAIProvider for backward compatibility
 export { BaseAIProvider } from './base-provider';
 
 /**
- * Create an AI provider based on settings
+ * Create the TideLog managed AI provider.
  */
-export function createAIProvider(settings: TideLogSettings): AIProvider {
-    const provider = settings.activeProvider;
-    const config = settings.providers[provider];
-
-    switch (provider) {
-        case 'openrouter':
-            return new OpenRouterProvider(config.apiKey, config.model);
-        case 'anthropic':
-            return new AnthropicProvider(config.apiKey, config.model);
-        case 'gemini':
-            return new GeminiProvider(config.apiKey, config.model);
-        case 'openai':
-            return new OpenAIProvider(config.apiKey, config.model);
-        case 'siliconflow':
-            return new CustomProvider(
-                config.apiKey,
-                config.model,
-                config.baseUrl || 'https://api.siliconflow.cn/v1'
-            );
-        case 'custom':
-            return new CustomProvider(
-                config.apiKey,
-                config.model,
-                config.baseUrl || 'https://api.siliconflow.cn/v1'
-            );
-        default:
-            return new OpenRouterProvider(
-                settings.providers.openrouter.apiKey,
-                settings.providers.openrouter.model
-            );
-    }
+export function createAIProvider(plugin: TideLogPlugin): AIProvider {
+    return new TideLogProvider(plugin);
 }

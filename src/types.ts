@@ -139,12 +139,15 @@ export interface StreamCallback {
     (chunk: string): void;
 }
 
+export type AIFeature = 'daily_insight' | 'weekly' | 'monthly' | 'profile' | 'chat';
+
 export interface AIProvider {
     name: string;
     sendMessage(
         messages: ChatMessage[],
         systemPrompt: string,
-        onChunk: StreamCallback
+        onChunk: StreamCallback,
+        feature?: AIFeature,
     ): Promise<string>;
     testConnection(): Promise<boolean>;
 }

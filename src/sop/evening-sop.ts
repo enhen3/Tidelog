@@ -277,7 +277,8 @@ export class EveningSOP {
                 systemPrompt,
                 (chunk) => {
                     response += chunk;
-                }
+                },
+                'daily_insight',
             );
 
             // Strip any leaked instructions from AI response
@@ -505,7 +506,7 @@ ${emotionQ}`
                     ? 'You are Flow, a warm personal growth companion. Write a brief, heartfelt closing.'
                     : '你是 Flow，一个温暖的个人成长伙伴。写一段简短、真诚的收尾语。';
 
-                const closingMsg = await provider.sendMessage(messages, systemPrompt, () => {});
+                const closingMsg = await provider.sendMessage(messages, systemPrompt, () => {}, 'daily_insight');
                 if (closingMsg && closingMsg.trim()) {
                     summary = closingMsg.trim();
                 }

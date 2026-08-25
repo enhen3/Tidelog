@@ -126,7 +126,8 @@ ${todayPlan}
                 systemPrompt,
                 (chunk) => {
                     response += chunk;
-                }
+                },
+                'daily_insight',
             );
 
             const confirmSuffix = getLanguage() === 'en'
@@ -250,7 +251,8 @@ ${formattedPlan}
                 systemPrompt,
                 (chunk) => {
                     response += chunk;
-                }
+                },
+                'daily_insight',
             );
 
             this.messages.push({

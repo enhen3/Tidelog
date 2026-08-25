@@ -56,7 +56,7 @@ export class PlanSuggestionService {
             ? `Target: ${targetLabel}\n\nPlanning context:\n${context}`
             : `目标周期：${targetLabel}\n\n规划上下文：\n${context}`;
         const messages: ChatMessage[] = [{ role: 'user', content: userPrompt, timestamp: Date.now() }];
-        const response = await provider.sendMessage(messages, systemPrompt, () => { /* background generation */ });
+        const response = await provider.sendMessage(messages, systemPrompt, () => { /* background generation */ }, 'daily_insight');
         const lines = this.normalizeSuggestionLines(response);
         if (lines.length === 0) return [];
 

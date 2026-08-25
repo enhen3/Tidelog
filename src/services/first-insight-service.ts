@@ -75,14 +75,19 @@ export class FirstInsightService {
         try {
             const provider = this.plugin.getAIProvider();
             let fullResponse = '';
-            await provider.sendMessage(messages, buildFirstInsightSystemPrompt(currentProfile), (chunk) => {
-                fullResponse += chunk;
-                try {
-                    onChunk?.(chunk);
-                } catch (error) {
-                    console.warn('TideLog first insight stream callback failed:', error);
-                }
-            });
+            await provider.sendMessage(
+                messages,
+                buildFirstInsightSystemPrompt(currentProfile),
+                (chunk) => {
+                    fullResponse += chunk;
+                    try {
+                        onChunk?.(chunk);
+                    } catch (error) {
+                        console.warn('TideLog first insight stream callback failed:', error);
+                    }
+                },
+                'profile',
+            );
 
             const report = formatFirstInsightReportDocument(stripProfileTags(fullResponse));
             const profileUpdate = formatProfileDocument(extractProfileUpdate(fullResponse) || report);

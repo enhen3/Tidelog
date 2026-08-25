@@ -446,7 +446,7 @@ export default class TideLogPlugin extends Plugin {
      * Get the current AI provider based on settings
      */
     getAIProvider() {
-        return createAIProvider(this.settings);
+        return createAIProvider(this);
     }
 
     /**

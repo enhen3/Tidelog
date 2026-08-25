@@ -286,7 +286,7 @@ export class LicenseManager {
     // Device ID
     // =========================================================================
 
-    private getOrCreateDeviceId(): string {
+    getOrCreateDeviceId(): string {
         const existing = this.plugin.settings.proLicense.deviceId;
         if (existing) return existing;
 

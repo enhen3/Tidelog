@@ -382,6 +382,10 @@ export const en: Record<string, string> = {
     'error.modelNotFound': '🔍 **Model unavailable**\n\nThe configured AI model cannot be accessed. Please check the model name in the plugin settings.',
     'error.serverError': '🔧 **AI service temporarily unavailable**\n\n{0}\'s server is experiencing issues. Please try again later.',
     'error.network': '🌐 **Network connection failed**\n\nPlease check your network connection and try again. If using a proxy, verify your proxy settings.',
+    'error.aiContentBlocked': '🚫 **This request cannot be processed**\n\nPlease revise potentially sensitive content and try again.',
+    'error.aiQuotaExceeded': '⏳ **AI quota reached**\n\nUsed: {0} / {1}\nResets at: {2}',
+    'error.aiFeatureUnavailable': '🔒 **Feature unavailable**\n\nYour current TideLog plan does not include this AI feature.',
+    'error.aiProviderError': '🔧 **AI service temporarily unavailable**\n\nThe upstream AI service failed. Please try again later.',
     'error.unknown': '⚠️ **An unexpected error occurred**\n\nPlease check your {0} API settings or try switching to another AI provider.\n\nIf the issue persists, restart Obsidian and try again.',
 
     // ─── vault-manager.ts ──────────────────────────────────

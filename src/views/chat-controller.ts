@@ -197,23 +197,6 @@ export class ChatController {
         try {
             const provider = h.plugin.getAIProvider();
 
-            // Check if API key is configured
-            const activeProvider = h.plugin.settings.activeProvider;
-            const providerConfig = h.plugin.settings.providers[activeProvider];
-            if (!providerConfig.apiKey) {
-                messageEl.empty();
-                void MarkdownRenderer.render(
-                    h.app,
-                    t('chat.noApiKey', activeProvider.toUpperCase()),
-                    messageEl,
-                    '',
-                    h
-                );
-                h.isProcessing = false;
-                h.sendButton.disabled = false;
-                return;
-            }
-
             const userProfile = await h.plugin.vaultManager.getUserProfileContent();
 
             const systemPrompt = getLanguage() === 'en'
@@ -250,16 +233,21 @@ If user mentions "update plan" "modify plan" "adjust tasks", guide them to click
 
 ` + (userProfile ? `<user_profile>\n${userProfile}\n</user_profile>\n\n自然地将了解融入对话。` : '');
 
-            await provider.sendMessage(h.messages, systemPrompt, (chunk) => {
-                if (!indicatorRemoved) {
-                    h.hideThinkingIndicator();
-                    indicatorRemoved = true;
-                }
-                fullResponse += chunk;
-                messageEl.empty();
-                void MarkdownRenderer.render(h.app, fullResponse, messageEl, '', h);
-                h.scrollToBottom();
-            });
+            await provider.sendMessage(
+                h.messages,
+                systemPrompt,
+                (chunk) => {
+                    if (!indicatorRemoved) {
+                        h.hideThinkingIndicator();
+                        indicatorRemoved = true;
+                    }
+                    fullResponse += chunk;
+                    messageEl.empty();
+                    void MarkdownRenderer.render(h.app, fullResponse, messageEl, '', h);
+                    h.scrollToBottom();
+                },
+                'chat',
+            );
 
             // Add to message history
             h.messages.push({

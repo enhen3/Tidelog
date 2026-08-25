@@ -100,7 +100,8 @@ ${t('insight.generateWeeklyReport')}`;
                 (chunk) => {
                     fullResponse += chunk;
                     onChunk(chunk);
-                }
+                },
+                'weekly',
             );
 
             // Save report to archive (strip extraction tags before saving)
@@ -190,7 +191,8 @@ ${t('insight.generateMonthlyReport')}`;
                 (chunk) => {
                     fullResponse += chunk;
                     onChunk(chunk);
-                }
+                },
+                'monthly',
             );
 
             // Save report (strip extraction tags)

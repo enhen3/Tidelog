@@ -18,8 +18,12 @@ export const ErrorCode = {
     NETWORK_TIMEOUT:   'TL-3002',  // Request timeout
     BILLING_CREDITS:   'TL-4001',  // Insufficient credits / balance
     BILLING_RATE:      'TL-4002',  // Rate limit exceeded
+    QUOTA_EXCEEDED:    'TL-4003',  // TideLog managed AI quota exhausted
     SERVER_ERROR:      'TL-5001',  // Provider server error (5xx)
+    PROVIDER_ERROR:    'TL-5002',  // TideLog managed AI upstream failed
     CONFIG_URL:        'TL-6001',  // Base URL misconfigured
+    CONTENT_BLOCKED:   'TL-7001',  // Request blocked by content policy
+    FEATURE_UNAVAILABLE: 'TL-7002', // Feature unavailable for current tier
     UNKNOWN:           'TL-9001',  // Unclassified error
 } as const;
 
@@ -173,6 +177,11 @@ function formatByCode(code: TideLogErrorCode, provider: string, detail?: string)
             return t('error.credits', provider) + `\n\n**${code}**` + detailLine;
         case ErrorCode.BILLING_RATE:
             return t('error.rateLimit', provider) + `\n\n**${code}**` + detailLine;
+        case ErrorCode.QUOTA_EXCEEDED:
+        case ErrorCode.PROVIDER_ERROR:
+        case ErrorCode.CONTENT_BLOCKED:
+        case ErrorCode.FEATURE_UNAVAILABLE:
+            return (detail || t('error.unknown', provider)) + `\n\n**${code}**`;
         case ErrorCode.SERVER_ERROR:
             return t('error.serverError', provider) + `\n\n**${code}**` + detailLine;
         case ErrorCode.CONFIG_URL:
