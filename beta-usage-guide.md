@@ -20,38 +20,30 @@ Plan 写下今天任务 → Review 完成复盘闭环 → Insights 在达标后�
 
 ---
 
-## 第二步：按需配置 AI 服务
+## 第二步：了解 AI 配额
 
-TideLog 的基础记录和任务管理可以先使用；AI 功能需要你自己的 API Key。
+**不需要任何配置。** AI 能力由 TideLog 统一提供，装上即用——不用注册第三方平台、
+不用申请 API Key、不用选择模型。
 
 AI 会在这些动作中被调用：
 
 - 自由聊天。
-- 测试连接。
 - 生成或更新周报 / 月报 / AI 眼中的你。
 - 完成复盘后刷新日 / 周 / 月计划建议。
+- 从旧日记生成首次画像。
 
-### 推荐：硅基流动 SiliconFlow（国内最简单）
+各档位的配额如下：
 
-1. 访问 [siliconflow.cn](https://siliconflow.cn) → 注册账号。
-2. 进入 **控制台 → API 密钥**。
-3. 点击 **新建 API 密钥**，复制生成的 Key。
-4. 回到 Obsidian → Settings → TideLog。
-5. **AI provider** 选择 `SiliconFlow`。
-6. 粘贴 API Key，使用默认推荐模型，点击 **测试连接**。
+| 档位 | 今日洞察 | 周报 / 月报 / 画像 | AI 对话 |
+|---|---|---|---|
+| 免费 | 每月 3 次 | 不提供 | 不提供 |
+| 试用（7 天） | 不限 | 不限 | 每日 20 次 |
+| Pro | 不限 | 不限 | 每月 200 次 |
 
-### 其他平台选择
+**计划与复盘的本地功能永久免费，不消耗任何配额。**
 
-| 平台 | 适合谁 | 设置中选择 | 获取 Key 地址 |
-|------|--------|-----------|-------------|
-| **SiliconFlow** | 国内用户 | SiliconFlow | [siliconflow.cn](https://siliconflow.cn) |
-| **OpenRouter** | 想用多种模型 | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| **Anthropic** | 想用 Claude | Anthropic | [console.anthropic.com](https://console.anthropic.com) |
-| **Google Gemini** | 免费额度大 | Gemini | [aistudio.google.com](https://aistudio.google.com/apikey) |
-| **OpenAI** | 想用 GPT | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) |
-| **自定义** | 自建 / 其他兼容 API | Custom | 按你的服务提供 |
-
-不确定选哪个：国内用户先选 SiliconFlow，海外用户先选 OpenRouter。
+七天试用无需绑定支付方式、由你主动开启、不会自动续费。
+在 Settings → TideLog → Pro 可以随时查看当前剩余配额。
 
 ---
 
@@ -104,7 +96,7 @@ AI 会在这些动作中被调用：
 ## 常见问题
 
 **Q: AI 没有回复 / 报错了？**
-A: 先去 Settings → TideLog，点击「测试连接」。通常是 API Key、模型名或余额问题。
+A: 先去 Settings → TideLog → Pro 查看剩余配额。若配额已用完，会显示重置时间；若显示服务不可用，通常是网络或服务端临时问题，稍后重试。
 
 **Q: 可以换模型吗？**
 A: 可以。设置里可以选择推荐模型，也可以手动输入模型名。

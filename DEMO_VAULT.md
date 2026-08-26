@@ -29,4 +29,4 @@ npm run demo:check
 
 演示 Vault 不包含真实 API Key 或 Pro License。生成脚本会写入一个仅供本地截图使用、7 天内有效的演示 Pro 状态；它没有 License Key，也不会向授权服务器发起验证。正式演示前重新运行一次 `npm run demo:vault` 即可续期。
 
-需要现场调用 AI 重新生成内容时，仍需在本机 Obsidian 设置中临时配置自己的 API Key，演示结束后移除。
+AI 能力由 TideLog 服务端统一提供，演示时无需配置任何 API Key。现场重新生成会消耗对应档位的配额。
