@@ -46,7 +46,12 @@ check(Q.checkQuota('free', 'daily_insight', 2, now).allowed === true, '免费：
 const f3 = Q.checkQuota('free', 'daily_insight', 3, now);
 check(f3.allowed === false && f3.reason === 'quota_exceeded', '免费：今日洞察第 4 次拒绝');
 check(f3.remaining === 0 && f3.limit === 3, '免费：拒绝时返回 limit/remaining');
-for (const feat of ['weekly', 'monthly', 'profile', 'chat']) {
+const firstProfile = Q.checkQuota('free', 'profile', 0, now);
+check(firstProfile.allowed === true && firstProfile.limit === 1, '免费：首次画像放行一次');
+check(firstProfile.period === 'lifetime' && firstProfile.resetsAt === null, '免费：首次画像不随月份重置');
+const usedProfile = Q.checkQuota('free', 'profile', 1, now);
+check(usedProfile.allowed === false && usedProfile.reason === 'quota_exceeded', '免费：画像成功一次后拒绝');
+for (const feat of ['weekly', 'monthly', 'chat']) {
 	const d = Q.checkQuota('free', feat, 0, now);
 	check(d.allowed === false && d.reason === 'not_available_on_tier', `免费：${feat} 不提供`);
 }
@@ -79,9 +84,44 @@ check(Q.resolveTier({ status: 'trial', expires_at: nowSec - 1 }, nowSec) === 'fr
 
 console.log('\nTest 7: 配额表与文档一致');
 check(Q.QUOTA.free.daily_insight.limit === 3, '免费今日洞察 = 3/月');
+check(Q.QUOTA.free.profile.limit === 1 && Q.isLifetimeQuota('free', 'profile'), '免费画像 = 历史一次');
+check(!Q.isLifetimeQuota('trial', 'profile') && !Q.isLifetimeQuota('pro', 'profile'), 'trial / Pro 画像维持原周期规则');
 check(Q.QUOTA.trial.chat.limit === 20 && Q.QUOTA.trial.chat.window === 'day', '试用对话 = 20/日');
 check(Q.QUOTA.pro.chat.limit === 200 && Q.QUOTA.pro.chat.window === 'month', 'Pro 对话 = 200/月');
 check(Q.FEATURES.length === 5, 'feature 共 5 项');
+
+
+console.log('\nTest 8: 配额单位归属（防止固定 sessionId 绕过配额）');
+// 背景：配额按"一次用户动作"计量，同一 sessionId 的请求只扣一个单位。
+// 但 sessionId 由客户端生成，若不设上限，永远发同一个值即可无限白嫖。
+{
+	const first = Q.resolveSessionUnit('sess-a', 0);
+	check(first.counted === false, '本动作的第一次请求需要扣减配额');
+	check(first.effectiveSessionId === 'sess-a', '第一次请求归入该动作');
+
+	const second = Q.resolveSessionUnit('sess-a', 1);
+	check(second.counted === true, '同一动作的后续请求不再扣减');
+	check(second.effectiveSessionId === 'sess-a', '后续请求仍归入该动作');
+
+	const cap = Q.MAX_REQUESTS_PER_SESSION;
+	const atCap = Q.resolveSessionUnit('sess-a', cap);
+	check(atCap.counted === false, `超过每 session 上限（${cap}）后必须重新扣减`);
+	check(atCap.effectiveSessionId === null, '超限请求不再挂在原 session 下，独立计一个单位');
+
+	const wayOver = Q.resolveSessionUnit('sess-a', cap * 100);
+	check(wayOver.counted === false, '持续复用同一 sessionId 无法逃避扣减');
+	check(wayOver.effectiveSessionId === null, '持续复用时每次都独立计单位');
+
+	const noSession = Q.resolveSessionUnit(null, 0);
+	check(noSession.counted === false, '旧客户端（无 sessionId）按请求计量');
+	check(noSession.effectiveSessionId === null, '无 sessionId 时写入 NULL');
+
+	let counted = 0;
+	for (let i = 0; i < 6; i += 1) {
+		if (!Q.resolveSessionUnit('review-1', i).counted) counted += 1;
+	}
+	check(counted === 1, `一次复盘的 6 次请求只扣 1 个单位（实际 ${counted}）`);
+}
 
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===`);
 process.exit(fail === 0 ? 0 : 1);

@@ -2,7 +2,7 @@
 -- Run: wrangler d1 execute tidelog-license-db --remote --file=migration-v2.sql
 
 -- Add new columns to licenses
-ALTER TABLE licenses ADD COLUMN license_type TEXT DEFAULT 'lifetime';
+ALTER TABLE licenses ADD COLUMN license_type TEXT DEFAULT 'annual';
 ALTER TABLE licenses ADD COLUMN expires_at INTEGER;
 ALTER TABLE licenses ADD COLUMN max_devices INTEGER DEFAULT 3;
 

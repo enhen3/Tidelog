@@ -5,6 +5,9 @@
 	"main": "main.js",
 	"type": "module",
 	"private": true,
+	"engines": {
+		"node": ">=24"
+	},
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"typecheck": "tsc --noEmit --skipLibCheck",
@@ -16,8 +19,9 @@
 		"demo:check": "node scripts/build-demo-vault.mjs --check",
 		"deploy": "cp main.js styles.css manifest.json \"${OBSIDIAN_VAULT:?Set OBSIDIAN_VAULT to your vault path}/.obsidian/plugins/tidelog/\" && echo '✅ Deployed to vault'",
 		"release:check": "node scripts/check-release-assets.mjs",
-		"check": "npm run typecheck && npm run typecheck:api && npm run lint:obsidian && npm test && npm run build && npm run release:check",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"check": "npm run typecheck && npm run typecheck:api && npm run lint:obsidian && npm test && npm run test:api && npm run build && npm run release:check",
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"test:api": "cd api && node test-quota.mjs && node test-trial.mjs && node test-moderation.mjs && node test-anchor.mjs && node test-p0-concurrency.mjs && node test-license-types.mjs && node test-schema.mjs && node test-migration-v6.mjs && cd .. && node test-visualization.mjs"
 	},
 	"keywords": [
 		"obsidian",
@@ -28,7 +32,7 @@
 	],
 	"license": "AGPL-3.0",
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260515.1",
+		"@cloudflare/workers-types": "^5.20260828.1",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "^8.57.0",
 		"@typescript-eslint/parser": "^8.57.0",
@@ -36,8 +40,10 @@
 		"eslint": "^10.0.3",
 		"eslint-plugin-obsidianmd": "^0.2.9",
 		"jsdom": "^29.1.1",
+		"sharp": "^0.35.4",
 		"tslib": "2.4.0",
-		"typescript": "5.4.5"
+		"typescript": "5.4.5",
+		"wrangler": "^4.127.0"
 	},
 	"dependencies": {
 		"obsidian": "latest"

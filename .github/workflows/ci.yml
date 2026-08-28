@@ -12,7 +12,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # 24 而不是 20：api/test-p0-concurrency.mjs 用 node:sqlite 跑真实 SQLite
+          # 来验证 P0 的原子 INSERT，该模块在 v23.4 之前需要 --experimental-sqlite。
+          # Node 20 上 npm run check 会直接失败，发版流程也会一起挂掉。
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run typecheck

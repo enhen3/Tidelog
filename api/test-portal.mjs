@@ -137,7 +137,7 @@ async function main() {
 		console.log(`\n${YELLOW}▶ Seeding test data...${RESET}`);
 		const seedRes = await post(worker, '/admin/generate', {
 			count: 1,
-			licenseType: 'lifetime',
+			licenseType: 'annual',
 			email: testEmail,
 			orderId: testOrderId,
 		}, ADMIN_HEADERS);

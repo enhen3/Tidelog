@@ -1,6 +1,6 @@
 /**
  * TideLog License API — Cloudflare Worker + D1
- * v2: License types (annual/lifetime) + multi-device (3 devices per key)
+ * v2: License types (monthly/annual; lifetime legacy) + multi-device (3 devices per key)
  * v3: Self-serve portal (GET /portal, POST /portal/lookup, POST /portal/unbind)
  *
  * Endpoints:
@@ -15,13 +15,25 @@
  */
 
 import type { D1Database, ExportedHandler } from '@cloudflare/workers-types';
-import { handleAIGenerate, handleAIQuota } from './ai';
+import { ANCHOR_SALT_MISSING, hmacHex, readAnchorSalt } from './anchor';
+import { handleAIGenerate, handleAIQuota, handleTrialStart, handleTrialStatus } from './ai';
+import { readJsonWithLimit } from './request';
+
+const MAX_CONTROL_BODY_BYTES = 64 * 1024;
 
 export interface Env {
 	DB: D1Database;
 	ADMIN_TOKEN: string;
 	DEEPSEEK_API_KEY: string;
 	DEEPSEEK_MODEL?: string;
+	/**
+	 * 匿名化盐值（wrangler secret）。用于把 IP / deviceId 派生成不可反解的锚点。
+	 *
+	 * 没有它时，锚点是无盐 SHA-256：IPv4 空间仅 2^32，可穷举反解出原始 IP，
+	 * 属于「去标识化」而非「匿名化」，在个人信息认定上是两回事。
+	 * 缺失时服务端拒绝提供 AI 服务（fail closed），不静默退回可反解的写法。
+	 */
+	ANCHOR_SALT?: string;
 }
 
 export interface LicenseRow {
@@ -40,11 +52,6 @@ interface DeviceRow {
 	license_key: string;
 	device_id: string;
 	activated_at: number;
-}
-
-interface RateLimitRow {
-	count: number;
-	reset_at: number;
 }
 
 // =============================================================================
@@ -67,18 +74,28 @@ function error(message: string, status = 400): Response {
 	return json({ success: false, error: message }, status);
 }
 
+async function readJsonObject(request: Request): Promise<Record<string, unknown> | Response> {
+	const parsed = await readJsonWithLimit(request, MAX_CONTROL_BODY_BYTES);
+	if (!parsed.ok) {
+		return parsed.error === 'body_too_large'
+			? error('Request body too large', 413)
+			: error('Invalid JSON body');
+	}
+	const value = parsed.value;
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return error('Invalid JSON body');
+	return value as Record<string, unknown>;
+}
+
+function boundedString(value: unknown, maxLength: number): string | null {
+	if (typeof value !== 'string') return null;
+	const normalized = value.trim();
+	return normalized && normalized.length <= maxLength ? normalized : null;
+}
+
 function getClientIp(request: Request): string {
 	return request.headers.get('CF-Connecting-IP')
 		|| request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
 		|| 'unknown';
-}
-
-async function sha256Hex(input: string): Promise<string> {
-	const bytes = new TextEncoder().encode(input);
-	const digest = await crypto.subtle.digest('SHA-256', bytes);
-	return [...new Uint8Array(digest)]
-		.map((byte) => byte.toString(16).padStart(2, '0'))
-		.join('');
 }
 
 async function checkRateLimit(
@@ -88,31 +105,30 @@ async function checkRateLimit(
 	limit: number,
 	windowSeconds: number,
 ): Promise<Response | null> {
+	// 限流键同样是 IP 派生值，落在 `rate_limits` 里长期可读。
+	// 用无盐 SHA-256 时，已知 scope 与时间窗即可穷举 2^32 个 IPv4 反解出原始 IP——
+	// 这条路径此前被漏掉了，`ai.ts` 改成 HMAC 并不能替它消除风险。
+	const salt = readAnchorSalt(env);
+	if (!salt) {
+		// fail closed：宁可整条路由不可用，也不写入可反解的 IP 派生值。
+		console.error('[TideLog API] ANCHOR_SALT 未配置，限流拒绝服务');
+		return error(ANCHOR_SALT_MISSING, 503);
+	}
 	const now = Math.floor(Date.now() / 1000);
 	const resetAt = Math.floor(now / windowSeconds) * windowSeconds + windowSeconds;
-	const clientHash = await sha256Hex(`${scope}:${getClientIp(request)}:${resetAt}`);
+	const clientHash = await hmacHex(salt, `ratelimit:${scope}:${getClientIp(request)}:${resetAt}`);
 
-	const row = await env.DB.prepare('SELECT count, reset_at FROM rate_limits WHERE key = ?')
-		.bind(clientHash)
-		.first<RateLimitRow>();
-
-	if (!row) {
-		await env.DB.prepare('INSERT INTO rate_limits (key, count, reset_at) VALUES (?, ?, ?)')
-			.bind(clientHash, 1, resetAt)
-			.run();
-		return null;
-	}
-
-	if (row.count >= limit) {
+	const consumed = await env.DB.prepare(
+		`INSERT INTO rate_limits (key, count, reset_at) VALUES (?, 1, ?)
+		 ON CONFLICT(key) DO UPDATE SET count = rate_limits.count + 1
+		 WHERE rate_limits.count < ?`,
+	).bind(clientHash, resetAt, limit).run();
+	if ((consumed.meta.changes ?? 0) === 0) {
 		return json(
-			{ success: false, error: 'Too many requests. Please try again later.', retryAfter: Math.max(1, row.reset_at - now) },
+			{ success: false, error: 'Too many requests. Please try again later.', retryAfter: Math.max(1, resetAt - now) },
 			429,
 		);
 	}
-
-	await env.DB.prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?')
-		.bind(clientHash)
-		.run();
 
 	if (Math.random() < 0.01) {
 		await env.DB.prepare('DELETE FROM rate_limits WHERE reset_at < ?')
@@ -120,6 +136,38 @@ async function checkRateLimit(
 			.run();
 	}
 
+	return null;
+}
+
+/**
+ * 对客户端提供的身份线索做独立限流。原值只参与 HMAC，不写入数据库。
+ * 这堵住了攻击者轮换 IP 后继续枚举邮箱 + 订单号的路径。
+ */
+async function checkIdentityRateLimit(
+	env: Env,
+	scope: string,
+	identity: string,
+	limit: number,
+	windowSeconds: number,
+): Promise<Response | null> {
+	const salt = readAnchorSalt(env);
+	if (!salt) return error(ANCHOR_SALT_MISSING, 503);
+	const now = Math.floor(Date.now() / 1000);
+	const resetAt = Math.floor(now / windowSeconds) * windowSeconds + windowSeconds;
+	const key = await hmacHex(salt, `ratelimit:${scope}:${identity}:${resetAt}`);
+
+	const consumed = await env.DB.prepare(
+		`INSERT INTO rate_limits (key, count, reset_at) VALUES (?, 1, ?)
+		 ON CONFLICT(key) DO UPDATE SET count = rate_limits.count + 1
+		 WHERE rate_limits.count < ?`,
+	).bind(key, resetAt, limit).run();
+	if ((consumed.meta.changes ?? 0) === 0) {
+		return json({
+			success: false,
+			error: 'Too many attempts. Please try again later.',
+			retryAfter: Math.max(1, resetAt - now),
+		}, 429);
+	}
 	return null;
 }
 
@@ -136,8 +184,21 @@ function generateKey(): string {
 
 /** Check if a license has expired */
 function isExpired(row: LicenseRow): boolean {
-	if (row.license_type === 'lifetime' || !row.expires_at) return false;
-	return Math.floor(Date.now() / 1000) > row.expires_at;
+	return row.license_type !== 'lifetime'
+		&& (row.expires_at === null || Math.floor(Date.now() / 1000) > row.expires_at);
+}
+
+function expiryOneMonthFromNow(): number {
+	const now = new Date();
+	const expiry = new Date(Date.UTC(
+		now.getUTCFullYear(), now.getUTCMonth() + 1, 1,
+		now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds(), now.getUTCMilliseconds(),
+	));
+	const lastDayOfTargetMonth = new Date(Date.UTC(
+		expiry.getUTCFullYear(), expiry.getUTCMonth() + 1, 0,
+	)).getUTCDate();
+	expiry.setUTCDate(Math.min(now.getUTCDate(), lastDayOfTargetMonth));
+	return Math.floor(expiry.getTime() / 1000);
 }
 
 // =============================================================================
@@ -145,9 +206,10 @@ function isExpired(row: LicenseRow): boolean {
 // =============================================================================
 
 async function handleActivate(request: Request, env: Env): Promise<Response> {
-	const body = await request.json<{ key: string; deviceId: string }>();
-	const { key, deviceId } = body;
-
+	const body = await readJsonObject(request);
+	if (body instanceof Response) return body;
+	const key = boundedString(body.key, 128);
+	const deviceId = boundedString(body.deviceId, 256);
 	if (!key || !deviceId) {
 		return error('Missing key or deviceId');
 	}
@@ -166,42 +228,45 @@ async function handleActivate(request: Request, env: Env): Promise<Response> {
 		return error('This license has been revoked', 403);
 	}
 
-	// Check expiry for annual licenses
+	// Every non-lifetime license has an expiry.
 	if (isExpired(row)) {
 		return error('This license has expired', 403);
 	}
 
-	// Check existing device bindings
-	const { results: devices } = await env.DB.prepare(
-		'SELECT * FROM license_devices WHERE license_key = ?'
-	).bind(normalizedKey).all<DeviceRow>();
+	// 数量检查必须和 INSERT 在同一条 SQL 中。先 COUNT 再 INSERT 会让并发设备
+	// 同时看到空位，最终突破 max_devices。
+	const insert = await env.DB.prepare(
+		`INSERT INTO license_devices (license_key, device_id)
+		 SELECT ?, ?
+		 WHERE (SELECT COUNT(*) FROM license_devices WHERE license_key = ?) < ?
+		   AND NOT EXISTS (
+		     SELECT 1 FROM license_devices WHERE license_key = ? AND device_id = ?
+		   )`,
+	).bind(normalizedKey, deviceId, normalizedKey, row.max_devices, normalizedKey, deviceId).run();
 
-	// Already activated on this device?
-	const alreadyBound = devices.some(d => d.device_id === deviceId);
-	if (alreadyBound) {
+	if ((insert.meta.changes ?? 0) === 0) {
+		const alreadyBound = await env.DB.prepare(
+			'SELECT 1 AS found FROM license_devices WHERE license_key = ? AND device_id = ?',
+		).bind(normalizedKey, deviceId).first<{ found: number }>();
+		const count = await env.DB.prepare(
+			'SELECT COUNT(*) AS n FROM license_devices WHERE license_key = ?',
+		).bind(normalizedKey).first<{ n: number }>();
+		if (!alreadyBound) {
+			return error(
+				`Device limit reached (${row.max_devices}/${row.max_devices}). Deactivate another device first.`,
+				409,
+			);
+		}
 		return json({
 			success: true,
 			status: 'active',
 			licenseType: row.license_type,
 			expiresAt: row.expires_at,
-			deviceCount: devices.length,
+			deviceCount: count?.n ?? row.max_devices,
 			maxDevices: row.max_devices,
 			message: 'Already activated on this device',
 		});
 	}
-
-	// Check device limit
-	if (devices.length >= row.max_devices) {
-		return error(
-			`Device limit reached (${row.max_devices}/${row.max_devices}). Deactivate another device first.`,
-			409
-		);
-	}
-
-	// Bind device
-	await env.DB.prepare(
-		'INSERT INTO license_devices (license_key, device_id) VALUES (?, ?)'
-	).bind(normalizedKey, deviceId).run();
 
 	// Mark license as active
 	if (row.status === 'unused') {
@@ -215,16 +280,19 @@ async function handleActivate(request: Request, env: Env): Promise<Response> {
 		status: 'active',
 		licenseType: row.license_type,
 		expiresAt: row.expires_at,
-		deviceCount: devices.length + 1,
+		deviceCount: (await env.DB.prepare(
+			'SELECT COUNT(*) AS n FROM license_devices WHERE license_key = ?',
+		).bind(normalizedKey).first<{ n: number }>())?.n ?? 1,
 		maxDevices: row.max_devices,
 		message: 'License activated successfully',
 	});
 }
 
 async function handleVerify(request: Request, env: Env): Promise<Response> {
-	const body = await request.json<{ key: string; deviceId: string }>();
-	const { key, deviceId } = body;
-
+	const body = await readJsonObject(request);
+	if (body instanceof Response) return body;
+	const key = boundedString(body.key, 128);
+	const deviceId = boundedString(body.deviceId, 256);
 	if (!key || !deviceId) {
 		return error('Missing key or deviceId');
 	}
@@ -268,9 +336,10 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleDeactivate(request: Request, env: Env): Promise<Response> {
-	const body = await request.json<{ key: string; deviceId: string }>();
-	const { key, deviceId } = body;
-
+	const body = await readJsonObject(request);
+	if (body instanceof Response) return body;
+	const key = boundedString(body.key, 128);
+	const deviceId = boundedString(body.deviceId, 256);
 	if (!key || !deviceId) {
 		return error('Missing key or deviceId');
 	}
@@ -302,25 +371,32 @@ async function handleDeactivate(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleAdminGenerate(request: Request, env: Env): Promise<Response> {
-	const body = await request.json<{
-		count?: number;
-		licenseType?: string;
-		email?: string;
-		orderId?: string;
-	}>();
+	const body = await readJsonObject(request);
+	if (body instanceof Response) return body;
 
 	const requestedCount = Number.isInteger(body.count) ? body.count as number : 10;
 	const count = Math.max(1, Math.min(requestedCount, 500));
-	const licenseType = body.licenseType || 'lifetime';
-	if (licenseType !== 'annual' && licenseType !== 'lifetime') {
-		return error('Invalid license type. Expected annual or lifetime.', 400);
+	if (typeof body.licenseType !== 'string' || !body.licenseType) {
+		return error('Missing license type. Expected monthly or annual.', 400);
+	}
+	const licenseType = body.licenseType;
+	if (licenseType === 'lifetime') {
+		return error('Lifetime licenses are no longer sold and cannot be issued from this endpoint.', 400);
+	}
+	if (licenseType !== 'monthly' && licenseType !== 'annual') {
+		return error('Invalid license type. Expected monthly or annual.', 400);
 	}
 
-	const email = body.email?.trim().toLowerCase() || null;
-	const orderId = body.orderId?.trim() || null;
-	const expiresAt = licenseType === 'annual'
-		? Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60
-		: null;
+	if (body.email !== undefined && typeof body.email !== 'string') return error('Invalid email', 400);
+	if (body.orderId !== undefined && typeof body.orderId !== 'string') return error('Invalid orderId', 400);
+	const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() || null : null;
+	const orderId = typeof body.orderId === 'string' ? body.orderId.trim() || null : null;
+	if ((email && email.length > 254) || (orderId && orderId.length > 128)) {
+		return error('Invalid email or orderId', 400);
+	}
+	const expiresAt = licenseType === 'monthly'
+		? expiryOneMonthFromNow()
+		: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
 
 	const keys: string[] = [];
 
@@ -360,10 +436,11 @@ async function handleAdminList(env: Env): Promise<Response> {
 			SUM(CASE WHEN status = 'unused' THEN 1 ELSE 0 END) as unused,
 			SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
 			SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) as revoked,
+			SUM(CASE WHEN license_type = 'monthly' THEN 1 ELSE 0 END) as monthly,
 			SUM(CASE WHEN license_type = 'annual' THEN 1 ELSE 0 END) as annual,
 			SUM(CASE WHEN license_type = 'lifetime' THEN 1 ELSE 0 END) as lifetime
 		 FROM licenses`
-	).first<{ total: number; unused: number; active: number; revoked: number; annual: number; lifetime: number }>();
+	).first<{ total: number; unused: number; active: number; revoked: number; monthly: number; annual: number; lifetime: number }>();
 
 	return json({ success: true, stats, licenses: enriched });
 }
@@ -373,15 +450,23 @@ async function handleAdminList(env: Env): Promise<Response> {
 // =============================================================================
 
 async function handlePortalLookup(request: Request, env: Env): Promise<Response> {
-	const body = await request.json<{ email: string; orderId: string }>();
-	const { email, orderId } = body;
-
+	const body = await readJsonObject(request);
+	if (body instanceof Response) return body;
+	const email = boundedString(body.email, 254);
+	const orderId = boundedString(body.orderId, 128);
 	if (!email || !orderId) {
 		return error('Missing email or orderId');
 	}
 
 	const normalizedEmail = email.trim().toLowerCase();
 	const normalizedOrderId = orderId.trim();
+	if (normalizedEmail.length > 254 || normalizedOrderId.length < 6 || normalizedOrderId.length > 128) {
+		return error('Invalid email or orderId');
+	}
+	const identityLimited = await checkIdentityRateLimit(
+		env, 'portal-lookup-email', normalizedEmail, 10, 15 * 60,
+	);
+	if (identityLimited) return identityLimited;
 
 	// Must match BOTH email AND orderId to prevent enumeration
 	const { results: rows } = await env.DB.prepare(
@@ -417,15 +502,24 @@ async function handlePortalLookup(request: Request, env: Env): Promise<Response>
 }
 
 async function handlePortalUnbind(request: Request, env: Env): Promise<Response> {
-	const body = await request.json<{ email: string; orderId: string; deviceId: string }>();
-	const { email, orderId, deviceId } = body;
-
+	const body = await readJsonObject(request);
+	if (body instanceof Response) return body;
+	const email = boundedString(body.email, 254);
+	const orderId = boundedString(body.orderId, 128);
+	const deviceId = boundedString(body.deviceId, 256);
 	if (!email || !orderId || !deviceId) {
 		return error('Missing email, orderId, or deviceId');
 	}
 
 	const normalizedEmail = email.trim().toLowerCase();
 	const normalizedOrderId = orderId.trim();
+	if (normalizedEmail.length > 254 || normalizedOrderId.length < 6 || normalizedOrderId.length > 128) {
+		return error('Invalid email or orderId');
+	}
+	const identityLimited = await checkIdentityRateLimit(
+		env, 'portal-unbind-email', normalizedEmail, 10, 15 * 60,
+	);
+	if (identityLimited) return identityLimited;
 
 	// Step 1: verify identity — find a license matching email+orderId
 	const { results: rows } = await env.DB.prepare(
@@ -498,6 +592,7 @@ function buildPortalHtml(lang: string): string {
 			? 'No licenses found. Please check your email and order ID.'
 			: '未找到 License，请检查邮箱和订单号是否正确。',
 		lifetime: isEn ? 'Lifetime' : '终身版',
+		monthly: isEn ? 'Monthly' : '月度版',
 		annual: isEn ? 'Annual' : '年度版',
 		activatedAt: isEn ? 'Activated' : '激活于',
 		expiresAt: isEn ? 'Expires' : '到期',
@@ -664,6 +759,10 @@ function buildPortalHtml(lang: string): string {
     background: #eff6ff;
     color: #1d4ed8;
   }
+  .license-type-badge.monthly {
+    background: #f5f3ff;
+    color: #6d28d9;
+  }
   .license-type-badge.revoked {
     background: #fef2f2;
     color: #991b1b;
@@ -818,9 +917,9 @@ function buildPortalHtml(lang: string): string {
       }
       var html = '<div class="found-label">' + escHtml(fmt(STR.foundLabel, data.licenses.length)) + '</div>';
       data.licenses.forEach(function(lic) {
-        var isLifetime = lic.type !== 'annual';
-        var badgeClass = lic.status === 'revoked' ? 'revoked' : (isLifetime ? '' : 'annual');
-        var typeLabel = isLifetime ? STR.lifetime : STR.annual;
+        var isLifetime = lic.type === 'lifetime';
+        var badgeClass = lic.status === 'revoked' ? 'revoked' : (isLifetime ? '' : lic.type);
+        var typeLabel = isLifetime ? STR.lifetime : (lic.type === 'monthly' ? STR.monthly : STR.annual);
         var statusLabel = lic.status === 'active' ? STR.statusActive
                         : lic.status === 'revoked' ? STR.statusRevoked
                         : STR.statusUnused;
@@ -945,9 +1044,30 @@ function handlePortalPage(request: Request): Response {
 // Router
 // =============================================================================
 
-function checkAdmin(request: Request, env: Env): Response | null {
+async function timingSafeTextEqual(provided: string, expected: string): Promise<boolean> {
+	const encoder = new TextEncoder();
+	const [providedHash, expectedHash] = await Promise.all([
+		crypto.subtle.digest('SHA-256', encoder.encode(provided)),
+		crypto.subtle.digest('SHA-256', encoder.encode(expected)),
+	]);
+	const subtle = crypto.subtle as SubtleCrypto & {
+		timingSafeEqual?: (a: ArrayBuffer | ArrayBufferView, b: ArrayBuffer | ArrayBufferView) => boolean;
+	};
+	if (typeof subtle.timingSafeEqual === 'function') {
+		return subtle.timingSafeEqual(providedHash, expectedHash);
+	}
+	// Node 的 Web Crypto 尚未提供 Cloudflare 扩展。两个 SHA-256 摘要固定为 32 字节，
+	// 用无提前返回的完整 XOR 循环作为测试/本地运行兜底。
+	const a = new Uint8Array(providedHash);
+	const b = new Uint8Array(expectedHash);
+	let different = 0;
+	for (let index = 0; index < a.length; index += 1) different |= a[index] ^ b[index];
+	return different === 0;
+}
+
+async function checkAdmin(request: Request, env: Env): Promise<Response | null> {
 	const auth = request.headers.get('Authorization');
-	if (!auth || auth !== `Bearer ${env.ADMIN_TOKEN}`) {
+	if (!auth || !env.ADMIN_TOKEN || !await timingSafeTextEqual(auth, `Bearer ${env.ADMIN_TOKEN}`)) {
 		return error('Unauthorized', 401);
 	}
 	return null;
@@ -979,6 +1099,16 @@ export default {
 				if (limited) return limited;
 				return await handleAIQuota(request, env);
 			}
+			if (path === '/trial/start' && request.method === 'POST') {
+				const limited = await checkRateLimit(request, env, 'trial-start', 10, 60);
+				if (limited) return limited;
+				return await handleTrialStart(request, env);
+			}
+			if (path === '/trial/status' && request.method === 'GET') {
+				const limited = await checkRateLimit(request, env, 'trial-status', 30, 60);
+				if (limited) return limited;
+				return await handleTrialStatus(request, env);
+			}
 
 			if (path === '/license/activate' && request.method === 'POST') {
 				const limited = await checkRateLimit(request, env, 'license-activate', 20, 60);
@@ -997,7 +1127,7 @@ export default {
 			}
 
 			if (path.startsWith('/admin/')) {
-				const authError = checkAdmin(request, env);
+				const authError = await checkAdmin(request, env);
 				if (authError) return authError;
 
 				if (path === '/admin/generate' && request.method === 'POST') {

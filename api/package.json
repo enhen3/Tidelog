@@ -15,11 +15,14 @@
     "generate-keys": "node scripts/generate-keys.mjs",
     "db:migrate:v4": "wrangler d1 execute tidelog-license-db --remote --file=migration-v4.sql",
     "test:moderation": "node test-moderation.mjs",
-    "test:anchor": "node test-anchor.mjs"
+    "test:anchor": "node test-anchor.mjs",
+    "db:migrate:v5": "node scripts/migrate-v5.mjs",
+    "db:migrate:v6": "wrangler d1 migrations apply tidelog-license-db --remote",
+    "test:trial": "node test-trial.mjs"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240529.0",
+    "@cloudflare/workers-types": "^5.20260828.1",
     "typescript": "^5.4.0",
-    "wrangler": "^3.60.0"
+    "wrangler": "^4.127.0"
   }
 }
