@@ -14,7 +14,7 @@ export interface LicenseInfo {
     activatedAt?: number;
     deviceId?: string;
     lastVerified?: number;
-    licenseType?: 'annual' | 'lifetime';
+    licenseType?: 'monthly' | 'annual' | 'lifetime';
     expiresAt?: number; // epoch ms, null for lifetime
 }
 
@@ -47,7 +47,11 @@ export interface TideLogSettings {
 
     // Onboarding
     onboardingCompleted: boolean;
+    /** 是否已经在设置页看过一次默认展开的 TideLog 快速介绍。 */
+    quickGuideSeen: boolean;
     firstInsightCompleted: boolean;
+    /** 已在复盘反馈里提示过「可以从旧日记生成画像」的时间戳。null 表示还没提示过。 */
+    firstInsightHintShownAt: number | null;
 
     // AI Provider Settings
     activeProvider: AIProviderType;
@@ -89,6 +93,8 @@ export interface EveningQuestionConfig {
     initialMessage: string;
     required: boolean;
     enabled: boolean;
+    /** Only user-created questions can be deleted from Settings. */
+    custom?: boolean;
 }
 
 // =============================================================================
@@ -140,6 +146,7 @@ export interface StreamCallback {
 }
 
 export type AIFeature = 'daily_insight' | 'weekly' | 'monthly' | 'profile' | 'chat';
+export type AIResponseMode = 'stream' | 'buffered';
 
 export interface AIProvider {
     name: string;
@@ -148,6 +155,10 @@ export interface AIProvider {
         systemPrompt: string,
         onChunk: StreamCallback,
         feature?: AIFeature,
+        /** 一次用户动作的标识。同一动作的多次调用只消耗一个配额单位。 */
+        sessionId?: string,
+        /** 长报告若不展示逐字过程，可用缓冲响应减少长连接中断。 */
+        responseMode?: AIResponseMode,
     ): Promise<string>;
     testConnection(): Promise<boolean>;
 }

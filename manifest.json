@@ -1,11 +1,10 @@
 {
 	"id": "tidelog",
 	"name": "TideLog",
-	"version": "1.1.49",
+	"version": "1.2.0",
 	"minAppVersion": "1.11.4",
-	"description": "Turn Daily Notes into a Plan → Review → Insights loop with tasks, catch-up reviews, and AI reports.",
+	"description": "Turn Daily Notes into a Plan, Review and Insights loop. Reviews answer back as you write; weekly, monthly and portrait reports build from the loops you actually complete.",
 	"author": "enhen3",
 	"authorUrl": "https://github.com/enhen3",
-	"fundingUrl": "https://afdian.com/item/463307362c2f11f1b39d52540025c377",
 	"isDesktopOnly": false
 }

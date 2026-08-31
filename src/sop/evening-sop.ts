@@ -21,6 +21,7 @@ import { t, getLanguage } from '../i18n';
 import { isSectionHeading } from '../utils/md';
 import { formatDailyReviewEntry } from '../utils/document-format';
 import { moment } from 'obsidian';
+import { newAISessionId } from '../services/ai-session';
 
 interface QuestionConfig {
     type: EveningQuestionType;
@@ -48,10 +49,14 @@ function getPromptMap(): Record<EveningQuestionType, string> {
 
 export class EveningSOP {
     private plugin: TideLogPlugin;
+    /** 本次复盘的配额单位标识：这一整轮复盘（含收尾与后续计划建议）只算一次。 */
+    private sessionId: string = newAISessionId();
     private messages: ChatMessage[] = [];
     private currentQuestionIndex: number = 0;
     private questionFlow: QuestionConfig[] = [];
     private isEmotionScoreStep = false;
+    /** 至少一条复盘回答已写入日记，并成功收到 AI 反馈。 */
+    private hasReceivedReviewFeedback = false;
 
     /**
      * Build question flow from user settings
@@ -105,10 +110,12 @@ export class EveningSOP {
         onMessage: (message: string) => void
     ): Promise<void> {
         // Reset state
+        this.sessionId = newAISessionId();
         this.messages = [];
         this.currentQuestionIndex = 0;
         this.questionFlow = this.buildQuestionFlow();
         this.isEmotionScoreStep = false;
+        this.hasReceivedReviewFeedback = false;
 
         // Load context data
         const userProfile = await this.plugin.vaultManager.getUserProfileContent();
@@ -279,10 +286,18 @@ export class EveningSOP {
                     response += chunk;
                 },
                 'daily_insight',
+                this.sessionId,
             );
 
             // Strip any leaked instructions from AI response
             response = this.stripLeakedInstructions(response);
+            if (response.trim()) {
+                this.hasReceivedReviewFeedback = true;
+            }
+
+            // 全新用户（vault 是空的）永远不会走「从旧日记生成画像」那条路，
+            // 引导首屏也不再解释它。这里是路径 B 上唯一会让人知道该功能存在的地方。
+            response = this.appendFirstProfileHint(response);
 
             this.messages.push({
                 role: 'assistant',
@@ -297,6 +312,22 @@ export class EveningSOP {
             onMessage(`${saveMsg}\n\n${error ? formatAPIError(error, this.plugin.settings.activeProvider) : ''}`);
             this.moveToNextQuestion(context, onMessage);
         }
+    }
+
+    /**
+     * 在第一次 AI 反馈末尾追加一次「以后可以生成过往画像」的轻提示。
+     *
+     * 只在这三个条件同时成立时出现：这是本次复盘的第一个回答、用户还没生成过首次画像、
+     * 以前没提示过。它是入口，不是广告——重复出现就变成了后者。
+     */
+    private appendFirstProfileHint(response: string): string {
+        if (this.currentQuestionIndex !== 0) return response;
+        if (this.plugin.settings.firstInsightCompleted) return response;
+        if (this.plugin.settings.firstInsightHintShownAt !== null) return response;
+
+        this.plugin.settings.firstInsightHintShownAt = Date.now();
+        void this.plugin.saveSettings();
+        return `${response.trim()}\n\n${t('firstInsight.laterProfileHint')}`;
     }
 
     /**
@@ -506,7 +537,7 @@ ${emotionQ}`
                     ? 'You are Flow, a warm personal growth companion. Write a brief, heartfelt closing.'
                     : '你是 Flow，一个温暖的个人成长伙伴。写一段简短、真诚的收尾语。';
 
-                const closingMsg = await provider.sendMessage(messages, systemPrompt, () => {}, 'daily_insight');
+                const closingMsg = await provider.sendMessage(messages, systemPrompt, () => {}, 'daily_insight', this.sessionId);
                 if (closingMsg && closingMsg.trim()) {
                     summary = closingMsg.trim();
                 }
@@ -539,8 +570,8 @@ ${emotionQ}`
                 .length;
             if (totalEnabled > 2) {
                 summary += getLanguage() === 'en'
-                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. Connect AI, then start the 7-day full trial to use the complete Review and Insights flow.*`
-                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。配置好 AI 后，可开启 7 天完整体验，使用完整复盘和洞察流程。*`;
+                    ? `\n\n---\n💡 *You completed 2 of ${totalEnabled} review questions. Start the 7-day full trial to use the complete Review and Insights flow.*`
+                    : `\n\n---\n💡 *你完成了 ${totalEnabled} 个复盘问题中的 2 个。开启 7 天完整体验，即可使用完整复盘和洞察流程。*`;
             }
         }
 
@@ -548,13 +579,19 @@ ${emotionQ}`
         // so the next Plan view opens with fresh guidance instead of a stale empty card.
         try {
             if (this.isTargetToday(context)) {
-                await this.plugin.planSuggestionService?.refreshAfterDailyReview(context);
+                await this.plugin.planSuggestionService?.refreshAfterDailyReview(context, this.sessionId);
             }
         } catch (err) {
             console.error('[Evening SOP] Failed to refresh plan suggestions:', err);
         }
 
         onMessage(summary);
+
+        // 对“没有旧日记、直接从复盘开始”的用户，第一次价值不是点开复盘，
+        // 而是回答已写入日记且 AI 已给出真实反馈。满足后才完成 onboarding。
+        if (this.hasReceivedReviewFeedback) {
+            await this.plugin.completeOnboarding();
+        }
         void this.plugin.showTrialOfferOnce?.(t('chat.tabInsights'));
 
         // Sync to kanban board if service available
@@ -569,6 +606,7 @@ ${emotionQ}`
         // Reset context
         context.type = 'none';
         context.currentStep = 0;
+        this.hasReceivedReviewFeedback = false;
     }
 
     private getTargetMoment(context: SOPContext): moment.Moment {

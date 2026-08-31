@@ -432,8 +432,8 @@ console.log('\nTest 8b: 总 token 护栏跨 feature 且在并发边界原子生�
 	check('越过总量边界的并发请求返回明确 429', rejected instanceof Response
 		&& rejected.status === 429
 		&& (await rejected.json()).error === 'fair_use_limit_reached');
-	check('成功请求先原子预占 4096 输出 token', count(db,
-		"SELECT COUNT(*) AS n FROM ai_usage WHERE subject_id = 'subject-token-budget' AND output_tokens = 4096") === 1);
+	check('成功请求先原子预占 8192 输出 token', count(db,
+		"SELECT COUNT(*) AS n FROM ai_usage WHERE subject_id = 'subject-token-budget' AND output_tokens = 8192") === 1);
 }
 
 console.log('\nTest 9: 失败回滚后可重试，配额查询与实际生成一致');
@@ -465,6 +465,28 @@ console.log('\nTest 9: 失败回滚后可重试，配额查询与实际生成一
 		const afterFailure = await AI.handleAIQuota(request(quotaUrl, { headers }), testEnv);
 		check('失败后查询仍显示可用', (await afterFailure.json()).features.profile.used === 0);
 
+		globalThis.fetch = async () => Response.json({
+			choices: [{ message: { content: '' } }],
+			usage: { prompt_tokens: 10, completion_tokens: 0 },
+		});
+		const empty = await AI.handleAIGenerate(request('/ai/generate', {
+			method: 'POST', headers, body: JSON.stringify(body),
+		}), testEnv, ctx);
+		check('空画像响应返回 502 且不消耗终身一次额度', empty.status === 502
+			&& count(db, "SELECT COUNT(*) AS n FROM ai_usage WHERE feature = 'profile'") === 0);
+
+		globalThis.fetch = async () => new Response(new ReadableStream({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode('{"choices":'));
+				controller.error(new DOMException('The operation was aborted', 'AbortError'));
+			},
+		}));
+		const interrupted = await AI.handleAIGenerate(request('/ai/generate', {
+			method: 'POST', headers, body: JSON.stringify(body),
+		}), testEnv, ctx);
+		check('缓冲响应中断返回 502 且释放预占', interrupted.status === 502
+			&& count(db, "SELECT COUNT(*) AS n FROM ai_usage WHERE feature = 'profile'") === 0);
+
 		let upstreamBody;
 		globalThis.fetch = async (_url, init) => {
 			upstreamBody = JSON.parse(init.body);
@@ -477,7 +499,8 @@ console.log('\nTest 9: 失败回滚后可重试，配额查询与实际生成一
 			method: 'POST', headers, body: JSON.stringify(body),
 		}), testEnv, ctx);
 		check('失败后的重试成功', retried.status === 200);
-		check('上游每次输出硬限制为 4096 token', upstreamBody.max_tokens === 4096);
+		check('上游每次输出硬限制为 8192 token', upstreamBody.max_tokens === 8192);
+		check('V4 显式关闭思考模式，输出额度留给用户可见正文', upstreamBody.thinking?.type === 'disabled');
 		const afterSuccess = await AI.handleAIQuota(request(quotaUrl, { headers }), testEnv);
 		const afterSuccessJson = await afterSuccess.json();
 		check('成功后查询显示一次已用且永不重置', afterSuccessJson.features.profile.used === 1

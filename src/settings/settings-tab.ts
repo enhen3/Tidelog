@@ -5,19 +5,127 @@
 
 import {
     App,
+    Modal,
     PluginSettingTab,
     Setting,
     Notice,
     Platform,
     normalizePath,
+    FuzzySuggestModal,
+    TFolder,
 } from 'obsidian';
 
 import TideLogPlugin from '../main';
 import { EveningQuestionConfig } from '../types';
 import { t } from '../i18n';
+import { bindAfdianPurchaseFlow } from '../utils/purchase-flow';
 import type { Language } from '../i18n';
 import { OnboardingModal } from '../views/onboarding-modal';
-import { ProModal } from '../views/pro-modal';
+
+class VaultFolderSuggestModal extends FuzzySuggestModal<TFolder> {
+    constructor(
+        app: App,
+        private readonly onChooseFolder: (path: string) => void,
+    ) {
+        super(app);
+        this.setPlaceholder(t('settings.chooseFolderPlaceholder'));
+    }
+
+    getItems(): TFolder[] {
+        return this.app.vault.getAllLoadedFiles()
+            .filter((file): file is TFolder => file instanceof TFolder && file.path !== '/')
+            .sort((a, b) => a.path.localeCompare(b.path));
+    }
+
+    getItemText(folder: TFolder): string {
+        return folder.path;
+    }
+
+    onChooseItem(folder: TFolder): void {
+        this.onChooseFolder(folder.path);
+    }
+}
+
+export class LicenseActivationModal extends Modal {
+    constructor(
+        app: App,
+        private readonly plugin: TideLogPlugin,
+        private readonly onActivated: () => void,
+    ) {
+        super(app);
+    }
+
+    onOpen(): void {
+        this.modalEl.addClass('tl-license-activation-shell');
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.addClass('tl-license-activation-modal');
+
+        contentEl.createEl('h2', { text: t('settings.activationModalTitle') });
+        contentEl.createEl('p', {
+            cls: 'tl-license-activation-desc',
+            text: t('settings.activationModalDesc'),
+        });
+
+        const formEl = contentEl.createDiv('tl-license-activation-form');
+        const inputEl = formEl.createEl('input', { cls: 'tl-setting-input-key' });
+        inputEl.type = 'text';
+        inputEl.placeholder = t('settings.licenseKeyPlaceholder');
+        inputEl.autocomplete = 'off';
+
+        const activateBtn = formEl.createEl('button', {
+            cls: 'mod-cta tl-settings-action-btn',
+            text: t('settings.activate'),
+        });
+        activateBtn.disabled = true;
+
+        const errorEl = contentEl.createDiv('tl-license-activation-error');
+        errorEl.setAttr('role', 'alert');
+        const submit = async () => {
+            const keyValue = inputEl.value.trim();
+            if (!keyValue || activateBtn.disabled) return;
+
+            activateBtn.disabled = true;
+            activateBtn.setText(t('settings.verifying'));
+            errorEl.empty();
+            const result = await this.plugin.licenseManager.activate(keyValue);
+            if (result.success) {
+                new Notice(`🎉 ${result.message}`);
+                this.close();
+                this.onActivated();
+                return;
+            }
+
+            errorEl.setText(result.message);
+            activateBtn.setText(t('settings.activate'));
+            activateBtn.disabled = false;
+        };
+
+        inputEl.addEventListener('input', () => {
+            activateBtn.disabled = inputEl.value.trim().length === 0;
+            errorEl.empty();
+        });
+        inputEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                void submit();
+            }
+        });
+        activateBtn.addEventListener('click', () => void submit());
+
+        const portalLink = contentEl.createEl('a', {
+            cls: 'tl-license-activation-lookup',
+            text: t('settings.lookupLicenseInline'),
+            href: 'https://tidelog-api.mydreamchronicle.com/portal',
+        });
+        portalLink.setAttr('target', '_blank');
+        window.setTimeout(() => inputEl.focus(), 0);
+    }
+
+    onClose(): void {
+        this.contentEl.empty();
+    }
+}
 
 export class TideLogSettingTab extends PluginSettingTab {
     plugin: TideLogPlugin;
@@ -48,72 +156,50 @@ export class TideLogSettingTab extends PluginSettingTab {
         this.legacyImportButtonEl = null;
 
         this.renderSettingsHero(containerEl);
-        this.renderGettingStarted(containerEl);
-        this.renderAISettings(containerEl);
-        this.renderLegacyImportEntry(containerEl);
         this.renderProLicense(containerEl);
+        this.renderGettingStarted(containerEl);
         this.renderEveningQuestions(containerEl);
         this.renderFolderSettings(containerEl);
         this.renderDayBoundarySetting(containerEl);
+        this.renderLegacyImportEntry(containerEl);
         this.renderLanguageSetting(containerEl);
-    }
-
-    private renderAISettings(containerEl: HTMLElement): void {
-        const cardEl = containerEl.createDiv('tl-settings-guide-card tl-ai-managed-card');
-        const copyEl = cardEl.createDiv('tl-settings-collapsible-summary-copy');
-        copyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.aiManagedKicker') });
-        copyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.aiManagedTitle') });
-        copyEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.aiManagedDesc') });
     }
 
     private renderFolderSettings(containerEl: HTMLElement): void {
         new Setting(containerEl).setName(t('settings.sectionFolders')).setHeading();
 
-        new Setting(containerEl)
-            .setName(t('settings.dailyFolder'))
-            .setDesc(t('settings.dailyFolderDesc'))
-            .addText((text) =>
-                text
-                    .setPlaceholder('01-daily')
-                    .setValue(this.plugin.settings.dailyFolder)
-                    .onChange((value) => {
-                        this.plugin.settings.dailyFolder = normalizePath(value);
-                        void this.plugin.saveSettings();
-                    })
-            );
+        this.renderFolderPickerSetting(containerEl, 'dailyFolder', t('settings.dailyFolder'), t('settings.dailyFolderDesc'));
+        this.renderFolderPickerSetting(containerEl, 'planFolder', t('settings.planFolder'), t('settings.planFolderDesc'));
+        this.renderFolderPickerSetting(containerEl, 'archiveFolder', t('settings.archiveFolder'), t('settings.archiveFolderDesc'));
+    }
 
+    private renderFolderPickerSetting(
+        containerEl: HTMLElement,
+        key: 'dailyFolder' | 'planFolder' | 'archiveFolder',
+        name: string,
+        description: string,
+    ): void {
         new Setting(containerEl)
-            .setName(t('settings.planFolder'))
-            .setDesc(t('settings.planFolderDesc'))
-            .addText((text) =>
-                text
-                    .setPlaceholder('02-plan')
-                    .setValue(this.plugin.settings.planFolder)
-                    .onChange((value) => {
-                        this.plugin.settings.planFolder = normalizePath(value);
+            .setName(name)
+            .setDesc(description)
+            .addButton((button) => {
+                const updateButton = () => {
+                    button.setButtonText(this.plugin.settings[key] || t('settings.chooseFolder'));
+                    button.buttonEl.setAttr('aria-label', `${name}: ${this.plugin.settings[key] || t('settings.chooseFolder')}`);
+                };
+                updateButton();
+                button.buttonEl.addClass('tl-settings-folder-picker');
+                button.onClick(() => {
+                    new VaultFolderSuggestModal(this.app, (path) => {
+                        this.plugin.settings[key] = normalizePath(path);
+                        updateButton();
                         void this.plugin.saveSettings();
-                    })
-            );
-
-        new Setting(containerEl)
-            .setName(t('settings.archiveFolder'))
-            .setDesc(t('settings.archiveFolderDesc'))
-            .addText((text) =>
-                text
-                    .setPlaceholder('03-archive')
-                    .setValue(this.plugin.settings.archiveFolder)
-                    .onChange((value) => {
-                        this.plugin.settings.archiveFolder = normalizePath(value);
-                        void this.plugin.saveSettings();
-                    })
-            );
-
-        containerEl.createDiv({ cls: 'tl-settings-section-note', text: t('settings.folderSectionNote') });
+                    }).open();
+                });
+            });
     }
 
     private renderDayBoundarySetting(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName(t('settings.sectionDayBoundary')).setHeading();
-
         const getBoundaryExampleTime = (value: number) => {
             if (value <= 1) return '00:30';
             const exampleHour = Math.max(0, Math.min(7, value - 1));
@@ -123,37 +209,28 @@ export class TideLogSettingTab extends PluginSettingTab {
             ? t('settings.dayBoundaryAtMidnight')
             : t('settings.dayBoundaryValue', `${String(value).padStart(2, '0')}:00`, getBoundaryExampleTime(value));
 
-        const boundarySetting = new Setting(containerEl)
-            .setName(t('settings.dayBoundaryHour'))
-            .setDesc(t('settings.dayBoundaryHourDesc'));
-
-        const clampedBoundaryHour = Math.min(8, this.plugin.settings.dayBoundaryHour);
+        const clampedBoundaryHour = Math.max(0, Math.min(8, Number(this.plugin.settings.dayBoundaryHour) || 0));
         if (clampedBoundaryHour !== this.plugin.settings.dayBoundaryHour) {
             this.plugin.settings.dayBoundaryHour = clampedBoundaryHour;
             void this.plugin.saveSettings();
         }
 
-        let valueEl: HTMLElement;
-        boundarySetting.addSlider((slider) => {
-            const sliderParentEl = slider.sliderEl.parentElement ?? containerEl;
-            valueEl = sliderParentEl.createSpan('tl-settings-boundary-value');
-            valueEl.setText(`${String(clampedBoundaryHour).padStart(2, '0')}:00`);
-            slider.sliderEl.after(valueEl);
+        const boundarySetting = new Setting(containerEl)
+            .setName(t('settings.dayBoundaryHour'))
+            .setDesc(formatBoundary(clampedBoundaryHour));
 
-            return slider
-                .setLimits(0, 8, 1)
-                .setValue(clampedBoundaryHour)
+        boundarySetting.addDropdown((dropdown) => {
+            for (let hour = 0; hour <= 8; hour += 1) {
+                dropdown.addOption(String(hour), `${String(hour).padStart(2, '0')}:00`);
+            }
+            return dropdown
+                .setValue(String(clampedBoundaryHour))
                 .onChange((value) => {
-                    this.plugin.settings.dayBoundaryHour = value;
-                    valueEl.setText(`${String(value).padStart(2, '0')}:00`);
-                    boundaryNote.setText(formatBoundary(value));
+                    const hour = Number(value);
+                    this.plugin.settings.dayBoundaryHour = hour;
+                    boundarySetting.setDesc(formatBoundary(hour));
                     void this.plugin.saveSettings();
                 });
-        });
-
-        const boundaryNote = containerEl.createDiv({
-            cls: 'tl-settings-boundary-note',
-            text: formatBoundary(clampedBoundaryHour),
         });
     }
 
@@ -175,20 +252,14 @@ export class TideLogSettingTab extends PluginSettingTab {
             );
     }
 
-    /**
-     * Render a premium, brand-colored settings hero so the settings page feels
-     * like a finished product surface instead of a default Obsidian form list.
-     */
     private renderSettingsHero(containerEl: HTMLElement): void {
-        const heroEl = containerEl.createDiv('tl-settings-hero');
-        const copyEl = heroEl.createDiv('tl-settings-hero-copy');
-        const lockupEl = copyEl.createDiv('tl-settings-lockup');
-        const logoEl = lockupEl.createDiv('tl-settings-logo-mark');
+        const accessState = this.plugin.licenseManager.getAccessState();
+        const trialDays = this.plugin.licenseManager.getTrialDaysRemaining();
+        const heroEl = containerEl.createDiv('tl-settings-hero tl-settings-hero-compact');
+        const logoEl = heroEl.createDiv('tl-settings-logo-mark');
         logoEl.createSpan('tl-settings-logo-line');
         logoEl.createSpan('tl-settings-logo-dot');
-        const lockupCopyEl = lockupEl.createDiv('tl-settings-lockup-copy');
-        lockupCopyEl.createDiv({ cls: 'tl-settings-eyebrow', text: t('settings.heroEyebrow') });
-        lockupCopyEl.createDiv({ cls: 'tl-settings-lockup-subtitle', text: t('settings.heroSubtitle') });
+        const copyEl = heroEl.createDiv('tl-settings-hero-copy');
         copyEl.createDiv({
             cls: 'tl-settings-hero-title',
             text: t('settings.heroTitle'),
@@ -197,20 +268,17 @@ export class TideLogSettingTab extends PluginSettingTab {
             cls: 'tl-settings-hero-desc',
             text: t('settings.heroDesc'),
         });
-
-        const flowEl = copyEl.createDiv('tl-settings-flow');
-        [t('chat.tabPlan'), t('chat.tabReview'), t('chat.tabInsights')].forEach((label) => {
-            flowEl.createSpan({ cls: 'tl-settings-flow-pill', text: label });
-        });
-
-        const proofEl = copyEl.createDiv('tl-settings-proof-row');
-        [
-            t('settings.proofNoTelemetry'),
-            t('settings.proofVaultNative'),
-            t('settings.proofScopedReads'),
-            t('settings.proofUserTriggeredAI'),
-        ].forEach((label) => {
-            proofEl.createSpan({ cls: 'tl-settings-proof-pill', text: label });
+        heroEl.createDiv({
+            cls: `tl-settings-hero-status ${accessState === 'paid' || accessState === 'trial' ? 'is-pro' : 'is-free'}`,
+            text: accessState === 'paid'
+                ? t('settings.proActive')
+                : accessState === 'trial'
+                    ? t('settings.trialRemainingBadge', String(trialDays))
+                    : accessState === 'trial-expired'
+                        ? t('settings.trialExpiredBadge')
+                        : accessState === 'license-inactive'
+                            ? t('trial.licenseInactiveBadge')
+                            : t('settings.proFree'),
         });
     }
 
@@ -218,75 +286,77 @@ export class TideLogSettingTab extends PluginSettingTab {
      * Render onboarding entry point for users who want to revisit setup.
      */
     private renderGettingStarted(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName(t('settings.gettingStarted')).setHeading();
+        const shouldOpenByDefault = !this.plugin.settings.quickGuideSeen;
+        const guideEl = containerEl.createEl('details', { cls: 'tl-settings-quick-guide' });
+        guideEl.open = shouldOpenByDefault;
 
-        const guideEl = containerEl.createEl('details', { cls: 'tl-settings-guide-card tl-settings-collapsible-card' });
-        guideEl.open = !this.plugin.settings.onboardingCompleted;
-        const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-collapsible-summary' });
-        const summaryCopyEl = summaryEl.createDiv('tl-settings-collapsible-summary-copy');
-        summaryCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.gettingStartedGuide') });
-        summaryCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.gettingStartedTitle') });
-        summaryCopyEl.createDiv({ cls: 'tl-settings-card-desc', text: t('settings.gettingStartedDesc') });
-        summaryEl.createSpan({ cls: 'tl-settings-collapse-icon', text: '⌄' });
+        const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-quick-guide-summary' });
+        summaryEl.createSpan({ cls: 'tl-settings-quick-guide-heading', text: t('settings.sectionQuickGuide') });
+        summaryEl.createSpan({ cls: 'tl-settings-quick-guide-flow', text: t('settings.quickGuideFlow') });
 
-        const bodyEl = guideEl.createDiv('tl-settings-collapsible-body');
-        const mainEl = bodyEl.createDiv('tl-settings-guide-main');
-
-        const stepsEl = mainEl.createDiv('tl-settings-guide-steps');
+        const bodyEl = guideEl.createDiv('tl-settings-quick-guide-body');
+        const stepsEl = bodyEl.createDiv('tl-settings-quick-guide-steps');
         [
-            t('settings.guideStepAI'),
-            t('settings.guideStepPlan'),
-            t('settings.guideStepReview'),
-            t('settings.guideStepInsights'),
-        ].forEach((step, index) => {
-            const stepEl = stepsEl.createDiv('tl-settings-guide-step');
-            stepEl.createSpan({ cls: 'tl-settings-guide-step-number', text: String(index + 1) });
-            stepEl.createSpan({ text: step });
+            [
+                'plan',
+                t('settings.quickGuidePlanStage'),
+                t('settings.quickGuidePlanTitle'),
+                t('settings.quickGuidePlanUser'),
+                t('settings.quickGuidePlanAI'),
+            ],
+            [
+                'review',
+                t('settings.quickGuideReviewStage'),
+                t('settings.quickGuideReviewTitle'),
+                t('settings.quickGuideReviewUser'),
+                t('settings.quickGuideReviewAI'),
+            ],
+            [
+                'insights',
+                t('settings.quickGuideInsightsStage'),
+                t('settings.quickGuideInsightsTitle'),
+                t('settings.quickGuideInsightsUser'),
+                t('settings.quickGuideInsightsAI'),
+            ],
+        ].forEach(([phase, stage, title, userAction, aiAction], index) => {
+            const stepEl = stepsEl.createDiv('tl-settings-quick-guide-step');
+            stepEl.addClass(`is-${phase}`);
+            stepEl.createSpan({ cls: 'tl-settings-quick-guide-number', text: String(index + 1) });
+            const copyEl = stepEl.createDiv('tl-settings-quick-guide-copy');
+            copyEl.createDiv({ cls: 'tl-settings-quick-guide-stage', text: stage });
+            copyEl.createDiv({ cls: 'tl-settings-quick-guide-title', text: title });
+            const userRowEl = copyEl.createDiv('tl-settings-quick-guide-role-row');
+            userRowEl.createSpan({ cls: 'tl-settings-quick-guide-role is-user', text: t('settings.quickGuideUserLabel') });
+            userRowEl.createSpan({ text: userAction });
+            const aiRowEl = copyEl.createDiv('tl-settings-quick-guide-role-row');
+            aiRowEl.createSpan({ cls: 'tl-settings-quick-guide-role is-ai', text: t('settings.quickGuideAILabel') });
+            aiRowEl.createSpan({ text: aiAction });
         });
-
-        const actionEl = bodyEl.createDiv('tl-settings-card-actions');
-        const openBtn = actionEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn', text: t('settings.openGettingStarted') });
-        openBtn.addEventListener('click', () => {
-            new OnboardingModal(this.app, this.plugin).open();
+        bodyEl.createDiv({ cls: 'tl-settings-quick-guide-loop', text: t('settings.quickGuideLoop') });
+        const actionEl = bodyEl.createDiv('tl-settings-quick-guide-action');
+        const openBtn = actionEl.createEl('button', {
+            cls: 'tl-settings-action-btn',
+            text: t('settings.openGettingStarted'),
         });
+        openBtn.addEventListener('click', () => new OnboardingModal(this.app, this.plugin).open());
 
+        if (shouldOpenByDefault) {
+            this.plugin.settings.quickGuideSeen = true;
+            void this.plugin.saveSettings();
+        }
     }
 
     private renderLegacyImportEntry(containerEl: HTMLElement): void {
-        const guideEl = containerEl.createEl('details', { cls: 'tl-settings-legacy-import tl-settings-guide-card tl-settings-collapsible-card' });
-        guideEl.open = false;
-
-        const summaryEl = guideEl.createEl('summary', { cls: 'tl-settings-collapsible-summary' });
-        const summaryCopyEl = summaryEl.createDiv('tl-settings-collapsible-summary-copy');
-        summaryCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.legacyImportKicker') });
-        summaryCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.legacyImportTitle') });
-        this.legacyImportDescEl = summaryCopyEl.createDiv({ cls: 'tl-settings-card-desc' });
-        summaryEl.createSpan({ cls: 'tl-settings-collapse-icon', text: '⌄' });
-
-        const bodyEl = guideEl.createDiv('tl-settings-collapsible-body');
-        const mainEl = bodyEl.createDiv('tl-settings-guide-main');
-        const stepsEl = mainEl.createDiv('tl-settings-guide-steps');
-        [
-            t('settings.legacyImportStepReadonly'),
-            t('settings.legacyImportStepNormalize'),
-            t('settings.legacyImportStepSave'),
-        ].forEach((step, index) => {
-            const stepEl = stepsEl.createDiv('tl-settings-guide-step');
-            stepEl.createSpan({ cls: 'tl-settings-guide-step-number', text: String(index + 1) });
-            stepEl.createSpan({ text: step });
+        new Setting(containerEl).setName(t('settings.sectionImportHelp')).setHeading();
+        const importSetting = new Setting(containerEl)
+            .setName(t('settings.legacyImportTitle'))
+            .setDesc('');
+        this.legacyImportDescEl = importSetting.descEl;
+        importSetting.addButton((button) => {
+            this.legacyImportButtonEl = button.buttonEl;
+            button.onClick(() => void this.plugin.openFirstInsight());
         });
-
-        const actionEl = bodyEl.createDiv('tl-settings-card-actions');
-        const openBtn = actionEl.createEl('button', {
-            cls: 'mod-cta tl-settings-action-btn',
-            attr: { type: 'button' },
-        });
-        this.legacyImportButtonEl = openBtn;
         this.refreshLegacyImportEntryState();
-
-        openBtn.addEventListener('click', () => {
-            void this.plugin.openFirstInsight();
-        });
     }
 
     private refreshLegacyImportEntryState(): void {
@@ -317,47 +387,15 @@ export class TideLogSettingTab extends PluginSettingTab {
      * (which interferes with focus and text selection in Electron/Chromium).
      */
     private renderEveningQuestions(containerEl: HTMLElement): void {
-        new Setting(containerEl).setName(t('settings.eveningQuestions')).setHeading();
-
         const questions = this.plugin.settings.eveningQuestions;
         const isPro = this.plugin.licenseManager.isPro();
-        const isTrial = this.plugin.licenseManager.getAccessState() === 'trial';
         const enabledCount = questions.filter((q) => q.enabled !== false).length;
-
-        const introEl = containerEl.createDiv(`tl-q-intro ${isPro ? 'is-pro' : 'is-free'}`);
-        const introCopyEl = introEl.createDiv('tl-q-intro-copy');
-        introCopyEl.createDiv({ cls: 'tl-settings-card-kicker', text: t('settings.reviewFlowKicker') });
-        introCopyEl.createDiv({ cls: 'tl-settings-card-title', text: t('settings.reviewFlowTitle') });
-        introCopyEl.createDiv({
-            cls: 'tl-settings-card-desc',
-            text: isPro
-                ? t('settings.reviewProDesc', enabledCount)
-                : t('settings.reviewFreeDesc', enabledCount),
-        });
-        introCopyEl.createDiv({
-            cls: `tl-q-plan-status ${isPro ? 'is-pro' : 'is-free'}`,
-            text: isPro
-                ? t(isTrial ? 'settings.reviewTrialActiveBadge' : 'settings.reviewProActiveBadge')
-                : t('settings.reviewFreeBadge'),
-        });
-        if (!isPro) {
-            const upgradeBtn = introEl.createEl('button', {
-                cls: 'mod-cta tl-settings-action-btn',
-                text: this.plugin.licenseManager.getAccessState() === 'trial-expired'
-                    ? t('trial.expiredAction')
-                    : this.plugin.licenseManager.getAccessState() === 'license-inactive'
-                        ? t('trial.licenseInactiveAction')
-                        : t('trial.start'),
-            });
-            upgradeBtn.addEventListener('click', () => {
-                new ProModal(
-                    this.app,
-                    t('settings.reviewFlowTitle'),
-                    this.plugin.licenseManager,
-                    () => this.display(),
-                ).open();
-            });
-        }
+        new Setting(containerEl)
+            .setName(t('settings.eveningQuestions'))
+            .setDesc(isPro
+                ? t('settings.reviewEnabledSummary', enabledCount, questions.length)
+                : t('settings.reviewFreeSummary', enabledCount, questions.length))
+            .setHeading();
 
         // Question list container for drag-and-drop
         const listEl = containerEl.createDiv('tl-q-list');
@@ -417,6 +455,10 @@ export class TideLogSettingTab extends PluginSettingTab {
             toggleInput.checked = question.enabled !== false;
             toggleInput.setAttribute('title', t('settings.enableQuestion'));
             toggleInput.setAttribute('aria-label', t('settings.enableQuestion'));
+            toggleWrap.createSpan('tl-q-toggle-track');
+            toggleWrap.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
             toggleInput.addEventListener('click', (e) => {
                 e.stopPropagation();
             });
@@ -436,18 +478,21 @@ export class TideLogSettingTab extends PluginSettingTab {
                 })();
             });
 
-            // --- Delete button ---
-            const deleteBtn = row.createSpan({ cls: 'tl-q-icon-btn tl-q-icon-delete' });
-            deleteBtn.textContent = '✕';
-            deleteBtn.setAttribute('title', t('settings.delete'));
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                void (async () => {
-                    this.plugin.settings.eveningQuestions.splice(index, 1);
-                    await this.plugin.saveSettings();
-                    this.display();
-                })();
-            });
+            // Built-in questions are part of the review workflow contract. Only
+            // questions explicitly created by the user can be deleted.
+            if (question.custom === true) {
+                const deleteBtn = row.createSpan({ cls: 'tl-q-icon-btn tl-q-icon-delete' });
+                deleteBtn.textContent = '✕';
+                deleteBtn.setAttribute('title', t('settings.delete'));
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    void (async () => {
+                        this.plugin.settings.eveningQuestions.splice(index, 1);
+                        await this.plugin.saveSettings();
+                        this.display();
+                    })();
+                });
+            }
 
             // --- Expand/collapse: open or close the detail panel below ---
             const toggleExpand = () => {
@@ -586,6 +631,7 @@ export class TideLogSettingTab extends PluginSettingTab {
                 initialMessage: '',
                 required: false,
                 enabled: true,
+                custom: true,
             };
             this.plugin.settings.eveningQuestions.push(newQ);
             void this.plugin.saveSettings().then(() => this.display());
@@ -652,43 +698,36 @@ export class TideLogSettingTab extends PluginSettingTab {
         const headerEl = proCardEl.createDiv('tl-settings-pro-header');
         const copyEl = headerEl.createDiv('tl-settings-pro-copy');
         copyEl.createDiv({
-            cls: 'tl-settings-card-kicker',
-            text: isPaid
-                ? 'TideLog Pro active'
-                : isTrial
-                    ? t('settings.trialKicker')
-                    : 'TideLog Pro',
-        });
-        copyEl.createDiv({
             cls: 'tl-settings-card-title',
             text: isPaid
-                ? t('settings.proActiveTitle')
+                ? 'TideLog Pro'
                 : isTrial
-                    ? t('trial.activeTitle')
+                    ? t('settings.trialCompactTitle')
                     : accessState === 'license-inactive'
                         ? t('trial.licenseInactiveTitle')
                     : accessState === 'trial-expired'
-                        ? t('trial.expiredTitle')
-                        : t('settings.trialTitle'),
+                        ? t('settings.trialExpiredTitle')
+                        : t('settings.freePlanTitle'),
         });
         copyEl.createDiv({
             cls: 'tl-settings-card-desc',
             text: isPaid
-                ? t('settings.proActiveDesc')
+                ? t('settings.proActiveCompactDesc')
                 : isTrial
-                    ? t('settings.trialActiveDesc', String(trialDays), trialExpiry)
+                    ? t('settings.trialActiveCompactDesc', trialExpiry)
                     : accessState === 'license-inactive'
                         ? t('trial.licenseInactiveDesc')
                     : accessState === 'trial-expired'
-                        ? t('settings.trialExpiredDesc', trialExpiry)
-                        : t('settings.trialEligibleDesc'),
+                        ? t('settings.trialExpiredCompactDesc')
+                        : t('settings.freePlanDesc'),
         });
-        headerEl.createDiv({
+        const actionEl = headerEl.createDiv('tl-settings-pro-actions');
+        actionEl.createDiv({
             cls: `tl-settings-pro-status ${hasAccess ? 'is-pro' : 'is-free'}`,
             text: isPaid
                 ? t('settings.proActive')
                 : isTrial
-                    ? t('settings.trialActiveBadge', String(trialDays))
+                    ? t('settings.trialRemainingBadge', String(trialDays))
                     : accessState === 'license-inactive'
                         ? t('trial.licenseInactiveBadge')
                     : accessState === 'trial-expired'
@@ -696,27 +735,16 @@ export class TideLogSettingTab extends PluginSettingTab {
                         : t('settings.proFree'),
         });
 
-        const proFeaturesEl = proCardEl.createDiv('tl-settings-pro-benefits');
-        [
-            t('settings.proFeatureReview'),
-            t('settings.proFeatureInsight'),
-            t('settings.proFeatureReports'),
-        ].forEach((feature) => {
-            proFeaturesEl.createSpan({ cls: 'tl-settings-pro-benefit', text: feature });
-        });
-
         if (isPaid) {
-            const activeEl = proCardEl.createDiv('tl-settings-pro-active-panel');
             const label = this.plugin.licenseManager.getLicenseLabel();
             const expiry = this.plugin.licenseManager.getExpiryDate();
             const expiryText = expiry ? ` · ${t('settings.proExpiry')}: ${expiry}` : '';
-            activeEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
+            copyEl.createDiv({ cls: 'tl-settings-pro-meta', text: `${label} ${t('settings.proActivated')}${expiryText}` });
             return;
         }
 
         if (accessState === 'free') {
-            const trialPanelEl = proCardEl.createDiv('tl-settings-trial-panel');
-            const trialBtn = trialPanelEl.createEl('button', {
+            const trialBtn = actionEl.createEl('button', {
                 cls: 'mod-cta tl-settings-action-btn tl-settings-pro-primary-btn',
                 text: t('settings.trialStart'),
             });
@@ -729,48 +757,31 @@ export class TideLogSettingTab extends PluginSettingTab {
                         new Notice(t('trial.startedNotice'));
                         this.display();
                     } else {
+                        if (this.plugin.licenseManager.getAccessState() !== 'free') {
+                            this.display();
+                            new Notice(t('trial.startFailed'));
+                            return;
+                        }
                         trialBtn.disabled = false;
                         trialBtn.setText(t('settings.trialStart'));
                         new Notice(t('trial.startFailed'));
                     }
                 })();
             });
-            trialPanelEl.createDiv({ cls: 'tl-settings-pro-purchase-note', text: t('trial.noCharge') });
+            actionEl.createSpan({ cls: 'tl-settings-pro-action-note', text: t('trial.compactPromise') });
         }
 
-        const purchasePanelEl = proCardEl.createDiv('tl-settings-pro-purchase-panel');
-        const purchaseBtn = purchasePanelEl.createEl('button', { cls: 'mod-cta tl-settings-action-btn tl-settings-pro-primary-btn', text: t('pro.purchase') });
-        purchaseBtn.addEventListener('click', () => { window.open(purchaseUrl); });
-        purchasePanelEl.createDiv({ cls: 'tl-settings-pro-purchase-note', text: t('settings.proPurchaseNote') });
-
-        const licensePanelEl = proCardEl.createDiv('tl-settings-license-panel');
-        licensePanelEl.createDiv({ cls: 'tl-settings-license-title', text: t('settings.haveLicense') });
-        const licenseRowEl = licensePanelEl.createDiv('tl-settings-license-row');
-        let keyValue = '';
-        const inputEl = licenseRowEl.createEl('input', { cls: 'tl-setting-input-key' });
-        inputEl.type = 'text';
-        inputEl.placeholder = t('settings.licenseKeyPlaceholder');
-        inputEl.addEventListener('input', () => { keyValue = inputEl.value; });
-        const activateBtn = licenseRowEl.createEl('button', { cls: 'tl-settings-action-btn tl-settings-license-activate-btn', text: t('settings.activate') });
-        activateBtn.addEventListener('click', () => {
-            void (async () => {
-                activateBtn.setText(t('settings.verifying'));
-                activateBtn.setAttribute('disabled', 'true');
-                const result = await this.plugin.licenseManager.activate(keyValue);
-                if (result.success) {
-                    new Notice(`🎉 ${result.message}`);
-                    this.display();
-                } else {
-                    new Notice(`❌ ${result.message}`);
-                    activateBtn.setText(t('settings.activate'));
-                    activateBtn.removeAttribute('disabled');
-                }
-            })();
+        const purchaseBtn = actionEl.createEl('button', { cls: 'tl-settings-action-btn tl-settings-pro-purchase-btn', text: t('settings.proPurchase') });
+        bindAfdianPurchaseFlow(purchaseBtn, purchaseUrl, () => {
+            purchaseBtn.setText(t('settings.proPurchaseRetry'));
         });
-        const helperEl = licensePanelEl.createDiv('tl-settings-license-helper');
-        helperEl.createSpan({ text: t('settings.licenseHelpText') });
-        const portalLink = helperEl.createEl('a', { text: t('settings.lookupLicenseInline'), href: 'https://tidelog-api.mydreamchronicle.com/portal' });
-        portalLink.setAttr('target', '_blank');
+        const activateProBtn = actionEl.createEl('button', {
+            cls: 'tl-settings-action-btn tl-settings-pro-activate-btn',
+            text: t('settings.activatePro'),
+        });
+        activateProBtn.addEventListener('click', () => {
+            new LicenseActivationModal(this.app, this.plugin, () => this.display()).open();
+        });
     }
 
 }

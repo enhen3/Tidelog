@@ -10,6 +10,7 @@ import { formatAPIError } from '../utils/error-formatter';
 import { replaceFile } from '../utils/vault-write';
 import { stripExtractionTags } from '../utils/md';
 import { formatGeneratedInsightDocument, formatProfileDocument, formatTideLogTitle } from '../utils/document-format';
+import { monthlyInsightFileNames, weeklyInsightFileNames } from '../utils/insight-files';
 import { t, getLanguage } from '../i18n';
 import {
     getBaseContextPrompt,
@@ -17,6 +18,7 @@ import {
     MONTHLY_INSIGHT_PROMPT,
     PROFILE_SUGGESTION_PROMPT,
 } from '../sop/prompts';
+import { newAISessionId } from './ai-session';
 
 interface GenerateInsightOptions {
     force?: boolean;
@@ -102,6 +104,7 @@ ${t('insight.generateWeeklyReport')}`;
                     onChunk(chunk);
                 },
                 'weekly',
+                newAISessionId(),
             );
 
             // Save report to archive (strip extraction tags before saving)
@@ -193,6 +196,7 @@ ${t('insight.generateMonthlyReport')}`;
                     onChunk(chunk);
                 },
                 'monthly',
+                newAISessionId(),
             );
 
             // Save report (strip extraction tags)
@@ -300,10 +304,12 @@ ${t('insight.generateMonthlyReport')}`;
             const provider = this.plugin.getAIProvider();
             let fullResponse = '';
 
+            // 此前这里未传 feature，默认落到 'chat'：free 档 chat 上限为 0，
+            // 「AI 眼中的你」因此会以 feature_not_available 被拒；Pro 则错误消耗聊天额度。
             await provider.sendMessage(messages, systemPrompt, (chunk) => {
                 fullResponse += chunk;
                 onChunk(chunk);
-            });
+            }, 'profile', newAISessionId());
 
             // Save full analysis to Insights for history tracking
             await this.saveProfileAnalysis(fullResponse);
@@ -401,12 +407,12 @@ ${t('insight.generateMonthlyReport')}`;
             await this.plugin.vaultManager.ensureInsightsFolder();
 
             const fileName = type === 'weekly'
-                ? t('insight.weeklyFileName', date.format('YYYY'), String(date.isoWeek()))
-                : t('insight.monthlyFileName', date.format('YYYY-MM'));
+                ? weeklyInsightFileNames(date, getLanguage())[0]
+                : monthlyInsightFileNames(date, getLanguage())[0];
 
             const filePath = `${this.plugin.settings.archiveFolder}/Insights/${fileName}`;
             const rawTitle = type === 'weekly'
-                ? t('insight.weeklyReportTitle', date.format('YYYY'), String(date.isoWeek()))
+                ? t('insight.weeklyReportTitle', String(date.isoWeekYear()), String(date.isoWeek()))
                 : t('insight.monthlyReportTitle', getLanguage() === 'en' ? date.format('YYYY-MM') : date.format('YYYY年MM月'));
             const title = formatTideLogTitle(rawTitle);
             const start = type === 'weekly' ? date.clone().startOf('isoWeek') : date.clone().startOf('month');
@@ -428,11 +434,8 @@ ${t('insight.generateMonthlyReport')}`;
 
     private findInsightReport(type: 'weekly' | 'monthly', date: moment.Moment): TFile | null {
         const fileNames = type === 'weekly'
-            ? [
-                t('insight.weeklyFileName', date.format('YYYY'), String(date.isoWeek())),
-                t('insight.weeklyFileName', date.format('YYYY'), String(date.isoWeek()).padStart(2, '0')),
-            ]
-            : [t('insight.monthlyFileName', date.format('YYYY-MM'))];
+            ? weeklyInsightFileNames(date, getLanguage())
+            : monthlyInsightFileNames(date, getLanguage());
 
         for (const fileName of fileNames) {
             const file = this.plugin.app.vault.getAbstractFileByPath(`${this.plugin.settings.archiveFolder}/Insights/${fileName}`);

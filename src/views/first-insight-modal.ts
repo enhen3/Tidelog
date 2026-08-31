@@ -5,13 +5,113 @@
  * evidence-backed profile insight report.
  */
 
-import { Component, MarkdownRenderer, Modal, Notice } from 'obsidian';
+import { Modal, Notice, TFolder } from 'obsidian';
 import type TideLogPlugin from '../main';
 import { t } from '../i18n';
-import type { LegacyDailyImportResult, LegacyImportScanResult } from '../services/legacy-import-service';
+import type { LegacyImportScanResult } from '../services/legacy-import-service';
+import {
+    FIRST_INSIGHT_MAX_SELECTED_ENTRIES,
+    FIRST_INSIGHT_RECENT_WINDOW_DAYS,
+    selectRecentFirstInsightScan,
+} from '../services/legacy-import-service';
 import type { FirstInsightReportDraft } from '../services/first-insight-service';
-import { getFirstInsightBodyExcerptLimit, stripProfileTags } from '../services/first-insight-service';
-import { FIRST_INSIGHT_MIN_VALID_ENTRIES } from '../constants';
+import { FIRST_INSIGHT_MIN_ANALYZABLE_CHARS, FIRST_INSIGHT_MIN_VALID_ENTRIES } from '../constants';
+import { guessJournalFolder, importableFolderOptions, isFolderGuessFallback } from '../services/journal-folder-guess';
+import { ErrorCode, formatAPIErrorPlainText, TideLogError } from '../utils/error-formatter';
+import type { LegacyImportSession } from '../services/legacy-import-service';
+
+/**
+ * 路径 A 走不通时，到底差什么。
+ *
+ * 这四种情况的补救动作完全不同：前三种是「你选错了文件夹」，只有最后一种才是
+ * 「你的日记还不够多」。以前它们统一渲染成 `tooFewNotice`——一个把选错目录的人
+ * 告知「你写得不够多」的提示，指错了方向，用户没有可执行的下一步。
+ */
+export type FirstInsightBlockReason =
+    | 'folder_missing'
+    | 'no_markdown'
+    | 'no_dates'
+    | 'too_short'
+    | 'too_few';
+
+export interface FirstInsightBlockContext {
+    folderPath: string;
+    /** 文件夹里读到的 Markdown 文件总数。0 就是文件夹本身不对。 */
+    markdownCount: number;
+    /** 其中成功识别出日期的篇数。 */
+    candidateCount: number;
+    /** 其中正文长度也够分析的篇数。 */
+    validCount: number;
+    /** 认出了日期、但正文太短被排除的篇数。 */
+    tooShortCount: number;
+}
+
+export function firstInsightBlockContext(scan: LegacyImportScanResult): FirstInsightBlockContext {
+    const tooShortCount = scan.excludedEntries.filter(entry => entry.reason === 'too_short').length;
+    return {
+        folderPath: scan.folderPath,
+        // too_short 的文件已经计入 candidateCount，再加一次会把总数说多。
+        markdownCount: scan.candidateCount + (scan.excludedEntries.length - tooShortCount),
+        candidateCount: scan.candidateCount,
+        validCount: scan.validCount,
+        tooShortCount,
+    };
+}
+
+export function diagnoseFirstInsightBlock(context: FirstInsightBlockContext): FirstInsightBlockReason {
+    if (context.markdownCount === 0) return 'no_markdown';
+    // candidateCount 只统计「日期识别成功」的文件。它为 0 说明这个文件夹里没有日记，
+    // 而不是日记不够多——此时报「篇数不够」等于把选错目录说成用户写得太少。
+    if (context.candidateCount === 0) return 'no_dates';
+    const shortfall = FIRST_INSIGHT_MIN_VALID_ENTRIES - context.validCount;
+    // 补齐缺口所需的日记全都卡在字数上：他有日记，只是太短。这两件事的补救动作不同。
+    if (context.tooShortCount > 0 && context.tooShortCount >= shortfall) return 'too_short';
+    return 'too_few';
+}
+
+export function firstInsightBlockCopy(
+    reason: FirstInsightBlockReason,
+    context: FirstInsightBlockContext,
+): { title: string; action: string } {
+    const shortfall = String(Math.max(1, FIRST_INSIGHT_MIN_VALID_ENTRIES - context.validCount));
+    switch (reason) {
+        case 'folder_missing':
+            return {
+                title: t('firstInsight.blockFolderMissingTitle', context.folderPath),
+                action: t('firstInsight.blockFolderMissingAction'),
+            };
+        case 'no_markdown':
+            return {
+                title: t('firstInsight.blockNoMarkdownTitle', context.folderPath),
+                action: t('firstInsight.blockNoMarkdownAction'),
+            };
+        case 'no_dates':
+            return {
+                title: t('firstInsight.blockNoDatesTitle', context.folderPath, String(context.markdownCount)),
+                action: t('firstInsight.blockNoDatesAction'),
+            };
+        case 'too_short':
+            return {
+                title: t(
+                    'firstInsight.blockTooShortTitle',
+                    context.folderPath,
+                    String(context.candidateCount),
+                    String(context.tooShortCount),
+                    String(FIRST_INSIGHT_MIN_ANALYZABLE_CHARS),
+                ),
+                action: t('firstInsight.blockTooShortAction', String(context.validCount), shortfall),
+            };
+        default:
+            return {
+                title: t(
+                    'firstInsight.tooFewNotice',
+                    String(context.validCount),
+                    String(FIRST_INSIGHT_MIN_VALID_ENTRIES),
+                ),
+                action: t('firstInsight.blockTooFewAction', shortfall, String(FIRST_INSIGHT_MIN_VALID_ENTRIES)),
+            };
+    }
+}
 
 interface FolderTreeNode {
     name: string;
@@ -25,46 +125,80 @@ export class FirstInsightModal extends Modal {
     private actionEl!: HTMLElement;
     private reportEl!: HTMLElement;
     private importToDailyEl!: HTMLInputElement;
-    private markdownComponent!: Component;
     private scanResult: LegacyImportScanResult | null = null;
     private draft: FirstInsightReportDraft | null = null;
+    /**
+     * 已经建立的导入会话。缓存它是为了让「开启试用后继续」不必重新复制一遍原文——
+     * `createImport()` 会往归档区写文件，重跑一次就多出一份一模一样的副本。
+     */
+    private importSession: LegacyImportSession | null = null;
 
-    constructor(app: TideLogPlugin['app'], private plugin: TideLogPlugin) {
+    constructor(
+        app: TideLogPlugin['app'],
+        private plugin: TideLogPlugin,
+        /** 引导弹窗里用户已确认过的目录。没有时才回落到猜测。 */
+        private prefillFolder?: string,
+    ) {
         super(app);
+    }
+
+    private get isDirectMode(): boolean {
+        return Boolean(this.prefillFolder?.trim());
     }
 
     onOpen(): void {
         const { contentEl } = this;
-        this.markdownComponent = new Component();
-        this.markdownComponent.load();
         this.modalEl.addClass('tl-first-insight-shell');
         contentEl.addClass('tl-first-insight-modal');
 
-        const headerEl = contentEl.createDiv('tl-first-insight-header');
-        headerEl.createDiv({ cls: 'tl-insights-report-preview-kicker', text: t('firstInsight.kicker') });
-        headerEl.createEl('h2', { cls: 'tl-first-insight-title', text: t('firstInsight.title') });
-        headerEl.createDiv({ cls: 'tl-insights-card-desc', text: t('firstInsight.desc') });
-        headerEl.createDiv({ cls: 'tl-first-insight-privacy-note', text: t('firstInsight.privacyNote') });
+        if (!this.isDirectMode) {
+            const headerEl = contentEl.createDiv('tl-first-insight-header');
+            headerEl.createDiv({ cls: 'tl-insights-report-preview-kicker', text: t('firstInsight.kicker') });
+            headerEl.createEl('h2', { cls: 'tl-first-insight-title', text: t('firstInsight.title') });
+            headerEl.createDiv({ cls: 'tl-insights-card-desc', text: t('firstInsight.desc') });
+            headerEl.createDiv({ cls: 'tl-first-insight-privacy-note', text: t('firstInsight.privacyNote') });
 
-        const stepperEl = contentEl.createDiv('tl-first-insight-stepper');
-        [
-            t('firstInsight.stepChoose'),
-            t('firstInsight.stepScan'),
-            t('firstInsight.stepReport'),
-        ].forEach((label, index) => {
-            const itemEl = stepperEl.createDiv('tl-first-insight-stepper-item');
-            itemEl.createSpan({ cls: 'tl-first-insight-stepper-index', text: String(index + 1) });
-            itemEl.createSpan({ cls: 'tl-first-insight-stepper-label', text: label });
-        });
-
-        this.renderSetupCard(contentEl);
+            const stepperEl = contentEl.createDiv('tl-first-insight-stepper');
+            [
+                t('firstInsight.stepChoose'),
+                t('firstInsight.stepScan'),
+                t('firstInsight.stepReport'),
+            ].forEach((label, index) => {
+                const itemEl = stepperEl.createDiv('tl-first-insight-stepper-item');
+                itemEl.createSpan({ cls: 'tl-first-insight-stepper-index', text: String(index + 1) });
+                itemEl.createSpan({ cls: 'tl-first-insight-stepper-label', text: label });
+            });
+            this.renderSetupCard(contentEl);
+        } else {
+            this.folderInputEl = contentEl.createEl('input', {
+                cls: 'tl-first-insight-folder-value',
+                attr: { type: 'hidden', value: this.prefillFolder!.trim() },
+            });
+            this.folderInputEl.value = this.prefillFolder!.trim();
+            this.importToDailyEl = contentEl.createEl('input', {
+                cls: 'tl-first-insight-direct-import-toggle',
+                attr: { type: 'checkbox', hidden: 'true' },
+            });
+        }
         this.scanPreviewEl = contentEl.createDiv('tl-first-insight-preview');
         this.actionEl = contentEl.createDiv('tl-first-insight-actions');
         this.reportEl = contentEl.createDiv('tl-first-insight-report');
+
+        if (this.isDirectMode) {
+            const controlsEl = contentEl.createDiv('tl-first-insight-direct-controls');
+            const generateButton = controlsEl.createEl('button', {
+                cls: 'tl-insights-primary-btn tl-insights-primary-btn-ready',
+                text: t('firstInsight.generateBtn'),
+                attr: { type: 'button' },
+            });
+            // 自动启动前先锁住按钮，避免用户在 setTimeout 回调前点击造成双请求。
+            generateButton.disabled = true;
+            generateButton.addEventListener('click', () => void this.startFirstInsight(generateButton));
+            window.setTimeout(() => void this.startFirstInsight(generateButton), 0);
+        }
     }
 
     onClose(): void {
-        this.markdownComponent?.unload();
         this.modalEl.removeClass('tl-first-insight-shell');
         this.contentEl.empty();
     }
@@ -81,27 +215,32 @@ export class FirstInsightModal extends Modal {
         folderField.createEl('label', { text: t('firstInsight.folderLabel') });
 
         const folderOptions = this.getImportableFolderOptions(this.plugin.legacyImportService.listVaultFolders());
+        this.folderInputEl = folderField.createEl('input', {
+            cls: 'tl-first-insight-folder-value',
+            attr: { type: 'hidden' },
+        });
         if (folderOptions.length > 0) {
-            this.folderInputEl = folderField.createEl('input', {
-                cls: 'tl-first-insight-folder-value',
-                attr: { type: 'hidden' },
-            });
             const selectedEl = folderField.createDiv('tl-first-insight-folder-selected');
             const treeEl = folderField.createDiv('tl-first-insight-folder-tree');
             this.renderFolderTree(treeEl, folderOptions, this.pickDefaultFolder(folderOptions), selectedEl);
         } else {
-            this.folderInputEl = folderField.createEl('input', {
-                cls: 'tl-first-insight-folder-text-input',
-                attr: {
-                    type: 'text',
-                    placeholder: t('firstInsight.folderPlaceholder'),
-                    value: this.plugin.settings.dailyFolder,
-                },
+            folderField.createDiv({
+                cls: 'tl-insights-notice tl-insights-notice-stale',
+                text: t('onboarding.folderEmpty'),
             });
-            this.folderInputEl.value = this.plugin.settings.dailyFolder;
         }
 
-        card.createDiv({ cls: 'tl-first-insight-folder-note', text: t('firstInsight.folderNote') });
+        // 明确匹配到配置目录或 Daily / 日记语义时，不显示“这是猜测”。只有退回
+        // 字典序占位时才提醒用户，避免正确路径旁边出现一条无意义的怀疑文案。
+        if (folderOptions.length > 0 && !(this.prefillFolder && folderOptions.includes(this.prefillFolder))) {
+            const guess = guessJournalFolder(folderOptions, this.folderGuessContext());
+            if (isFolderGuessFallback(guess, folderOptions, this.folderGuessContext())) {
+                card.createDiv({
+                    cls: 'tl-first-insight-folder-guess-hint',
+                    text: t('firstInsight.folderGuessFallbackHint'),
+                });
+            }
+        }
 
         const importOptionEl = card.createEl('label', { cls: 'tl-first-insight-system-import-option' });
         this.importToDailyEl = importOptionEl.createEl('input', { attr: { type: 'checkbox' } });
@@ -114,6 +253,7 @@ export class FirstInsightModal extends Modal {
             text: t('firstInsight.generateBtn'),
             attr: { type: 'button' },
         });
+        generateButton.disabled = folderOptions.length === 0;
         const resetGeneratedState = () => {
             this.resetGeneratedStateForFolderChange(generateButton);
         };
@@ -126,53 +266,34 @@ export class FirstInsightModal extends Modal {
 
     private resetGeneratedStateForFolderChange(button: HTMLButtonElement): void {
         if (button.classList.contains('tl-insights-primary-btn-loading')) return;
-        if (!this.draft && !this.scanResult) return;
+        // 失败态卡片也要跟着清掉——不然用户在改目录时，上一次的「找不到文件夹」还挂在那里。
+        if (!this.draft && !this.scanResult && !this.importSession
+            && !this.scanPreviewEl.querySelector('.tl-first-insight-block')) return;
 
-        this.scanPreviewEl.empty();
-        this.actionEl.empty();
-        this.reportEl.empty();
-        this.scanResult = null;
-        this.draft = null;
+        this.clearResults();
         button.parentElement?.querySelector('.tl-first-insight-generating-status')?.remove();
         button.disabled = false;
         button.removeClass('tl-insights-primary-btn-complete');
         button.setText(t('firstInsight.generateBtn'));
     }
 
-    private pickDefaultFolder(folderOptions: string[]): string {
-        const archiveFolder = this.plugin.settings.archiveFolder;
-        const isImportableFolder = (folderPath: string) => {
-            return !folderPath.startsWith(`${archiveFolder}/`)
-                && folderPath !== archiveFolder;
+    private folderGuessContext() {
+        return {
+            archiveFolder: this.plugin.settings.archiveFolder,
+            dailyFolder: this.plugin.settings.dailyFolder,
         };
+    }
 
-        const legacyLike = folderOptions.find((folderPath) => {
-            const normalized = folderPath.toLowerCase();
-            return isImportableFolder(folderPath)
-                && /(legacy|journal|diary|日记)/i.test(normalized);
-        });
-        if (legacyLike) return legacyLike;
-
-        const dailyLike = folderOptions.find((folderPath) => {
-            return isImportableFolder(folderPath)
-                && /daily/i.test(folderPath.toLowerCase());
-        });
-        if (dailyLike) return dailyLike;
-
-        if (folderOptions.includes(this.plugin.settings.dailyFolder)) {
-            return this.plugin.settings.dailyFolder;
+    private pickDefaultFolder(folderOptions: string[]): string {
+        // 引导弹窗若已经让用户确认过目录，就用那个值——用户的确认永远优先于猜测。
+        if (this.prefillFolder && folderOptions.includes(this.prefillFolder)) {
+            return this.prefillFolder;
         }
-
-        return folderOptions[0] ?? '';
+        return guessJournalFolder(folderOptions, this.folderGuessContext());
     }
 
     private getImportableFolderOptions(folderOptions: string[]): string[] {
-        const archiveFolder = this.plugin.settings.archiveFolder;
-        const filtered = folderOptions.filter(folderPath => {
-            return folderPath !== archiveFolder
-                && !folderPath.startsWith(`${archiveFolder}/`);
-        });
-        return (filtered.length > 0 ? filtered : folderOptions).sort((a, b) => a.localeCompare(b));
+        return importableFolderOptions(folderOptions, this.folderGuessContext());
     }
 
     private renderFolderTree(
@@ -341,23 +462,34 @@ export class FirstInsightModal extends Modal {
             return;
         }
 
+        // 目录不存在是失败态里最容易发生的一种——首屏预填的就是一个猜测值。
+        // 让它走 scanFolder 的 throw，用户看到的是英文的 `Folder not found: X`。
+        if (!(this.app.vault.getAbstractFileByPath(folderPath) instanceof TFolder)) {
+            this.clearResults();
+            this.renderBlockCard('folder_missing', {
+                folderPath,
+                markdownCount: 0,
+                candidateCount: 0,
+                validCount: 0,
+                tooShortCount: 0,
+            });
+            return;
+        }
+
         button.disabled = true;
         button.addClass('tl-insights-primary-btn-loading');
         button.empty();
         button.createSpan('tl-insights-spinner');
         button.createSpan({ cls: 'tl-insights-loading-label', text: t('firstInsight.scanning') });
-        this.scanPreviewEl.empty();
-        this.actionEl.empty();
-        this.reportEl.empty();
-        this.scanResult = null;
-        this.draft = null;
+        this.clearResults();
 
         let completed = false;
         try {
-            const scan = await this.plugin.legacyImportService.scanFolder(folderPath);
-            this.scanResult = scan;
-            this.renderScanPreview(scan);
-            if (!scan.canGenerate) {
+            const detectedScan = await this.plugin.legacyImportService.scanFolder(folderPath);
+            const selection = selectRecentFirstInsightScan(detectedScan);
+            this.scanResult = selection.scan;
+            this.renderScanPreview(detectedScan, selection.scan);
+            if (!selection.scan.canGenerate) {
                 return;
             }
             completed = await this.generate(button);
@@ -380,46 +512,121 @@ export class FirstInsightModal extends Modal {
         }
     }
 
-    private renderScanPreview(scan: LegacyImportScanResult): void {
+    /**
+     * 忘掉上一次运行的**唯一**入口。
+     *
+     * 换过文件夹之后还留着旧的 importSession，就会拿 A 文件夹的副本去生成
+     * 界面上显示的 B 文件夹的画像——错得静悄悄。新增一个状态字段却漏掉一处清理
+     * 是这类 bug 的常态，所以清理只留一个地方。
+     */
+    private clearResults(): void {
+        this.scanPreviewEl.empty();
+        this.actionEl.empty();
+        this.reportEl.empty();
+        this.scanResult = null;
+        this.draft = null;
+        this.importSession = null;
+    }
+
+    /** 没有扫描结果可挂靠时（文件夹压根不存在），自成一张卡片。 */
+    private renderBlockCard(reason: FirstInsightBlockReason, context: FirstInsightBlockContext): void {
+        const card = this.scanPreviewEl.createDiv('tl-insights-card tl-first-insight-scan-card');
+        this.renderBlockNotice(card, reason, context);
+        this.revealElement(card);
+    }
+
+    /**
+     * 失败态只说一句「差 N 篇」是不够的：用户需要知道差的是什么，以及现在该做什么。
+     * `data-block-reason` 让这四种情况在测试里可分辨，不必依赖文案匹配。
+     */
+    private renderBlockNotice(
+        containerEl: HTMLElement,
+        reason: FirstInsightBlockReason,
+        context: FirstInsightBlockContext,
+    ): void {
+        const copy = firstInsightBlockCopy(reason, context);
+        const noticeEl = containerEl.createDiv({
+            cls: 'tl-insights-notice tl-insights-notice-stale tl-first-insight-block',
+            attr: { 'data-block-reason': reason },
+        });
+        noticeEl.createDiv({ cls: 'tl-first-insight-block-title', text: copy.title });
+        noticeEl.createDiv({ cls: 'tl-first-insight-block-action', text: copy.action });
+    }
+
+    private renderScanPreview(detectedScan: LegacyImportScanResult, selectedScan: LegacyImportScanResult): void {
         this.scanPreviewEl.empty();
         const card = this.scanPreviewEl.createDiv('tl-insights-card tl-first-insight-scan-card');
         const header = card.createDiv('tl-insights-card-header');
         const titleWrap = header.createDiv('tl-insights-card-title-wrap');
-        titleWrap.createDiv({ cls: 'tl-insights-card-title', text: t('firstInsight.scanPreviewTitle') });
+        titleWrap.createDiv({
+            cls: 'tl-insights-card-title',
+            text: t('firstInsight.scanPreviewTitle', String(selectedScan.validCount)),
+        });
         titleWrap.createDiv({
             cls: 'tl-insights-card-subtitle',
-            text: t('firstInsight.scanPreviewSubtitle', scan.folderPath, scan.dateRange.start, scan.dateRange.end),
+            text: t(
+                'firstInsight.scanPreviewSubtitle',
+                selectedScan.folderPath,
+                selectedScan.dateRange.start,
+                selectedScan.dateRange.end,
+            ),
         });
 
-        const stats = card.createDiv('tl-first-insight-stats');
-        this.renderStat(stats, t('firstInsight.candidateCount'), String(scan.candidateCount));
-        this.renderStat(stats, t('firstInsight.validCount'), String(scan.validCount));
-        this.renderStat(stats, t('firstInsight.excludedCount'), String(scan.excludedEntries.length));
-
-        const notice = card.createDiv('tl-insights-notice');
-        if (scan.canGenerate) {
-            const estimate = this.buildGenerationEstimate(scan);
-            notice.setText(t('firstInsight.readyNotice', String(scan.candidateCount), String(scan.validCount), estimate.label));
+        if (selectedScan.canGenerate) {
+            const estimate = this.buildGenerationEstimate(selectedScan);
+            const isLimited = detectedScan.validCount > FIRST_INSIGHT_MAX_SELECTED_ENTRIES;
+            card.createDiv({
+                cls: 'tl-insights-notice',
+                text: t(
+                    isLimited ? 'firstInsight.readyNoticeLimited' : 'firstInsight.readyNoticeAll',
+                    String(detectedScan.validCount),
+                    String(selectedScan.validCount),
+                    estimate.label,
+                    String(FIRST_INSIGHT_RECENT_WINDOW_DAYS),
+                    String(FIRST_INSIGHT_MAX_SELECTED_ENTRIES),
+                ),
+            });
+            // 一篇日记都没写明自己的日期时，这多半不是日记文件夹——但它扫得通过，
+            // 不该拦。拦住写「今天很累.md」的人比让选错目录的人多等一次更糟。
+            if (selectedScan.validEntries.every(entry => entry.dateSource === 'mtime')) {
+                card.createDiv({
+                    cls: 'tl-insights-notice tl-insights-notice-stale tl-first-insight-mtime-warning',
+                    text: t('firstInsight.mtimeOnlyWarning', String(selectedScan.validCount), selectedScan.folderPath),
+                });
+            }
+        } else if (detectedScan.canGenerate) {
+            const noticeEl = card.createDiv({
+                cls: 'tl-insights-notice tl-insights-notice-stale tl-first-insight-block',
+                attr: { 'data-block-reason': 'recent_too_few' },
+            });
+            noticeEl.createDiv({
+                cls: 'tl-first-insight-block-title',
+                text: t(
+                    'firstInsight.blockRecentTooFewTitle',
+                    String(FIRST_INSIGHT_RECENT_WINDOW_DAYS),
+                    String(selectedScan.validCount),
+                ),
+            });
+            noticeEl.createDiv({
+                cls: 'tl-first-insight-block-action',
+                text: t('firstInsight.blockRecentTooFewAction', String(FIRST_INSIGHT_MIN_VALID_ENTRIES)),
+            });
         } else {
-            notice.addClass('tl-insights-notice-stale');
-            notice.setText(t(
-                'firstInsight.tooFewNotice',
-                String(scan.validCount),
-                String(FIRST_INSIGHT_MIN_VALID_ENTRIES),
-            ));
+            const context = firstInsightBlockContext(detectedScan);
+            this.renderBlockNotice(card, diagnoseFirstInsightBlock(context), context);
         }
 
-        if (scan.excludedEntries.length > 0) {
+        if (!selectedScan.canGenerate && detectedScan.excludedEntries.length > 0) {
             const excludedEl = card.createDiv('tl-first-insight-excluded');
             excludedEl.createDiv({ cls: 'tl-first-insight-section-title', text: t('firstInsight.excludedTitle') });
             const listEl = excludedEl.createEl('ul');
-            scan.excludedEntries.slice(0, 8).forEach((item) => {
+            detectedScan.excludedEntries.slice(0, 8).forEach((item) => {
                 listEl.createEl('li', {
                     text: `${item.path} · ${this.reasonLabel(item.reason)}${item.date ? ` · ${item.date}` : ''}`,
                 });
             });
-            if (scan.excludedEntries.length > 8) {
-                excludedEl.createDiv({ cls: 'tl-first-insight-muted', text: t('firstInsight.excludedMore', String(scan.excludedEntries.length - 8)) });
+            if (detectedScan.excludedEntries.length > 8) {
+                excludedEl.createDiv({ cls: 'tl-first-insight-muted', text: t('firstInsight.excludedMore', String(detectedScan.excludedEntries.length - 8)) });
             }
         }
 
@@ -436,81 +643,115 @@ export class FirstInsightModal extends Modal {
         button.parentElement?.querySelector('.tl-first-insight-generating-status')?.remove();
         const progressEl = button.parentElement?.createDiv('tl-first-insight-generating-status');
 
+        this.actionEl.empty();
         this.reportEl.empty();
-        const card = this.reportEl.createDiv('tl-insights-card tl-first-insight-report-card');
-        const header = card.createDiv('tl-insights-card-header');
-        const titleWrap = header.createDiv('tl-insights-card-title-wrap');
-        titleWrap.createDiv({ cls: 'tl-insights-card-title', text: t('firstInsight.reportPreviewTitle') });
-        titleWrap.createDiv({ cls: 'tl-insights-card-subtitle', text: t('firstInsight.reportPreviewSubtitle') });
-        const notice = card.createDiv({ cls: 'tl-insights-notice', text: t('firstInsight.reportGeneratingNotice') });
-        const stream = card.createDiv('tl-insights-stream');
-        let fullContent = '';
-        this.revealElement(card);
-        const startedAt = Date.now();
-        let stage = t('firstInsight.stagePreparing');
         const estimate = this.buildGenerationEstimate(this.scanResult);
+        let longRunning = false;
         const updateProgress = () => {
-            const remaining = this.formatRemainingMinutes(estimate, Date.now() - startedAt);
-            const key = Date.now() - startedAt >= estimate.maxSeconds * 1000
-                ? 'firstInsight.generatingLongHint'
-                : 'firstInsight.generatingHint';
-            const progressText = t(key, estimate.label, String(estimate.journalCount), stage, remaining);
+            const key = longRunning ? 'firstInsight.generatingLongHint' : 'firstInsight.generatingHint';
+            const progressText = t(key, String(estimate.journalCount), estimate.label);
             progressEl?.setText(progressText);
         };
         updateProgress();
-        const progressTimer = window.setInterval(updateProgress, 1000);
+        const progressTimer = window.setTimeout(() => {
+            longRunning = true;
+            updateProgress();
+        }, estimate.maxSeconds * 1000);
 
         try {
-            stage = t('firstInsight.stagePreparing');
-            updateProgress();
-            const session = await this.plugin.legacyImportService.createImport(this.scanResult);
-            let dailyImportResult: LegacyDailyImportResult | null = null;
-            if (this.importToDailyEl.checked) {
-                stage = t('firstInsight.stageImporting');
-                updateProgress();
-                dailyImportResult = await this.plugin.legacyImportService.importSessionToDailyNotes(session);
+            const session = this.importSession
+                ?? await this.plugin.legacyImportService.createImport(this.scanResult);
+            const isFirstAttempt = this.importSession === null;
+            this.importSession = session;
+            // 重试（开启试用后继续）不该再往日记库里导入一次——第一次已经导过了。
+            if (isFirstAttempt && this.importToDailyEl.checked) {
+                await this.plugin.legacyImportService.importSessionToDailyNotes(session);
             }
-            stage = t('firstInsight.stageGenerating');
-            updateProgress();
-            const draft = await this.plugin.firstInsightService.generateFirstInsight(session, (chunk) => {
-                fullContent += chunk;
-                const displayContent = stripProfileTags(fullContent);
-                stream.empty();
-                try {
-                    void MarkdownRenderer.render(this.app, displayContent, stream, '', this.markdownComponent).catch((error) => {
-                        console.warn('TideLog first insight preview render failed:', error);
-                    });
-                } catch (error) {
-                    console.warn('TideLog first insight preview render failed:', error);
-                }
-            });
+            const draft = await this.plugin.firstInsightService.generateFirstInsight(session);
             this.draft = draft;
-            stream.empty();
-            await MarkdownRenderer.render(this.app, draft.report, stream, '', this.markdownComponent);
-            notice.setText(dailyImportResult
-                ? t(
-                    'firstInsight.generatedDraftNoticeWithImport',
-                    String(dailyImportResult.createdPaths.length),
-                    String(dailyImportResult.appendedPaths.length),
-                    String(dailyImportResult.skippedPaths.length),
-                )
-                : t('firstInsight.generatedDraftNotice'));
-            this.renderSaveAction(card);
-            this.revealElement(card);
-            window.setTimeout(() => this.revealElement(card), 120);
+            const actionCard = this.renderSaveAction();
+            this.revealElement(actionCard);
+            window.setTimeout(() => this.revealElement(actionCard), 120);
+            if (this.isDirectMode) button.parentElement?.remove();
             return true;
         } catch (error) {
-            notice.addClass('tl-insights-notice-stale');
-            notice.empty();
-            const message = error instanceof Error ? error.message : t('firstInsight.generateFailed');
-            void MarkdownRenderer.render(this.app, message, notice, '', this.markdownComponent)
-                .catch(() => notice.setText(message));
+            const card = this.reportEl.createDiv('tl-insights-card tl-first-insight-error-card');
+            const notice = card.createDiv('tl-insights-notice tl-insights-notice-stale');
+            // TideLogError 保留了分类结果，所以这里能区分「档位不够」和「网络断了」。
+            // 前者有一条明确的出路，后者没有——不该拿同一句话打发。
+            const message = formatAPIErrorPlainText(error, this.plugin.settings.activeProvider)
+                || t('firstInsight.generateFailed');
+            notice.setText(message);
+            if (this.canOfferTrialFor(error)) {
+                this.renderTrialGate(card, button);
+            }
+            this.revealElement(card);
             return false;
         } finally {
-            window.clearInterval(progressTimer);
+            window.clearTimeout(progressTimer);
             progressEl?.remove();
             button.removeClass('tl-insights-primary-btn-loading');
         }
+    }
+
+    /**
+     * 只有「档位不提供这项功能」且用户还能开试用时，才在这里给出路。
+     * 配额用尽、网络失败、内容被拦——这些开试用都解决不了，给按钮反而是骗人。
+     */
+    private canOfferTrialFor(error: unknown): boolean {
+        if (!(error instanceof TideLogError) || error.code !== ErrorCode.FEATURE_UNAVAILABLE) return false;
+        return this.plugin.licenseManager?.isTrialEligible?.() === true;
+    }
+
+    /**
+     * 就地开启试用并接着生成。
+     *
+     * 这是四条承诺该出现的位置之一：用户此刻正要开启试用，条款到这里才有人读
+     * ——和付费墙同理，只是他这次是从画像这条路撞上来的。
+     */
+    private renderTrialGate(card: HTMLElement, generateButton: HTMLButtonElement): void {
+        card.querySelector('.tl-first-insight-trial-gate')?.remove();
+        const gate = card.createDiv('tl-first-insight-trial-gate');
+        gate.createDiv({ cls: 'tl-first-insight-trial-gate-title', text: t('firstInsight.trialRequiredTitle') });
+        gate.createDiv({
+            cls: 'tl-first-insight-trial-gate-desc',
+            text: t('firstInsight.trialRequiredDesc', String(this.scanResult?.validCount ?? 0)),
+        });
+
+        gate.createDiv({ cls: 'tl-first-insight-trial-promises', text: t('trial.compactPromise') });
+
+        const startBtn = gate.createEl('button', {
+            cls: 'tl-insights-primary-btn tl-insights-primary-btn-ready tl-first-insight-trial-start',
+            text: t('firstInsight.trialRequiredBtn'),
+            attr: { type: 'button' },
+        });
+        startBtn.addEventListener('click', () => {
+            void (async () => {
+                startBtn.disabled = true;
+                startBtn.setText(t('firstInsight.trialStarting'));
+                // startTrial() 内部要写盘。抛出来的话按钮会永久停在「正在开启试用」，
+                // 用户既看不到原因也点不动——比失败本身更糟。
+                const started = await this.plugin.licenseManager.startTrial().catch((error) => {
+                    console.warn('TideLog trial start failed:', error);
+                    return false;
+                });
+                if (!started) {
+                    startBtn.disabled = false;
+                    startBtn.setText(t('firstInsight.trialRequiredBtn'));
+                    new Notice(t('firstInsight.trialStartFailed'));
+                    return;
+                }
+                gate.remove();
+                // 会话已缓存，这一次不会重新复制原文，直接接着生成。
+                const completed = await this.generate(generateButton);
+                // 重试不经过 startFirstInsight，按钮状态得在这里自己收尾，
+                // 否则它会一直停在「正在生成画像」的加载态上。
+                generateButton.disabled = completed;
+                generateButton.toggleClass?.('tl-insights-primary-btn-complete', completed);
+                generateButton.setText(t(completed ? 'firstInsight.generatedBtn' : 'firstInsight.generateBtn'));
+            })();
+        });
+        this.revealElement(gate);
     }
 
     private revealElement(element: HTMLElement): void {
@@ -541,13 +782,8 @@ export class FirstInsightModal extends Modal {
         maxSeconds: number;
         journalCount: number;
     } {
-        const evidenceChars = scan.validEntries.reduce((sum, entry) => {
-            return sum + Math.min(entry.analyzableBody.length, getFirstInsightBodyExcerptLimit(scan.validCount));
-        }, 0);
-        const perJournalSeconds = scan.validCount <= 12 ? 18 : 4;
-        const expectedSeconds = 180 + (scan.validCount * perJournalSeconds) + (Math.ceil(evidenceChars / 1000) * 15);
-        const minSeconds = Math.min(720, Math.max(240, Math.ceil((expectedSeconds * 0.75) / 60) * 60));
-        const maxSeconds = Math.min(900, Math.max(minSeconds + 120, Math.ceil((expectedSeconds * 1.1) / 60) * 60));
+        const minSeconds = 60;
+        const maxSeconds = scan.validCount <= 12 ? 60 : 180;
 
         return {
             label: this.formatEstimateRange(minSeconds, maxSeconds),
@@ -566,31 +802,10 @@ export class FirstInsightModal extends Modal {
         return t('firstInsight.estimateMinutesRange', String(minMinutes), String(maxMinutes));
     }
 
-    private formatRemainingMinutes(
-        estimate: { minSeconds: number; maxSeconds: number },
-        elapsedMs: number,
-    ): string {
-        const elapsedSeconds = Math.floor(elapsedMs / 1000);
-        const minRemainingSeconds = estimate.minSeconds - elapsedSeconds;
-        const maxRemainingSeconds = estimate.maxSeconds - elapsedSeconds;
-        if (maxRemainingSeconds <= 0) {
-            return t('firstInsight.remainingModelWait');
-        }
-        const maxMinutes = Math.max(1, Math.ceil(maxRemainingSeconds / 60));
-        if (minRemainingSeconds <= 60) {
-            return t('firstInsight.remainingMinutesUpper', String(maxMinutes));
-        }
-        const minMinutes = Math.max(1, Math.ceil(minRemainingSeconds / 60));
-        if (minMinutes === maxMinutes) {
-            return t('firstInsight.remainingMinutes', String(maxMinutes));
-        }
-        return t('firstInsight.remainingMinutesRange', String(minMinutes), String(maxMinutes));
-    }
-
-    private renderSaveAction(card: HTMLElement): void {
-        const confirmEl = card.createDiv('tl-first-insight-confirm');
+    private renderSaveAction(): HTMLElement {
+        this.actionEl.empty();
+        const confirmEl = this.actionEl.createDiv('tl-insights-card tl-first-insight-confirm');
         confirmEl.createDiv({ cls: 'tl-first-insight-section-title', text: t('firstInsight.saveQuestion') });
-        confirmEl.createDiv({ cls: 'tl-insights-card-desc', text: t('firstInsight.saveDesc') });
         const saveButton = confirmEl.createEl('button', {
             cls: 'tl-insights-primary-btn tl-insights-primary-btn-ready',
             text: t('firstInsight.saveBtn'),
@@ -599,6 +814,7 @@ export class FirstInsightModal extends Modal {
         saveButton.addEventListener('click', () => {
             void this.saveDraft(saveButton);
         });
+        return confirmEl;
     }
 
     private async saveDraft(saveButton: HTMLButtonElement): Promise<void> {
@@ -606,24 +822,19 @@ export class FirstInsightModal extends Modal {
         saveButton.disabled = true;
         saveButton.setText(t('firstInsight.saving'));
         try {
-            const profileFile = await this.plugin.firstInsightService.saveInitialProfile(this.draft);
-            new Notice(t('firstInsight.savedNotice'));
-            if (profileFile) {
-                await this.app.workspace.getLeaf().openFile(profileFile);
+            const { profileFile, reportFile } = await this.plugin.firstInsightService.saveInitialProfile(this.draft);
+            new Notice(t('firstInsight.savedNotice', reportFile?.path ?? `${this.plugin.settings.archiveFolder}/Insights`));
+            if (reportFile ?? profileFile) {
+                await this.app.workspace.getLeaf().openFile(reportFile ?? profileFile!);
             }
+            await this.plugin.completeOnboarding();
             this.close();
-            void this.plugin.showTrialOfferOnce?.(t('chat.insightProfile'));
         } catch (error) {
+            console.error('TideLog failed to save the first insight report:', error);
             new Notice(error instanceof Error ? error.message : t('firstInsight.saveFailed'));
             saveButton.disabled = false;
             saveButton.setText(t('firstInsight.saveBtn'));
         }
-    }
-
-    private renderStat(containerEl: HTMLElement, label: string, value: string): void {
-        const item = containerEl.createDiv('tl-first-insight-stat');
-        item.createDiv({ cls: 'tl-first-insight-stat-value', text: value });
-        item.createDiv({ cls: 'tl-first-insight-stat-label', text: label });
     }
 
     private reasonLabel(reason: LegacyImportScanResult['excludedEntries'][number]['reason']): string {

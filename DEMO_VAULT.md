@@ -27,6 +27,6 @@ npm run demo:check
 3. 若 Obsidian 显示第三方插件安全提示，确认信任该 Vault。
 4. 打开 `00-从这里开始.md`，再点击左侧 TideLog 波浪图标。
 
-演示 Vault 不包含真实 API Key 或 Pro License。生成脚本会写入一个仅供本地截图使用、7 天内有效的演示 Pro 状态；它没有 License Key，也不会向授权服务器发起验证。正式演示前重新运行一次 `npm run demo:vault` 即可续期。
+演示 Vault 不包含真实用户数据或 Pro License。生成脚本会写入一个仅供本地截图使用、7 天内有效的演示 Pro 状态；它没有 License Key，也不会向授权服务器发起验证。正式演示前重新运行一次 `npm run demo:vault` 即可续期。
 
 AI 能力由 TideLog 服务端统一提供，演示时无需配置任何 API Key。现场重新生成会消耗对应档位的配额。

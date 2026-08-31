@@ -59,6 +59,101 @@ export interface LegacyImportScanResult {
     canGenerate: boolean;
 }
 
+/** 日记不多时全部分析；超过 30 篇才限制为最近 30 天，且最多选择 30 篇。 */
+export const FIRST_INSIGHT_RECENT_WINDOW_DAYS = 30;
+export const FIRST_INSIGHT_MAX_SELECTED_ENTRIES = 30;
+
+export interface FirstInsightScanSelection {
+    scan: LegacyImportScanResult;
+    detectedCount: number;
+    selectedCount: number;
+    windowStart: string;
+    windowEnd: string;
+}
+
+/**
+ * 从完整扫描结果中选出首次画像真正会发送给 AI 的记录。
+ *
+ * 30 篇以内完整读取，不能为了一个对小库没有意义的“近期”概念丢掉用户交给
+ * TideLog 的记录。只有总数超过上限时，窗口才锚定在最新一篇可分析日记；
+ * 窗口内仍超过 30 篇时均匀取样，避免多篇同日记录挤掉其他日期。
+ */
+export function selectRecentFirstInsightScan(
+    source: LegacyImportScanResult,
+    windowDays = FIRST_INSIGHT_RECENT_WINDOW_DAYS,
+    maxEntries = FIRST_INSIGHT_MAX_SELECTED_ENTRIES,
+): FirstInsightScanSelection {
+    const ordered = source.validEntries
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date) || a.sourcePath.localeCompare(b.sourcePath));
+    if (ordered.length === 0) {
+        return {
+            scan: source,
+            detectedCount: source.candidateCount,
+            selectedCount: 0,
+            windowStart: source.dateRange.start,
+            windowEnd: source.dateRange.end,
+        };
+    }
+
+    const safeMaxEntries = Math.max(1, Math.floor(maxEntries));
+    if (ordered.length <= safeMaxEntries) {
+        const selectedScan: LegacyImportScanResult = {
+            ...source,
+            dateRange: {
+                start: ordered[0].date,
+                end: ordered[ordered.length - 1].date,
+            },
+            candidateCount: ordered.length,
+            validCount: ordered.length,
+            validEntries: ordered,
+            canGenerate: ordered.length >= FIRST_INSIGHT_MIN_VALID_ENTRIES,
+        };
+        return {
+            scan: selectedScan,
+            detectedCount: source.candidateCount,
+            selectedCount: ordered.length,
+            windowStart: selectedScan.dateRange.start,
+            windowEnd: selectedScan.dateRange.end,
+        };
+    }
+
+    const latest = moment(ordered[ordered.length - 1].date, 'YYYY-MM-DD', true);
+    const windowStart = latest.clone().subtract(Math.max(1, windowDays) - 1, 'days').format('YYYY-MM-DD');
+    const windowEnd = latest.format('YYYY-MM-DD');
+    const inWindow = ordered.filter(entry => entry.date >= windowStart && entry.date <= windowEnd);
+
+    let selected = inWindow;
+    if (selected.length > safeMaxEntries) {
+        if (safeMaxEntries === 1) {
+            selected = selected.slice(-1);
+        } else {
+            const step = (selected.length - 1) / (safeMaxEntries - 1);
+            selected = Array.from({ length: safeMaxEntries }, (_, index) => selected[Math.round(index * step)]);
+        }
+    }
+
+    const selectedScan: LegacyImportScanResult = {
+        ...source,
+        dateRange: {
+            start: selected[0]?.date ?? windowStart,
+            end: selected[selected.length - 1]?.date ?? windowEnd,
+        },
+        candidateCount: inWindow.length,
+        validCount: selected.length,
+        validEntries: selected,
+        canGenerate: selected.length >= FIRST_INSIGHT_MIN_VALID_ENTRIES,
+    };
+
+    return {
+        scan: selectedScan,
+        detectedCount: source.candidateCount,
+        selectedCount: selected.length,
+        windowStart,
+        windowEnd,
+    };
+}
+
 export interface NormalizedLegacyJournal {
     date: string;
     sourcePath: string;
@@ -281,6 +376,13 @@ export class LegacyImportService {
             const dailyPath = `${this.plugin.settings.dailyFolder}/${entry.date}.md`;
             const existing = this.plugin.app.vault.getAbstractFileByPath(dailyPath);
 
+            // 用户选中的源文件夹可能就是 TideLog 的 dailyFolder。把一篇日记导入
+            // 它自己，只会在文末复制出一整份重复正文，并在下次画像时再次被读取。
+            if (entry.sourcePath === dailyPath) {
+                result.skippedPaths.push(dailyPath);
+                continue;
+            }
+
             if (!existing) {
                 await this.plugin.app.vault.create(dailyPath, buildSystemDailyNoteFromLegacy(entry));
                 result.createdPaths.push(dailyPath);
@@ -389,7 +491,7 @@ export function extractLegacyJournalDate(content: string, sourcePath: string, so
 
 export function cleanJournalContent(content: string): string {
     const withoutFrontmatter = content.replace(/^---\s*\n[\s\S]*?\n---\s*/m, '');
-    return withoutFrontmatter
+    return stripLegacyImportSections(withoutFrontmatter)
         .replace(/```[\s\S]*?```/g, '')
         .replace(/<!--[\s\S]*?-->/g, '')
         .replace(/^#{1,6}\s+/gm, '')
@@ -397,6 +499,31 @@ export function cleanJournalContent(content: string): string {
         .replace(/\[[^\]]+]\([^)]*\)/g, (match) => match.replace(/^\[|\]\([^)]*\)$/g, ''))
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+/** 去掉 TideLog 自己追加的旧日记导入区，避免导入副本被当作第二份原始证据。 */
+function stripLegacyImportSections(content: string): string {
+    const lines = content.split(/\r?\n/);
+    const kept: string[] = [];
+    let skippedHeadingLevel = 0;
+
+    for (const line of lines) {
+        const heading = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+        if (heading) {
+            const level = heading[1].length;
+            const title = heading[2].trim().toLowerCase();
+            if (title === '旧日记导入' || title === 'legacy journal import') {
+                skippedHeadingLevel = level;
+                continue;
+            }
+            if (skippedHeadingLevel > 0 && level <= skippedHeadingLevel) {
+                skippedHeadingLevel = 0;
+            }
+        }
+        if (skippedHeadingLevel === 0) kept.push(line);
+    }
+
+    return kept.join('\n');
 }
 
 export function isLegacyJournalAnalyzable(content: string): boolean {

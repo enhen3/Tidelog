@@ -4,7 +4,7 @@
 
 import { requestUrl } from 'obsidian';
 import type TideLogPlugin from '../main';
-import type { AIFeature, AIProvider, ChatMessage, StreamCallback } from '../types';
+import type { AIFeature, AIProvider, AIResponseMode, ChatMessage, StreamCallback } from '../types';
 import { getLanguage, t } from '../i18n';
 import {
     classifyHTTPError,
@@ -17,9 +17,10 @@ const API_BASE = 'https://tidelog-api.mydreamchronicle.com';
 
 interface ProxyErrorBody {
     error?: string;
+    scope?: string;
     used?: number;
     limit?: number;
-    resets_at?: number;
+    resets_at?: number | null;
 }
 
 function parseErrorBody(responseText: string): ProxyErrorBody {
@@ -30,7 +31,7 @@ function parseErrorBody(responseText: string): ProxyErrorBody {
     }
 }
 
-function formatResetTime(value: number | undefined): string {
+function formatResetTime(value: number | null | undefined): string {
     if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
     const milliseconds = value < 1_000_000_000_000 ? value * 1000 : value;
     return new Date(milliseconds).toLocaleString(getLanguage() === 'en' ? 'en-US' : 'zh-CN');
@@ -53,10 +54,21 @@ export function classifyTideLogProxyError(status: number, responseText: string):
             ),
         );
     }
+    if (status === 429 && body.error === 'fair_use_limit_reached') {
+        return new TideLogError(
+            ErrorCode.QUOTA_EXCEEDED,
+            t('error.aiFairUseLimitReached', formatResetTime(body.resets_at)),
+        );
+    }
     if (status === 403 && body.error === 'feature_not_available') {
         return new TideLogError(ErrorCode.FEATURE_UNAVAILABLE, t('error.aiFeatureUnavailable'));
     }
-    if (status === 502 && body.error === 'provider_error') {
+    if (status === 502 && [
+        'provider_error',
+        'provider_unavailable',
+        'provider_empty_response',
+        'provider_invalid_response',
+    ].includes(body.error ?? '')) {
         return new TideLogError(ErrorCode.PROVIDER_ERROR, t('error.aiProviderError'));
     }
 
@@ -76,13 +88,22 @@ export class TideLogProvider implements AIProvider {
         systemPrompt: string,
         onChunk: StreamCallback,
         feature: AIFeature = 'chat',
+        sessionId?: string,
+        responseMode: AIResponseMode = 'stream',
     ): Promise<string> {
-        const requestBody = this.buildRequestBody(messages, systemPrompt, feature);
+        const shouldStream = responseMode === 'stream';
+        const requestBody = this.buildRequestBody(messages, systemPrompt, feature, sessionId, shouldStream);
         const url = `${API_BASE}/ai/generate`;
         const headers = {
-            Accept: 'text/event-stream',
+            Accept: shouldStream ? 'text/event-stream' : 'application/json',
             'Content-Type': 'application/json',
         };
+
+        // 首次画像在生成期间不展示逐字内容。让一个可能持续数分钟的请求维持
+        // ReadableStream 只会增加浏览器、代理与 Worker 三处中断点，没有用户收益。
+        if (!shouldStream) {
+            return this.requestBufferedCompletion(url, headers, requestBody, onChunk);
+        }
 
         let response: Response | null;
         try {
@@ -115,7 +136,6 @@ export class TideLogProvider implements AIProvider {
         const params = new URLSearchParams({ deviceId: this.getDeviceId() });
         const licenseKey = license.key?.trim();
         if (licenseKey) params.set('licenseKey', licenseKey);
-
         try {
             const response = await requestUrl({
                 url: `${API_BASE}/ai/quota?${params.toString()}`,
@@ -132,6 +152,8 @@ export class TideLogProvider implements AIProvider {
         messages: ChatMessage[],
         systemPrompt: string,
         feature: AIFeature,
+        sessionId?: string,
+        stream = true,
     ): Record<string, unknown> {
         const formattedMessages = [
             ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
@@ -144,7 +166,9 @@ export class TideLogProvider implements AIProvider {
             messages: formattedMessages,
             deviceId: this.getDeviceId(),
             ...(licenseKey ? { licenseKey } : {}),
-            stream: true,
+            // 一次用户动作的标识：同一动作的多次请求只计一个配额单位。
+            ...(sessionId ? { sessionId } : {}),
+            stream,
         };
     }
 
@@ -171,6 +195,48 @@ export class TideLogProvider implements AIProvider {
                 throw classifyTideLogProxyError(response.status, response.text);
             }
             return this.consumeSSEText(response.text, onChunk);
+        } catch (error) {
+            if (error instanceof TideLogError) throw error;
+            throw classifyNetworkError(error);
+        }
+    }
+
+    private async requestBufferedCompletion(
+        url: string,
+        headers: Record<string, string>,
+        requestBody: Record<string, unknown>,
+        onChunk: StreamCallback,
+    ): Promise<string> {
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'POST',
+                headers,
+                body: JSON.stringify(requestBody),
+                throw: false,
+            });
+            if (response.status >= 400) {
+                throw classifyTideLogProxyError(response.status, response.text);
+            }
+
+            let json = response.json as {
+                choices?: Array<{ message?: { content?: string }; delta?: { content?: string } }>;
+            } | undefined;
+            if (!json || typeof json !== 'object') {
+                try {
+                    json = JSON.parse(response.text) as typeof json;
+                } catch {
+                    json = undefined;
+                }
+            }
+            const content = json?.choices?.[0]?.message?.content
+                ?? json?.choices?.[0]?.delta?.content
+                ?? '';
+            if (!content.trim()) {
+                throw new TideLogError(ErrorCode.PROVIDER_ERROR, t('error.aiProviderError'));
+            }
+            onChunk(content);
+            return content;
         } catch (error) {
             if (error instanceof TideLogError) throw error;
             throw classifyNetworkError(error);

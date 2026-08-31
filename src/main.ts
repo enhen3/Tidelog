@@ -100,6 +100,9 @@ export default class TideLogPlugin extends Plugin {
 
         // Background license verification (non-blocking)
         void this.licenseManager.verifyOnStartup();
+        // Trial timestamps are server-authoritative. This also migrates a valid
+        // 1.1.49 local-only trial without extending its original expiry.
+        void this.licenseManager.syncTrialState();
 
         // Register custom tide icon for ribbon
         addIcon('tidelog-wave', `<path d="M8 50 Q20 30 32 50 Q44 70 56 50 Q68 30 80 50 Q92 70 96 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 70 Q16 50 28 70 Q40 90 52 70 Q64 50 76 70 Q88 90 96 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="22" r="8" fill="currentColor"/><path d="M42 22 Q50 8 58 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`);
@@ -397,13 +400,13 @@ export default class TideLogPlugin extends Plugin {
         new OnboardingModal(this.app, this).open();
     }
 
-    async openFirstInsight(): Promise<void> {
+    async openFirstInsight(prefillFolder?: string): Promise<void> {
         if (this.settings.firstInsightCompleted && !this.licenseManager.isPro()) {
             this.showProRequired(t('chat.insightProfile'));
             return;
         }
         await this.initializeVaultStructure();
-        new FirstInsightModal(this.app, this).open();
+        new FirstInsightModal(this.app, this, prefillFolder).open();
     }
 
     async showTrialOfferOnce(featureName: string): Promise<void> {

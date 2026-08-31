@@ -50,7 +50,7 @@
 - Vault：`TideLog-Demo-Vault`，使用 `03-Archive/Insights` 中最近生成的画像更新。
 - 文件：`assets/screenshots/tidelog-ai-profile.png`
 - 尺寸 / 模式：`1600 × 1000 px`，浅色模式，PNG。
-- 打码：不需要；不要露出 AI provider 设置、API Key 或 License 页面。
+- 打码：不需要；不要露出 License 页面或私人笔记内容。
 
 ## README 替换位置
 

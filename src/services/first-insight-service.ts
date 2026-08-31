@@ -10,11 +10,13 @@ import type TideLogPlugin from '../main';
 import { ChatMessage } from '../types';
 import { getLanguage, t } from '../i18n';
 import { replaceFile } from '../utils/vault-write';
-import { formatAPIError } from '../utils/error-formatter';
+import { classifyNetworkError, TideLogError } from '../utils/error-formatter';
 import { stripExtractionTags } from '../utils/md';
 import { formatFirstInsightReportDocument, formatProfileDocument } from '../utils/document-format';
 import type { LegacyImportSession, NormalizedLegacyJournal } from './legacy-import-service';
 import { FIRST_INSIGHT_MIN_VALID_ENTRIES } from '../constants';
+import { CLIENT_INPUT_TOKEN_BUDGET, estimateTokens } from '../utils/token-estimate';
+import { newAISessionId } from './ai-session';
 
 export const AHA_MODULE_HEADINGS_ZH = [
     '过去记录里的三个高频主题',
@@ -31,6 +33,30 @@ export const AHA_MODULE_HEADINGS_EN = [
     'One small experiment for next week',
     'Evidence references',
 ] as const;
+
+/** 既有画像会同时进入 system 与 user prompt；必须单独设上限，避免它挤穿总预算。 */
+export const FIRST_INSIGHT_PROFILE_TOKEN_CAP = 4_000;
+/** 首次画像无需顶满服务端 28K 输入预算；20K 足够支持一个月的近期模式判断。 */
+export const FIRST_INSIGHT_INPUT_TOKEN_BUDGET = 20_000;
+
+/**
+ * 保留画像开头（通常含当前偏好与最近结论），并明确告诉模型内容已被截断。
+ * 二分而不是按字符硬切，确保使用与服务端一致的 token 估算口径。
+ */
+export function boundFirstInsightCurrentProfile(currentProfile: string | null): string | null {
+    if (!currentProfile || estimateTokens(currentProfile) <= FIRST_INSIGHT_PROFILE_TOKEN_CAP) return currentProfile;
+    const suffix = getLanguage() === 'en'
+        ? '\n\n[Existing profile truncated to fit the input limit.]'
+        : '\n\n[既有画像已为满足输入上限而截断。]';
+    let low = 0;
+    let high = currentProfile.length;
+    while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if (estimateTokens(currentProfile.slice(0, mid) + suffix) <= FIRST_INSIGHT_PROFILE_TOKEN_CAP) low = mid;
+        else high = mid - 1;
+    }
+    return currentProfile.slice(0, low) + suffix;
+}
 
 export interface FirstInsightReportDraft {
     importId: string;
@@ -61,12 +87,15 @@ export class FirstInsightService {
             ));
         }
 
-        const currentProfile = await this.plugin.vaultManager.getUserProfileContent();
+        const currentProfile = boundFirstInsightCurrentProfile(await this.plugin.vaultManager.getUserProfileContent());
+        const systemPrompt = buildFirstInsightSystemPrompt(currentProfile);
         const prompt = buildFirstInsightPrompt({
             currentProfile,
             entries: session.normalizedEntries,
             importId: session.importId,
             dateRange: session.scan.dateRange,
+            // 系统提示词与用户提示词共用同一个服务端上限，必须一起计入预算。
+            reservedTokens: estimateTokens(systemPrompt),
         });
         const messages: ChatMessage[] = [
             { role: 'user', content: prompt, timestamp: Date.now() },
@@ -75,9 +104,9 @@ export class FirstInsightService {
         try {
             const provider = this.plugin.getAIProvider();
             let fullResponse = '';
-            await provider.sendMessage(
+            const returnedResponse = await provider.sendMessage(
                 messages,
-                buildFirstInsightSystemPrompt(currentProfile),
+                systemPrompt,
                 (chunk) => {
                     fullResponse += chunk;
                     try {
@@ -87,10 +116,32 @@ export class FirstInsightService {
                     }
                 },
                 'profile',
+                newAISessionId(),
+                'buffered',
             );
 
-            const report = formatFirstInsightReportDocument(stripProfileTags(fullResponse));
-            const profileUpdate = formatProfileDocument(extractProfileUpdate(fullResponse) || report);
+            // 正常 SSE 会逐块调用 onChunk；缓冲回退或某些代理实现只返回最终字符串。
+            // 只相信回调会把“已经生成完成”变成空草稿，最终在保存时才报一个无从诊断的失败。
+            if (!fullResponse.trim() && typeof returnedResponse === 'string') {
+                fullResponse = returnedResponse;
+            }
+
+            const extractedProfile = extractProfileUpdate(fullResponse);
+            const visibleResponse = stripProfileTags(fullResponse).trim();
+            const visibleReportSource = visibleResponse || withTopLevelTitle(
+                extractedProfile,
+                t('firstInsight.reportTitle'),
+            );
+            if (!visibleReportSource.trim()) {
+                throw new Error(t('firstInsight.emptyResponse'));
+            }
+
+            const report = formatFirstInsightReportDocument(visibleReportSource);
+            const profileSource = extractedProfile || withTopLevelTitle(
+                report,
+                getLanguage() === 'en' ? '# User Profile' : '# 用户画像',
+            );
+            const profileUpdate = formatProfileDocument(profileSource);
 
             return {
                 importId: session.importId,
@@ -103,20 +154,26 @@ export class FirstInsightService {
                 dateRange: session.scan.dateRange,
             };
         } catch (error) {
-            // Surface a single, friendly, classified message (e.g. a network
-            // drop on a long generation) instead of dumping a raw net:: code
-            // into the report preview.
-            throw new Error(formatAPIError(error, this.plugin.settings.activeProvider));
+            // 保留 provider 已经做出的分类。原先这里把错误先格式化成文案、再包进
+            // Error，调用方只能看到 TL-9001，也丢掉了 AbortError 等真实原因。
+            console.error('TideLog first insight generation failed:', error);
+            if (error instanceof TideLogError) throw error;
+            throw classifyNetworkError(error);
         }
     }
 
-    async saveInitialProfile(draft: FirstInsightReportDraft): Promise<TFile | null> {
+    async saveInitialProfile(draft: FirstInsightReportDraft): Promise<{
+        profileFile: TFile | null;
+        reportFile: TFile | null;
+    }> {
         await this.plugin.vaultManager.ensureInsightsFolder();
+        const reportFile = await this.saveFirstInsightReport(draft);
+        if (!reportFile) throw new Error(t('firstInsight.saveFailed'));
         const profileFile = await this.saveProfileUpdate(draft.profileUpdate);
-        await this.saveFirstInsightReport(draft);
+        if (!profileFile) throw new Error(t('firstInsight.saveFailed'));
         this.plugin.settings.firstInsightCompleted = true;
         await this.plugin.saveSettings();
-        return profileFile;
+        return { profileFile, reportFile };
     }
 
     async saveFirstInsightReport(draft: FirstInsightReportDraft): Promise<TFile | null> {
@@ -181,6 +238,7 @@ Your job is to generate one evidence-bound third-person profile report from the 
 Rules:
 - Original notes are read-only; never suggest editing them.
 - Stay evidence-bound and make uncertainty visible.
+- Treat this as a recent-window profile. Do not infer stable personality or long-term trends beyond the supplied date range.
 - Use source dates and file links in every important insight.
 - Do not mention token usage, cost estimates, or internal implementation details.
 - Reply in English.
@@ -195,6 +253,7 @@ ${currentProfile ? `<current_profile>\n${currentProfile}\n</current_profile>` : 
 规则：
 - 原始笔记只读，永远不要建议改写原笔记。
 - 必须受证据约束，不确定就写出不确定。
+- 这是基于近期时间窗的画像。不要把这段时间里的表现夸大成稳定人格或长期趋势。
 - 关键洞察必须带日期和文件链接。
 - 不要提 token、费用估算或内部实现细节。
 - 使用中文回复。
@@ -202,16 +261,84 @@ ${currentProfile ? `<current_profile>\n${currentProfile}\n</current_profile>` : 
 ${currentProfile ? `<current_profile>\n${currentProfile}\n</current_profile>` : ''}`;
 }
 
+/** 摘录压缩的下限：再短就失去证据价值，此时应改为减少篇数。 */
+const MIN_BODY_EXCERPT_LIMIT = 120;
+
+/**
+ * 按位置均匀抽样，保留首尾。
+ *
+ * 画像要看的是跨时间的模式，因此超预算时不能简单地"只留最近 N 篇"——
+ * 那会让报告失去时间跨度，得出的结论也就不再是"长期模式"。
+ */
+export function sampleEvenly<T>(items: T[], keep: number): T[] {
+    if (keep >= items.length) return items.slice();
+    if (keep <= 1) return items.length > 0 ? [items[0]] : [];
+    const step = (items.length - 1) / (keep - 1);
+    const out: T[] = [];
+    for (let i = 0; i < keep; i += 1) out.push(items[Math.round(i * step)]);
+    return out;
+}
+
 export function buildFirstInsightPrompt(input: {
     currentProfile: string | null;
     entries: NormalizedLegacyJournal[];
     importId: string;
     dateRange: { start: string; end: string };
+    /** 系统提示词等已占用的 token，从预算里先扣掉。 */
+    reservedTokens?: number;
 }): string {
-    const bodyExcerptLimit = getFirstInsightBodyExcerptLimit(input.entries.length);
-    const journalContext = input.entries
+    // 服务端对输入有 32K token 硬上限，超出直接 413。此前客户端不做总预算，
+    // 只按篇数压缩单篇摘录长度，因此大 vault 反而更容易在用户最期待的动作上失败：
+    // 100 篇 × 420 字中文正文就已约 42,000 token。
+    const currentProfile = boundFirstInsightCurrentProfile(input.currentProfile);
+    const boundedInput = { ...input, currentProfile };
+    const budget = Math.min(CLIENT_INPUT_TOKEN_BUDGET, FIRST_INSIGHT_INPUT_TOKEN_BUDGET)
+        - (input.reservedTokens ?? 0);
+    if (budget <= 0) {
+        throw new Error('首次画像的固定上下文已超过输入上限，未发送 AI 请求。');
+    }
+
+    let entries = input.entries;
+    let bodyExcerptLimit = getFirstInsightBodyExcerptLimit(entries.length);
+    const render = () => entries
         .map(entry => formatJournalForPrompt(entry, bodyExcerptLimit))
         .join('\n\n');
+
+    let journalContext = render();
+
+    // 预算必须对**整个提示词**生效，而不只是日记正文：固定模板（报告结构、
+    // 质量要求、示例段落）本身也占用可观的 token，只测正文会低估总量。
+    const overBudget = () => estimateTokens(buildBody(boundedInput, journalContext, entries)) > budget;
+
+    // 先压缩每篇摘录，尽量保住篇数（篇数决定模式的可信度）。
+    while (overBudget() && bodyExcerptLimit > MIN_BODY_EXCERPT_LIMIT) {
+        bodyExcerptLimit = Math.max(MIN_BODY_EXCERPT_LIMIT, Math.floor(bodyExcerptLimit / 2));
+        journalContext = render();
+    }
+
+    // 仍然超预算时才减少篇数，且均匀抽样以保留时间跨度。
+    while (overBudget() && entries.length > FIRST_INSIGHT_MIN_VALID_ENTRIES) {
+        const keep = Math.max(FIRST_INSIGHT_MIN_VALID_ENTRIES, Math.floor(entries.length / 2));
+        if (keep === entries.length) break;
+        entries = sampleEvenly(entries, keep);
+        journalContext = render();
+    }
+
+    const prompt = buildBody(boundedInput, journalContext, entries);
+    if (estimateTokens(prompt) > budget) {
+        // 理论上只有固定模板或单条不可再分的元数据异常巨大时才会到这里；明确失败
+        // 比把超过 32K 的请求交给服务端并得到 413 更可诊断，也不会消耗额度。
+        throw new Error('首次画像输入无法在安全预算内构建，未发送 AI 请求。');
+    }
+    return prompt;
+}
+
+/** 组装最终提示词。抽出来是为了让预算判定能对完整文本生效。 */
+function buildBody(
+    input: { currentProfile: string | null; importId: string; dateRange: { start: string; end: string } },
+    journalContext: string,
+    entries: { length: number },
+): string {
 
     if (getLanguage() === 'en') {
         return `<task>Generate the first TideLog profile insight report</task>
@@ -219,7 +346,7 @@ export function buildFirstInsightPrompt(input: {
 <import>
 Import id: ${input.importId}
 Date range: ${input.dateRange.start} to ${input.dateRange.end}
-Valid journals: ${input.entries.length}
+Valid journals: ${entries.length}
 </import>
 
 <current_profile>
@@ -321,7 +448,7 @@ The updated profile must preserve still-evidence-backed existing profile content
 <import>
 导入 ID：${input.importId}
 日期范围：${input.dateRange.start} 至 ${input.dateRange.end}
-有效日记数：${input.entries.length}
+有效日记数：${entries.length}
 </import>
 
 <current_profile>
@@ -423,6 +550,15 @@ export function extractProfileUpdate(response: string): string {
     return match?.[1]?.trim() ?? '';
 }
 
+function withTopLevelTitle(content: string, title: string): string {
+    const trimmed = content.trim();
+    if (!trimmed) return '';
+    if (/^#\s+.+$/m.test(trimmed)) {
+        return trimmed.replace(/^#\s+.+$/m, title.trim());
+    }
+    return `${title.trim()}\n\n${trimmed}`;
+}
+
 export function stripProfileTags(response: string): string {
     return stripExtractionTags(response);
 }
@@ -447,21 +583,28 @@ export function ensureProfileAhaStructure(content: string): string {
 }
 
 export function getFirstInsightBodyExcerptLimit(entryCount: number): number {
-    if (entryCount >= 50) return 420;
-    if (entryCount >= 30) return 650;
-    if (entryCount >= 15) return 900;
-    return 1600;
+    if (entryCount >= 25) return 600;
+    if (entryCount >= 15) return 700;
+    if (entryCount >= 8) return 900;
+    return 1200;
 }
 
+/**
+ * `summary` 是正文的前 3 句（`summarizeLegacyJournal`，上限 240 字），
+ * 而 `body_excerpt` 是正文的前 N 字。N ≥ 240 时前者被后者完整包含——
+ * 同一段话在提示词里出现两次，白吃掉的预算本可以用来多读正文。
+ */
+const SUMMARY_MAX_CHARS = 240;
+
 function formatJournalForPrompt(entry: NormalizedLegacyJournal, bodyExcerptLimit: number): string {
+    const summaryLine = bodyExcerptLimit >= SUMMARY_MAX_CHARS ? '' : `summary: ${entry.summary}\n`;
     return `--- ${entry.date} · ${entry.sourcePath} ---
 date: ${entry.date}
 source_path: [[${entry.sourcePath}]]
 normalized_path: [[${entry.normalizedPath}]]
 source_mtime: ${entry.sourceMtime ? moment(entry.sourceMtime).format('YYYY-MM-DD HH:mm:ss') : 'unknown'}
 date_source: ${entry.dateSource}
-summary: ${entry.summary}
-candidate_topics: ${entry.candidateTopics.join(', ') || 'none'}
+${summaryLine}candidate_topics: ${entry.candidateTopics.join(', ') || 'none'}
 task_signals:
 ${formatPromptList(entry.signals.tasks)}
 emotion_signals:

@@ -106,6 +106,9 @@ export function classifyNetworkError(err: unknown): TideLogError {
         msg.includes('err_internet_disconnected') || msg.includes('err_name_not_resolved') ||
         msg.includes('err_address_unreachable') || msg.includes('err_empty_response') ||
         msg.includes('connection closed') || msg.includes('connection reset') ||
+        msg.includes('aborterror') || msg.includes('aborted') ||
+        msg.includes('body stream') || msg.includes('bodystreambuffer') ||
+        msg.includes('stream terminated') || msg.includes('premature close') ||
         msg.includes('socket hang up') || msg.includes('econnrefused') ||
         msg.includes('econnreset') || msg.includes('enotfound') || msg.includes('eai_again')
     ) {
@@ -157,6 +160,15 @@ export function formatAPIError(error: unknown, providerName: string): string {
         return formatByCode(ErrorCode.NETWORK_FAILED, label);
     }
     return formatByCode(ErrorCode.UNKNOWN, label);
+}
+
+/** Plain-text surfaces (not MarkdownRenderer) must not expose `**TL-…**` markup. */
+export function formatAPIErrorPlainText(error: unknown, providerName: string): string {
+    return formatAPIError(error, providerName)
+        .replace(/\*\*/g, '')
+        .replace(/`([^`]*)`/g, '$1')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
 
 function formatByCode(code: TideLogErrorCode, provider: string, detail?: string): string {

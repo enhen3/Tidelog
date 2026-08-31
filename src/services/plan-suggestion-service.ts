@@ -11,6 +11,7 @@ import type { ChatMessage, SOPContext } from '../types';
 import { getLanguage } from '../i18n';
 import { replaceFile } from '../utils/vault-write';
 import { formatPlanSuggestionsDocument } from '../utils/document-format';
+import { monthlyInsightFileNames, weeklyInsightFileNames } from '../utils/insight-files';
 
 export type PlanSuggestionScope = 'day' | 'week' | 'month';
 
@@ -18,6 +19,8 @@ interface GenerateOptions {
     source?: 'manual' | 'review' | 'insight';
     reviewSummary?: string;
     force?: boolean;
+    /** 触发本次生成的用户动作标识。复盘后的三条建议属于那次复盘，不应各扣一次配额。 */
+    sessionId?: string;
 }
 
 export class PlanSuggestionService {
@@ -56,7 +59,7 @@ export class PlanSuggestionService {
             ? `Target: ${targetLabel}\n\nPlanning context:\n${context}`
             : `目标周期：${targetLabel}\n\n规划上下文：\n${context}`;
         const messages: ChatMessage[] = [{ role: 'user', content: userPrompt, timestamp: Date.now() }];
-        const response = await provider.sendMessage(messages, systemPrompt, () => { /* background generation */ }, 'daily_insight');
+        const response = await provider.sendMessage(messages, systemPrompt, () => { /* background generation */ }, 'daily_insight', options.sessionId);
         const lines = this.normalizeSuggestionLines(response);
         if (lines.length === 0) return [];
 
@@ -64,27 +67,29 @@ export class PlanSuggestionService {
         return lines;
     }
 
-    async refreshAfterDailyReview(context: SOPContext): Promise<void> {
+    /** @param sessionId 触发本次刷新的复盘会话；三条建议与那次复盘共用一个配额单位。 */
+    async refreshAfterDailyReview(context: SOPContext, sessionId?: string): Promise<void> {
         const reviewSummary = this.buildReviewSummary(context);
         if (!reviewSummary) return;
 
         const target = moment().add(1, 'day');
+        const opts = { source: 'review' as const, reviewSummary, force: true, sessionId };
         await Promise.allSettled([
-            this.generateSuggestions('day', target, { source: 'review', reviewSummary, force: true }),
-            this.generateSuggestions('week', target, { source: 'review', reviewSummary, force: true }),
-            this.generateSuggestions('month', target, { source: 'review', reviewSummary, force: true }),
+            this.generateSuggestions('day', target, opts),
+            this.generateSuggestions('week', target, opts),
+            this.generateSuggestions('month', target, opts),
         ]);
     }
 
-    async refreshAfterInsight(kind: 'weekly' | 'monthly', target: moment.Moment): Promise<void> {
+    async refreshAfterInsight(kind: 'weekly' | 'monthly', target: moment.Moment, sessionId?: string): Promise<void> {
         const next = kind === 'weekly'
             ? moment(target).add(1, 'week').startOf('isoWeek')
             : moment(target).add(1, 'month').startOf('month');
 
         if (kind === 'weekly') {
-            await this.generateSuggestions('week', next, { source: 'insight', force: true });
+            await this.generateSuggestions('week', next, { source: 'insight', force: true, sessionId });
         } else {
-            await this.generateSuggestions('month', next, { source: 'insight', force: true });
+            await this.generateSuggestions('month', next, { source: 'insight', force: true, sessionId });
         }
     }
 
@@ -263,14 +268,11 @@ export class PlanSuggestionService {
     }
 
     private async readInsightSummary(kind: 'weekly' | 'monthly', date: moment.Moment): Promise<string> {
-        const candidates = kind === 'weekly'
-            ? [
-                `${this.plugin.settings.archiveFolder}/Insights/${getLanguage() === 'en' ? `${date.format('YYYY')}-W${String(date.isoWeek())}-weekly-report.md` : `${date.format('YYYY')}-W${String(date.isoWeek())}-周报.md`}`,
-                `${this.plugin.settings.archiveFolder}/Insights/${getLanguage() === 'en' ? `${date.format('YYYY')}-W${String(date.isoWeek()).padStart(2, '0')}-weekly-report.md` : `${date.format('YYYY')}-W${String(date.isoWeek()).padStart(2, '0')}-周报.md`}`,
-            ]
-            : [
-                `${this.plugin.settings.archiveFolder}/Insights/${getLanguage() === 'en' ? `${date.format('YYYY-MM')}-monthly-report.md` : `${date.format('YYYY-MM')}-月报.md`}`,
-            ];
+        const fileNames = kind === 'weekly'
+            ? weeklyInsightFileNames(date, getLanguage())
+            : monthlyInsightFileNames(date, getLanguage());
+        const candidates = fileNames
+            .map(fileName => `${this.plugin.settings.archiveFolder}/Insights/${fileName}`);
 
         for (const path of candidates) {
             const file = this.plugin.app.vault.getAbstractFileByPath(path);

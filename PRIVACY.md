@@ -37,7 +37,7 @@ TideLog 服务端不存储您的提示词、笔记正文或 AI 响应正文。�
 仅记录服务运行所必需的信息，**不包含笔记正文，也不包含 AI 返回的内容正文**：
 
 - **Pro 用户**：您的 License Key、激活的设备标识
-- **免费 / 试用用户**：由设备标识与您的 IP 地址派生的哈希锚点（**原始 IP 不入库**）
+- **免费 / 试用用户**：分别由设备标识和 IP 地址派生的加盐 HMAC 锚点；设备锚点用于识别同一免费主体，IP 锚点仅用于配额防滥用（**原始设备标识与 IP 不入库**）
 - **所有用户**：调用时间、功能类型、计费周期、调用次数、token 计数
 
 上述信息仅用于配额核算、防滥用与故障排查。
@@ -111,7 +111,7 @@ The check runs on the TideLog server before forwarding. A request that matches a
 TideLog records only the information necessary to operate the service. **These records do not contain note bodies or AI response bodies:**
 
 - **Pro users:** the License Key and activated device identifier.
-- **Free / trial users:** a hashed anchor derived from the device identifier and IP address. **The original IP address is not stored in the TideLog database.**
+- **Free / trial users:** separate salted HMAC anchors derived from the device identifier and the IP address. The device anchor identifies the same free subject; the IP anchor is used only for quota abuse prevention. **Neither the raw device identifier nor the original IP address is stored in the TideLog database.**
 - **All users:** request time, feature type, billing period, request count, and token counts.
 
 This information is used only for quota accounting, abuse prevention, and troubleshooting.

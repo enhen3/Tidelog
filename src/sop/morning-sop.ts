@@ -7,10 +7,14 @@ import { SOPContext, ChatMessage } from '../types';
 import { getBaseContextPrompt, getMorningPrompt } from './prompts';
 import { formatAPIError } from '../utils/error-formatter';
 import { t, getLanguage } from '../i18n';
+import { newAISessionId } from '../services/ai-session';
 
 export class MorningSOP {
     private plugin: TideLogPlugin;
+    /** 本次晨间计划的配额单位标识：整轮对话只算一次。 */
+    private sessionId: string = newAISessionId();
     private messages: ChatMessage[] = [];
+    private hasReceivedPlanFeedback = false;
 
     constructor(plugin: TideLogPlugin) {
         this.plugin = plugin;
@@ -23,6 +27,8 @@ export class MorningSOP {
         context: SOPContext,
         onMessage: (message: string) => void,
     ): Promise<void> {
+        this.sessionId = newAISessionId();
+        this.hasReceivedPlanFeedback = false;
         // Reset messages
         this.messages = [];
 
@@ -96,6 +102,9 @@ export class MorningSOP {
         onMessage: (message: string) => void
     ): Promise<void> {
         const todayPlan = context.responses['today_plan'];
+        // 用户调整计划后，必须针对最新版本重新拿到反馈；上一个版本的成功
+        // 不能掩盖这一次请求失败。
+        this.hasReceivedPlanFeedback = false;
 
         // Use AI to evaluate feasibility
         const userProfile = context.userProfileContent;
@@ -128,7 +137,9 @@ ${todayPlan}
                     response += chunk;
                 },
                 'daily_insight',
+                this.sessionId,
             );
+            this.hasReceivedPlanFeedback = response.trim().length > 0;
 
             const confirmSuffix = getLanguage() === 'en'
                 ? '\n\nConfirm this plan? (Reply "confirm" or adjust your plan)'
@@ -199,6 +210,14 @@ ${formattedPlan}
         // Reset context
         context.type = 'none';
         context.currentStep = 0;
+
+        // 进入计划页不等于完成首次使用。只有 AI 已给出反馈、计划也确实写入
+        // 日记后，才持久化完成状态并在价值之后邀请用户开启试用。
+        if (this.hasReceivedPlanFeedback) {
+            await this.plugin.completeOnboarding();
+            void this.plugin.showTrialOfferOnce?.(t('chat.tabPlan'));
+        }
+        this.hasReceivedPlanFeedback = false;
     }
 
     /**
@@ -253,6 +272,7 @@ ${formattedPlan}
                     response += chunk;
                 },
                 'daily_insight',
+                this.sessionId,
             );
 
             this.messages.push({

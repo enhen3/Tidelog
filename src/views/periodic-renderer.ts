@@ -8,6 +8,8 @@ import type TideLogPlugin from '../main';
 import type { App } from 'obsidian';
 import type { PlanSuggestionScope } from '../services/plan-suggestion-service';
 import { t, getLanguage } from '../i18n';
+import { extractInsightSummaryItems } from '../utils/md';
+import { weeklyInsightFileNames } from '../utils/insight-files';
 
 export type PeriodicMode = 'day' | 'week' | 'month' | 'capture';
 
@@ -998,13 +1000,8 @@ export class PeriodicRenderer {
     /** Load and render the AI weekly insight report summary */
     private async renderWeeklyInsight(preview: HTMLElement, weekStart: moment.Moment): Promise<void> {
         const h = this.host;
-        const weekNum = weekStart.format('ww');
-        const year = weekStart.format('YYYY');
-        // Try various naming patterns
-        const patterns = [
-            `${h.plugin.settings.archiveFolder}/Insights/${t('insight.weeklyFileName', year, weekNum)}`,
-            `${h.plugin.settings.archiveFolder}/Insights/${t('insight.weeklyFileName', year, String(parseInt(weekNum, 10)))}`,
-        ];
+        const patterns = weeklyInsightFileNames(weekStart, getLanguage())
+            .map(fileName => `${h.plugin.settings.archiveFolder}/Insights/${fileName}`);
 
         let insightContent: string | null = null;
         let insightFile: TFile | null = null;
@@ -1019,31 +1016,19 @@ export class PeriodicRenderer {
 
         if (!insightContent) return;
 
+        const summaryItems = extractInsightSummaryItems(insightContent, 3);
+        if (summaryItems.length === 0) return;
+
         const section = preview.createDiv('tl-periodic-insight-section');
         section.createDiv({ cls: 'tl-periodic-insight-label', text: t('periodic.aiWeeklySummary') });
-
-        // Extract key sections from insight report
-        const extracts: { icon: string; pattern: RegExp }[] = [
-            { icon: '📊', pattern: /### \d+\.\s*(?:本周概览|Weekly Overview)\n([\s\S]*?)(?=###|$)/ },
-            { icon: '🏆', pattern: /### \d+\.\s*(?:成功模式|Success Patterns)\n([\s\S]*?)(?=###|$)/ },
-            { icon: '💡', pattern: /### \d+\.\s*(?:下周建议|Next Week Suggestions)\n([\s\S]*?)(?=###|$)/ },
-        ];
-
-        for (const ex of extracts) {
-            const m = insightContent.match(ex.pattern);
-            if (m && m[1].trim()) {
-                const lines = m[1].trim().split('\n').filter(l => l.trim()).slice(0, 3);
-                for (const line of lines) {
-                    const itemDiv = section.createDiv('tl-periodic-insight-item');
-                    itemDiv.setText(line.replace(/^[-*]\s*\*\*.*?\*\*[:：]?\s*/, '').replace(/^[-*]\s*/, '').replace(/^\d+\.\s*\*\*.*?\*\*[:：]?\s*/, ''));
-                }
-            }
+        for (const item of summaryItems) {
+            section.createDiv({ cls: 'tl-periodic-insight-item', text: item });
         }
 
         // Link to full report
         if (insightFile) {
             const link = section.createDiv('tl-periodic-insight-link');
-            link.setText(t('review.viewFullReport'));
+            link.setText(t('periodic.viewFullWeekly'));
             link.addEventListener('click', () => {
                 void h.app.workspace.getLeaf().openFile(insightFile);
             });

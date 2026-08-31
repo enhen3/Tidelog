@@ -18,6 +18,14 @@ import { webcrypto } from 'node:crypto';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+const purchaseEntrySources = [
+    'src/views/pro-modal.ts',
+    'src/views/insights-renderer.ts',
+    'src/settings/settings-tab.ts',
+].map((relativePath) => ({
+    relativePath,
+    content: fs.readFileSync(path.join(__dirname, relativePath), 'utf8'),
+}));
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
     pretendToBeVisual: true,
@@ -32,6 +40,11 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.Element = dom.window.Element;
 globalThis.Node = dom.window.Node;
 globalThis.Event = dom.window.Event;
+const openedPurchaseUrls = [];
+window.open = (purchaseUrl) => {
+    openedPurchaseUrls.push(String(purchaseUrl));
+    return null;
+};
 if (!globalThis.crypto) {
     Object.defineProperty(globalThis, 'crypto', {
         value: webcrypto,
@@ -211,6 +224,17 @@ console.log('Test 1: invalid license surfaces business error');
     };
 
     const manager = new LicenseManager(makeLicensePlugin());
+    const purchaseUrl = new URL(manager.getPurchaseUrl());
+    check(
+        purchaseUrl.pathname === '/item/463307362c2f11f1b39d52540025c377',
+        'purchase entry keeps the canonical TideLog item URL instead of relying on Afdian login return parameters',
+    );
+    check(
+        purchaseEntrySources.every(({ content }) => content.includes('bindAfdianPurchaseFlow')),
+        'every in-app Pro purchase entry keeps the one-click post-login retry',
+        purchaseEntrySources.filter(({ content }) => !content.includes('bindAfdianPurchaseFlow'))
+            .map(({ relativePath }) => relativePath).join(', '),
+    );
     const result = await manager.activate('TL-INVALID-0000-0000');
 
     check(calls[0]?.throw === false, 'license API requests opt out of HTTP 4xx throwing');
@@ -244,9 +268,79 @@ console.log('\nTest 2: transient license server 5xx is retried');
     check(result.success === true, 'activation succeeds after retry');
 }
 
+console.log('\nTest 2b: device identity survives plugin data deletion and new vaults');
+{
+    window.localStorage.clear();
+    const firstPlugin = makeLicensePlugin();
+    firstPlugin.app.vault.getName = () => 'First Vault';
+    const firstManager = new LicenseManager(firstPlugin);
+    const firstId = firstManager.getOrCreateDeviceId();
+    await Promise.resolve();
+
+    const reinstalledPlugin = makeLicensePlugin();
+    reinstalledPlugin.app.vault.getName = () => 'Completely Different Vault';
+    const reinstalledManager = new LicenseManager(reinstalledPlugin);
+    const recoveredId = reinstalledManager.getOrCreateDeviceId();
+
+    check(/^dev-[a-z0-9]+-[a-f0-9]{8}$/.test(firstId), 'generated device identity has the expected format');
+    check(recoveredId === firstId, 'clearing plugin settings does not reset trial/profile identity');
+    check(reinstalledPlugin.settings.proLicense.deviceId === firstId, 'a new vault reuses the installation identity instead of granting a new trial');
+    window.localStorage.clear();
+}
+
+console.log('\nTest 2c: explicit server revocation bypasses offline grace');
+{
+    const revokedPlugin = makeLicensePlugin();
+    revokedPlugin.settings.proLicense = {
+        key: 'TL-REVOKED',
+        activated: true,
+        deviceId: 'dev-revoked-deadbeef',
+        lastVerified: Date.now(),
+        licenseType: 'lifetime',
+    };
+    globalThis.__requestUrl = async () => ({
+        status: 200,
+        json: { success: false, valid: false, error: 'License revoked' },
+        text: '{"success":false,"valid":false}',
+    });
+    const revokedManager = new LicenseManager(revokedPlugin);
+    await revokedManager.verifyOnStartup();
+    check(revokedPlugin.settings.proLicense.activated === false, 'server-declared invalid license is disabled immediately');
+
+    const offlinePlugin = makeLicensePlugin();
+    offlinePlugin.settings.proLicense = {
+        key: 'TL-OFFLINE',
+        activated: true,
+        deviceId: 'dev-offline-cafebabe',
+        lastVerified: Date.now(),
+        licenseType: 'lifetime',
+    };
+    globalThis.__requestUrl = async () => { throw new Error('offline'); };
+    const offlineManager = new LicenseManager(offlinePlugin);
+    await offlineManager.verifyOnStartup();
+    check(offlinePlugin.settings.proLicense.activated === true, 'network failure still keeps the offline grace state');
+}
+
 console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days');
 {
     let saveCount = 0;
+    let trialStartCalls = 0;
+    const serverStartedAt = Math.floor(Date.now() / 1000);
+    const serverExpiresAt = serverStartedAt + 7 * 24 * 60 * 60;
+    globalThis.__requestUrl = async (options) => {
+        trialStartCalls++;
+        return {
+            status: 200,
+            json: {
+                success: true,
+                state: 'active',
+                started_at: serverStartedAt,
+                expires_at: serverExpiresAt,
+                newly_started: trialStartCalls === 1,
+            },
+            text: '{"success":true,"state":"active"}',
+        };
+    };
     const plugin = makeLicensePlugin();
     plugin.saveSettings = async () => { saveCount++; };
     const manager = new LicenseManager(plugin);
@@ -256,11 +350,14 @@ console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days')
     check(manager.getAccessState() === 'trial', 'started trial becomes the current access state');
     check(manager.isPro() === true, 'active trial unlocks existing Pro gates');
     check(manager.getTrialDaysRemaining() === 7, 'new trial reports seven days remaining');
-    check(saveCount === 1, 'trial timestamps are persisted');
+    check(saveCount === 2, 'device identity is saved before the server window is cached');
+    check(plugin.settings.trial.startedAt === serverStartedAt * 1000, 'client uses server start time instead of Date.now()');
+    check(trialStartCalls === 1, 'click calls the dedicated trial endpoint once');
     check(await manager.startTrial() === false, 'trial cannot be started twice');
+    check(trialStartCalls === 1, 'local second click does not issue another start request');
     await manager.markTrialOfferShown();
     await manager.markTrialOfferShown();
-    check(saveCount === 2, 'contextual trial offer is persisted only once');
+    check(saveCount === 3, 'contextual trial offer is persisted only once');
 
     plugin.settings.trial.expiresAt = Date.now() - 1;
     check(manager.getAccessState() === 'trial-expired', 'expired trial has a distinct state');
@@ -273,6 +370,66 @@ console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days')
     const noAiManager = new LicenseManager(noAiPlugin);
     check(noAiManager.needsAISetupForTrial() === false, 'trial no longer requires user AI setup');
     check(await noAiManager.startTrial() === true, 'trial starts without any user AI configuration');
+
+    const expiredServerPlugin = makeLicensePlugin();
+    globalThis.__requestUrl = async () => ({
+        status: 409,
+        json: {
+            error: 'trial_already_used',
+            state: 'expired',
+            started_at: serverStartedAt - 8 * 24 * 60 * 60,
+            expires_at: serverStartedAt - 24 * 60 * 60,
+            newly_started: false,
+        },
+        text: '{"error":"trial_already_used","state":"expired"}',
+    });
+    const expiredServerManager = new LicenseManager(expiredServerPlugin);
+    check(await expiredServerManager.startTrial() === false, 'server-expired trial cannot be restarted');
+    check(expiredServerManager.getAccessState() === 'trial-expired', 'server expiry is cached and immediately changes access state');
+
+    const syncedPlugin = makeLicensePlugin();
+    globalThis.__requestUrl = async () => ({
+        status: 200,
+        json: {
+            state: 'active',
+            started_at: serverStartedAt,
+            expires_at: serverExpiresAt,
+            newly_started: false,
+        },
+        text: '{"state":"active"}',
+    });
+    const syncedManager = new LicenseManager(syncedPlugin);
+    check(await syncedManager.syncTrialState() === true, 'startup sync restores a server trial after local state is missing');
+    check(syncedManager.getAccessState() === 'trial', 'restored server trial unlocks local Pro gates');
+
+    const legacyPlugin = makeLicensePlugin();
+    const legacyStartedAt = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    const legacyExpiresAt = legacyStartedAt + 7 * 24 * 60 * 60 * 1000;
+    legacyPlugin.settings.trial = { startedAt: legacyStartedAt, expiresAt: legacyExpiresAt };
+    const legacyCalls = [];
+    globalThis.__requestUrl = async (options) => {
+        legacyCalls.push(options);
+        if (options.method === 'GET') {
+            return { status: 200, json: { state: 'eligible', started_at: null, expires_at: null }, text: '{}' };
+        }
+        const body = JSON.parse(options.body);
+        return {
+            status: 200,
+            json: {
+                success: true,
+                state: 'active',
+                started_at: body.legacyStartedAt,
+                expires_at: body.legacyExpiresAt,
+                newly_started: true,
+            },
+            text: '{"success":true,"state":"active"}',
+        };
+    };
+    const legacyManager = new LicenseManager(legacyPlugin);
+    await legacyManager.syncTrialState();
+    const migrationBody = JSON.parse(legacyCalls[1].body);
+    check(migrationBody.legacyStartedAt === Math.floor(legacyStartedAt / 1000), '1.1.49 local trial sends its original start time');
+    check(migrationBody.legacyExpiresAt === Math.floor(legacyExpiresAt / 1000), '1.1.49 migration preserves the original expiry');
 
     const paidPlugin = makeLicensePlugin();
     paidPlugin.settings.proLicense = {
@@ -300,6 +457,22 @@ console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days')
     const inactiveLicenseManager = new LicenseManager(inactiveLicensePlugin);
     check(inactiveLicenseManager.getAccessState() === 'license-inactive', 'expired paid access is not presented as a fresh trial');
     check(inactiveLicenseManager.isTrialEligible() === false, 'previously paid users cannot consume a new-user trial');
+
+    const monthlyPlugin = makeLicensePlugin();
+    monthlyPlugin.settings.proLicense = {
+        key: 'TL-MONTHLY',
+        activated: true,
+        activatedAt: Date.now(),
+        lastVerified: Date.now(),
+        licenseType: 'monthly',
+        expiresAt: Date.now() + 2 * 24 * 60 * 60 * 1000,
+    };
+    const monthlyManager = new LicenseManager(monthlyPlugin);
+    check(monthlyManager.hasPaidLicense() === true, 'unexpired monthly license unlocks Pro');
+    check(monthlyManager.getLicenseLabel() === 'Pro 月度版', 'monthly license has its own display label');
+    check(monthlyManager.getExpiryDate() !== null, 'monthly license displays its expiry date');
+    monthlyPlugin.settings.proLicense.expiresAt = Date.now() - 1;
+    check(monthlyManager.hasPaidLicense() === false, 'expired monthly license no longer unlocks Pro');
 }
 
 console.log('\nTest 4: free users see standalone Kanban trial entry');
@@ -341,10 +514,81 @@ console.log('\nTest 5: eligible Pro modal leads with trial and no automatic char
 
     const text = modal.contentEl.textContent || '';
     const startButton = modal.contentEl.querySelector('button.tl-pro-cta-cn');
+    const purchaseButton = modal.contentEl.querySelector('a.tl-pro-cta-purchase');
+    const comparison = modal.contentEl.querySelector('.tl-pro-comparison-table');
+    const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
 
-    check(startButton?.textContent?.includes('7 天'), 'trial is the primary CTA');
-    check(text.includes('无需绑定支付方式'), 'trial explains that no payment method is required');
-    check(text.includes('不会自动续费'), 'trial explains that it does not auto-renew');
+    check(!modal.contentEl.querySelector('.tl-pro-modal-desc'), 'free modal removes the redundant subtitle under its title');
+    check(startButton?.textContent?.includes('免费开启 7 天 Pro 体验'), 'trial CTA states the free Pro experience directly');
+    check(text.includes('无需绑卡'), 'trial explains that no payment method is required');
+    check(text.includes('到期自动结束'), 'trial explains that it ends without renewal');
+    check(startButton?.querySelector('.tl-pro-cta-subtitle')?.textContent?.includes('无需绑卡'), 'compact trial terms are embedded inside the trial button');
+    check(!!comparison && comparison.textContent.includes('免费版') && comparison.textContent.includes('Pro 版'), 'free users see a Free versus Pro comparison table');
+    const comparisonRows = [...(comparison?.querySelectorAll('tbody tr') ?? [])];
+    const reportsRow = comparisonRows.find(row => row.textContent.includes('周报与月报'));
+    const chatRow = comparisonRows.find(row => row.textContent.includes('AI 对话'));
+    check(comparison?.textContent?.includes('首次画像 1 次'), 'comparison table names the initial-profile entitlement');
+    check(reportsRow?.querySelector('td.is-pro')?.textContent === '✓', 'weekly and monthly reports use a simple checkmark in the Pro column');
+    check(chatRow?.querySelector('td.is-pro')?.textContent === '✓' && !comparison?.textContent?.includes('200'), 'AI chat uses a checkmark without foregrounding the quota');
+    check(purchaseButton?.textContent?.includes('持续使用完整功能'), 'purchase CTA is written around continued user value');
+    check(purchaseButton?.querySelector('.tl-pro-cta-subtitle')?.textContent === '早鸟价：月付 ¥19 · 年付 ¥168', 'early-bird pricing is embedded inside the purchase button');
+    check(!text.includes('省 3 个月') && !modal.contentEl.querySelector('.tl-pro-pricing'), 'pricing no longer adds a separate line or savings claim');
+    check(css.includes('.tl-pro-cta-purchase') && css.includes('height: 48px'), 'trial and purchase actions share a more compact height while purchase keeps its own visual treatment');
+    check(css.includes('color: rgba(36, 42, 42, 0.72)') && !css.includes('rgba(255, 255, 255, 0.82)'), 'both button subtitles share the same non-white color and typography');
+    check(text.includes('购买过但找不到激活码') && text.includes('邮箱和订单号'), 'license recovery link explains who it is for and what information it needs');
+    check(modal.contentEl.querySelectorAll('.tl-pro-trial-promise').length === 0, 'trial terms are one compact line instead of four paragraphs');
+}
+
+console.log('\nTest 5b: active trial modal leads with unlocked value and remaining time');
+{
+    const expiresAt = Math.floor((Date.now() + 5 * 24 * 60 * 60 * 1000) / 1000);
+    globalThis.__requestUrl = async () => ({
+        status: 200,
+        json: {
+            identity: 'trial',
+            period: '2026-08',
+            trial_state: 'active',
+            trial_started_at: expiresAt - 7 * 24 * 60 * 60,
+            trial_expires_at: expiresAt,
+            features: { chat: { used: 7, limit: 20 } },
+        },
+        text: '{}',
+    });
+    const licenseManager = {
+        getAccessState: () => 'trial',
+        getTrialDaysRemaining: () => 5,
+        getOrCreateDeviceId: () => 'dev-trialtest-deadbeef',
+        applyTrialServerSnapshot: async () => {},
+        getPurchaseUrl: () => 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
+    };
+    const modal = new ProModal({}, 'Commercial Flow Test Feature', licenseManager);
+    modal.onOpen();
+    await new Promise(resolve => realSetTimeout(resolve, 0));
+
+    const text = modal.contentEl.textContent || '';
+    const statusCard = modal.contentEl.querySelector('.tl-pro-trial-status-card');
+    const purchaseButton = modal.contentEl.querySelector('a.tl-pro-cta-purchase');
+    check(text.includes('7 天 Pro 体验进行中'), 'active-trial title states the current state');
+    check(statusCard?.textContent?.includes('Pro 功能已全部解锁') && statusCard.textContent.includes('还剩 5 天'), 'active-trial card leads with unlocked value and remaining days');
+    check(statusCard?.textContent?.includes('完整复盘') && statusCard.textContent.includes('周报与月报'), 'active-trial card summarizes the unlocked features');
+    check(!text.includes('本月还可用') && !text.includes('20'), 'active-trial modal does not foreground AI usage limits');
+    check(purchaseButton?.textContent?.includes('体验结束后继续使用'), 'active-trial purchase action explains continued access');
+    check(purchaseButton?.textContent?.includes('早鸟价'), 'active-trial purchase action keeps pricing inside the button');
+    openedPurchaseUrls.length = 0;
+    purchaseButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    check(
+        openedPurchaseUrls[0] === licenseManager.getPurchaseUrl(),
+        'first Pro purchase click opens the canonical TideLog item',
+    );
+    check(
+        purchaseButton?.textContent?.includes('已登录？继续打开购买页'),
+        'purchase CTA becomes a clear retry after Afdian sign-in can lose the item route',
+    );
+    purchaseButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    check(
+        openedPurchaseUrls.length === 2 && openedPurchaseUrls[1] === licenseManager.getPurchaseUrl(),
+        'retry reopens the TideLog item so buyers never need to search Afdian home',
+    );
 }
 
 console.log('\nTest 6: expired-trial modal explains Afdian sign-in purchase friction');
@@ -361,13 +605,11 @@ console.log('\nTest 6: expired-trial modal explains Afdian sign-in purchase fric
     const text = modal.contentEl.textContent || '';
     const buyLink = modal.contentEl.querySelector('a.tl-pro-cta-btn');
 
-    check(text.includes('需要登录/注册爱发电'), 'Pro modal states Afdian account sign-in is required');
-    check(text.includes('购买后自动收到 License Key'), 'Pro modal states the License Key is sent automatically after purchase');
-    check(text.includes('页面空白'), 'Pro modal explains the blank Afdian page recovery path');
-    check(
-        buyLink?.textContent?.trim() === '🛒 前往爱发电购买 Pro',
-        'Pro modal keeps the purchase CTA concise while opening Afdian',
-    );
+    check(text.includes('需要登录或注册爱发电'), 'Pro modal states Afdian account sign-in is required');
+    check(text.includes('购买后自动收到激活码'), 'Pro modal explains the activation code in user-facing Chinese');
+    check(text.includes('登录后若停在爱发电首页'), 'Pro modal explains the actual Afdian sign-in recovery path');
+    check(buyLink?.textContent?.includes('🛒 前往爱发电购买 Pro'), 'Pro modal keeps the purchase action clear while opening Afdian');
+    check(buyLink?.textContent?.includes('早鸟价：月付 ¥19 · 年付 ¥168'), 'expired-trial purchase action carries the early-bird price inside the button too');
     check(
         buyLink?.getAttribute('href') === licenseManager.getPurchaseUrl(),
         'Pro modal purchase CTA still links to the Afdian purchase URL',

@@ -9,6 +9,8 @@ import { t, getLanguage } from '../i18n';
 import { ProModal } from './pro-modal';
 import { loadDayLoopData } from './loop-utils';
 import { stripExtractionTags } from '../utils/md';
+import { monthlyInsightFileNames, weeklyInsightFileNames } from '../utils/insight-files';
+import { bindAfdianPurchaseFlow } from '../utils/purchase-flow';
 
 export type InsightsMode = 'weekly' | 'monthly' | 'profile';
 
@@ -47,14 +49,21 @@ export class InsightsRenderer {
         panel.addClass('tl-insights');
         if (Platform.isMobile) panel.addClass('is-mobile');
 
+        const accessState = this.host.plugin.licenseManager.getAccessState();
         if (!this.host.plugin.licenseManager.isPro()) {
-            this.renderLocked(panel);
+            if (accessState === 'trial-expired') {
+                const body = panel.createDiv('tl-insights-body');
+                this.renderTrialBanner(body, 'expired');
+                await this.renderLocked(body, false);
+                return;
+            }
+            await this.renderLocked(panel);
             return;
         }
 
         const body = panel.createDiv('tl-insights-body');
-        if (this.host.plugin.licenseManager.getAccessState() === 'trial') {
-            this.renderTrialBanner(body);
+        if (accessState === 'trial') {
+            this.renderTrialBanner(body, 'active');
         }
         if (this.host.insightsMode === 'weekly') {
             await this.renderWeekly(body);
@@ -65,15 +74,25 @@ export class InsightsRenderer {
         }
     }
 
-    private renderLocked(panel: HTMLElement): void {
+    private async renderLocked(panel: HTMLElement, showAction = true): Promise<void> {
         if (this.shouldShowFirstInsightEntry() && this.host.insightsMode === 'profile') {
             this.renderFirstInsightEntry(panel);
             return;
         }
 
+        if (this.host.insightsMode === 'profile') {
+            const firstInsightReport = this.findLatestFirstInsightReport();
+            if (firstInsightReport) {
+                await this.renderSavedFirstInsight(panel, firstInsightReport);
+                return;
+            }
+        }
+
         const card = panel.createDiv('tl-insights-card tl-insights-locked');
         card.createDiv({ cls: 'tl-insights-card-title', text: t('insights.lockedTitle') });
         card.createDiv({ cls: 'tl-insights-card-desc', text: t('insights.lockedDesc') });
+        if (!showAction) return;
+
         const btn = card.createEl('button', {
             cls: 'tl-insights-primary-btn',
             text: this.host.plugin.licenseManager.getAccessState() === 'trial-expired'
@@ -93,20 +112,57 @@ export class InsightsRenderer {
         });
     }
 
-    private renderTrialBanner(body: HTMLElement): void {
-        const banner = body.createDiv('tl-insights-trial-banner');
+    /** 免费生成的首次画像必须始终可回看；查看自己的既有报告不是 Pro 功能。 */
+    private async renderSavedFirstInsight(panel: HTMLElement, file: TFile): Promise<void> {
+        const card = panel.createDiv('tl-insights-card tl-first-insight-saved-card');
+        const header = card.createDiv('tl-insights-card-header');
+        const titleWrap = header.createDiv('tl-insights-card-title-wrap');
+        titleWrap.createDiv({ cls: 'tl-insights-card-title', text: t('firstInsight.savedReportTitle') });
+        titleWrap.createDiv({ cls: 'tl-insights-card-subtitle', text: t('firstInsight.savedReportLocation', file.path) });
+        await this.renderReportPreview(card, file);
+        const openBtn = card.createEl('button', {
+            cls: 'tl-insights-primary-btn tl-insights-open-doc-btn',
+            text: t('insights.openFullReport'),
+            attr: { type: 'button' },
+        });
+        openBtn.addEventListener('click', () => {
+            void this.host.app.workspace.getLeaf().openFile(file);
+        });
+    }
+
+    private renderTrialBanner(body: HTMLElement, state: 'active' | 'expired'): void {
+        const isExpired = state === 'expired';
+        const banner = body.createDiv(`tl-insights-trial-banner${isExpired ? ' is-expired' : ''}`);
         const copy = banner.createDiv('tl-insights-trial-copy');
         copy.createDiv({
             cls: 'tl-insights-trial-title',
-            text: t(
-                'insights.trialBannerTitle',
-                String(this.host.plugin.licenseManager.getTrialDaysRemaining()),
-            ),
+            text: isExpired
+                ? t('insights.trialExpiredBannerTitle')
+                : t(
+                    'insights.trialBannerTitle',
+                    String(this.host.plugin.licenseManager.getTrialDaysRemaining()),
+                ),
         });
         copy.createDiv({
             cls: 'tl-insights-trial-desc',
-            text: t('insights.trialBannerDesc'),
+            text: isExpired
+                ? t('insights.trialExpiredBannerDesc')
+                : t('insights.trialBannerDesc'),
         });
+        const purchaseLink = banner.createEl('a', {
+            cls: 'tl-insights-trial-buy',
+            text: t('insights.trialPurchaseBtn'),
+            attr: {
+                href: this.host.plugin.licenseManager.getPurchaseUrl(),
+                target: '_blank',
+                rel: 'noopener noreferrer',
+            },
+        });
+        bindAfdianPurchaseFlow(
+            purchaseLink,
+            this.host.plugin.licenseManager.getPurchaseUrl(),
+            () => purchaseLink.setText(t('pro.purchaseRetryAction')),
+        );
     }
 
     private async renderWeekly(body: HTMLElement): Promise<void> {
@@ -181,9 +237,6 @@ export class InsightsRenderer {
                 updateBtn.addEventListener('click', () => {
                     void this.generateReport(opts.kind, opts.status.target.ref, card, updateBtn, notice, { force: true });
                 });
-            }
-            if (this.host.plugin.licenseManager.getAccessState() === 'trial') {
-                this.renderEarnedValue(card, opts.kind, opts.status.loops);
             }
             return;
         }
@@ -310,7 +363,7 @@ export class InsightsRenderer {
 
         const card = body.createDiv('tl-insights-card');
         const monthKey = moment().format('YYYY-MM');
-        const existing = this.findProfileFileForMonth(monthKey);
+        const existing = this.findProfileFileForMonth(monthKey) ?? this.findLatestFirstInsightReport();
 
         const header = card.createDiv('tl-insights-card-header');
         const titleWrap = header.createDiv('tl-insights-card-title-wrap');
@@ -345,9 +398,6 @@ export class InsightsRenderer {
                 updateBtn.addEventListener('click', () => {
                     void this.generateProfile(card, updateBtn, notice, { force: true });
                 });
-            }
-            if (this.host.plugin.licenseManager.getAccessState() === 'trial') {
-                this.renderEarnedValue(card, 'profile', 0);
             }
             return;
         }
@@ -439,41 +489,6 @@ export class InsightsRenderer {
             },
             options,
         );
-    }
-
-    private renderEarnedValue(
-        card: HTMLElement,
-        kind: 'weekly' | 'monthly' | 'profile',
-        loops: number,
-    ): void {
-        const value = card.createDiv('tl-insights-earned-value');
-        value.createDiv({
-            cls: 'tl-insights-earned-value-copy',
-            text: kind === 'weekly'
-                ? t('insights.valueWeekly', String(loops))
-                : kind === 'monthly'
-                    ? t('insights.valueMonthly', String(loops))
-                    : t('insights.valueProfile'),
-        });
-
-        if (kind === 'weekly') {
-            const profileBtn = value.createEl('button', {
-                cls: 'tl-insights-value-btn',
-                text: t('insights.updateProfileNext'),
-                attr: { type: 'button' },
-            });
-            profileBtn.addEventListener('click', () => this.host.openInsights('profile'));
-            return;
-        }
-
-        const purchaseBtn = value.createEl('button', {
-            cls: 'tl-insights-value-btn',
-            text: t('insights.keepUpdating'),
-            attr: { type: 'button' },
-        });
-        purchaseBtn.addEventListener('click', () => {
-            window.open(this.host.plugin.licenseManager.getPurchaseUrl());
-        });
     }
 
     private renderFirstInsightEntry(containerEl: HTMLElement): void {
@@ -662,19 +677,16 @@ export class InsightsRenderer {
     }
 
     private findWeeklyReport(ref: moment.Moment): TFile | null {
-        const year = String(ref.isoWeekYear());
-        const week = String(ref.isoWeek());
-        const candidates = [
-            `${this.host.plugin.settings.archiveFolder}/Insights/${t('insight.weeklyFileName', year, week)}`,
-            `${this.host.plugin.settings.archiveFolder}/Insights/${t('insight.weeklyFileName', year, week.padStart(2, '0'))}`,
-        ];
+        const candidates = weeklyInsightFileNames(ref, getLanguage())
+            .map(fileName => `${this.host.plugin.settings.archiveFolder}/Insights/${fileName}`);
         return this.findFirstFile(candidates);
     }
 
     private findMonthlyReport(ref: moment.Moment): TFile | null {
-        return this.findFirstFile([
-            `${this.host.plugin.settings.archiveFolder}/Insights/${t('insight.monthlyFileName', ref.format('YYYY-MM'))}`,
-        ]);
+        return this.findFirstFile(
+            monthlyInsightFileNames(ref, getLanguage())
+                .map(fileName => `${this.host.plugin.settings.archiveFolder}/Insights/${fileName}`),
+        );
     }
 
     private findFirstFile(paths: string[]): TFile | null {
@@ -692,6 +704,16 @@ export class InsightsRenderer {
             .filter((child): child is TFile => child instanceof TFile)
             .filter((file) => file.name.startsWith(monthKey) && (file.name.includes('画像更新') || file.name.includes('profile-update')))
             .sort((a, b) => b.name.localeCompare(a.name));
+        return files[0] ?? null;
+    }
+
+    private findLatestFirstInsightReport(): TFile | null {
+        const folder = this.host.app.vault.getAbstractFileByPath(`${this.host.plugin.settings.archiveFolder}/Insights`);
+        if (!(folder instanceof TFolder)) return null;
+        const files = folder.children
+            .filter((child): child is TFile => child instanceof TFile)
+            .filter((file) => file.name.includes('首次洞察画像报告') || file.name.includes('first-insight-profile-report'))
+            .sort((a, b) => (b.stat?.mtime ?? 0) - (a.stat?.mtime ?? 0));
         return files[0] ?? null;
     }
 }

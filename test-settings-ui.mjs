@@ -104,26 +104,86 @@ fs.writeFileSync(
     mockPath,
     `
 class Setting {
-    constructor(containerEl) { this.containerEl = containerEl; }
-    setName() { return this; }
-    setDesc() { return this; }
-    setHeading() { return this; }
-    addText() { return this; }
-    addDropdown() { return this; }
-    addButton() { return this; }
+    constructor(containerEl) {
+        this.containerEl = containerEl;
+        this.settingEl = activeDocument.createElement('div');
+        this.settingEl.className = 'setting-item';
+        this.infoEl = this.settingEl.appendChild(activeDocument.createElement('div'));
+        this.nameEl = this.infoEl.appendChild(activeDocument.createElement('div'));
+        this.nameEl.className = 'setting-item-name';
+        this.descEl = this.infoEl.appendChild(activeDocument.createElement('div'));
+        this.descEl.className = 'setting-item-description';
+        this.controlEl = this.settingEl.appendChild(activeDocument.createElement('div'));
+        this.controlEl.className = 'setting-item-control';
+        containerEl.appendChild(this.settingEl);
+    }
+    setName(value) { this.nameEl.textContent = String(value); return this; }
+    setDesc(value) { this.descEl.textContent = String(value); return this; }
+    setHeading() { this.settingEl.classList.add('setting-item-heading'); return this; }
+    addText(callback) {
+        const inputEl = this.controlEl.appendChild(activeDocument.createElement('input'));
+        callback?.({
+            inputEl,
+            setPlaceholder: (value) => { inputEl.placeholder = value; return this; },
+            setValue: (value) => { inputEl.value = value; return this; },
+            onChange: () => this,
+        });
+        return this;
+    }
+    addDropdown(callback) {
+        const selectEl = this.controlEl.appendChild(activeDocument.createElement('select'));
+        const component = {
+            selectEl,
+            addOption: (value, label) => {
+                const optionEl = activeDocument.createElement('option');
+                optionEl.value = value;
+                optionEl.textContent = label;
+                selectEl.appendChild(optionEl);
+                return component;
+            },
+            setValue: (value) => { selectEl.value = value; return component; },
+            onChange: () => component,
+        };
+        callback?.(component);
+        return this;
+    }
+    addButton(callback) {
+        const buttonEl = this.controlEl.appendChild(activeDocument.createElement('button'));
+        const component = {
+            buttonEl,
+            setButtonText: (value) => { buttonEl.textContent = value; return component; },
+            onClick: (handler) => { buttonEl.addEventListener('click', handler); return component; },
+        };
+        callback?.(component);
+        return this;
+    }
     addSlider() { return this; }
     addExtraButton() { return this; }
 }
 class PluginSettingTab { constructor(app, plugin) { this.app = app; this.plugin = plugin; this.containerEl = activeDocument.createElement('div'); } display() {} }
-class Modal { constructor(app) { this.app = app; this.contentEl = activeDocument.createElement('div'); } open() { this.onOpen?.(); } close() { this.onClose?.(); } }
+class Modal {
+    constructor(app) {
+        this.app = app;
+        this.modalEl = activeDocument.createElement('div');
+        this.contentEl = activeDocument.createElement('div');
+        this.modalEl.appendChild(this.contentEl);
+    }
+    open() { this.onOpen?.(); }
+    close() { this.onClose?.(); }
+}
+class FuzzySuggestModal { constructor(app) { this.app = app; } setPlaceholder() { return this; } open() {} }
+class TFolder { constructor(path = '') { this.path = path; } }
 module.exports = {
     App: class {},
     Modal,
+    FuzzySuggestModal,
     PluginSettingTab,
     Setting,
     Notice: class { constructor(){} },
     Platform: { isMobile: false },
     TFile: class {},
+    TFolder,
+    normalizePath: (value) => value,
     moment: () => ({ format: () => '' }),
     MarkdownRenderer: { render: async () => {} },
     addIcon: () => {},
@@ -160,13 +220,13 @@ async function bundle(entryPath) {
 
 // Shared entry so settings-tab, constants, i18n all share the same i18n instance
 const entrySrc = `
-export { TideLogSettingTab } from ${JSON.stringify(path.join(__dirname, 'src/settings/settings-tab.ts'))};
+export { TideLogSettingTab, LicenseActivationModal } from ${JSON.stringify(path.join(__dirname, 'src/settings/settings-tab.ts'))};
 export { OnboardingModal } from ${JSON.stringify(path.join(__dirname, 'src/views/onboarding-modal.ts'))};
 export { getDefaultEveningQuestions, DEFAULT_SETTINGS } from ${JSON.stringify(path.join(__dirname, 'src/constants.ts'))};
 `;
 const entryPath = path.join(__dirname, '.test-ui-entry.ts');
 fs.writeFileSync(entryPath, entrySrc);
-const { TideLogSettingTab, OnboardingModal, getDefaultEveningQuestions, DEFAULT_SETTINGS } = await bundle(entryPath);
+const { TideLogSettingTab, LicenseActivationModal, OnboardingModal, getDefaultEveningQuestions, DEFAULT_SETTINGS } = await bundle(entryPath);
 
 // ---------------------------------------------------------------------------
 // Test framework
@@ -178,16 +238,17 @@ function check(cond, label) {
 }
 
 // Build a plugin stub
-function makePlugin(eveningQuestions, { isPro = true, purchaseUrl = '' } = {}) {
-    const accessState = isPro ? 'paid' : 'free';
+function makePlugin(eveningQuestions, { isPro = true, purchaseUrl = '', accessState: explicitAccessState } = {}) {
+    const accessState = explicitAccessState ?? (isPro ? 'paid' : 'free');
+    const hasProAccess = accessState === 'paid' || accessState === 'trial';
     return {
         settings: { ...DEFAULT_SETTINGS, eveningQuestions },
         saveSettings: async () => {},
         licenseManager: {
-            isPro: () => isPro,
+            isPro: () => hasProAccess,
             getAccessState: () => accessState,
-            getTrialDaysRemaining: () => 0,
-            getTrialExpiryDate: () => null,
+            getTrialDaysRemaining: () => accessState === 'trial' ? 7 : 0,
+            getTrialExpiryDate: () => accessState === 'trial' ? '2026/9/7' : null,
             needsAISetupForTrial: () => false,
             startTrial: async () => true,
             getPurchaseUrl: () => purchaseUrl,
@@ -256,9 +317,77 @@ console.log('\nTest 1b: free Pro card omits blank-page recovery helper');
 
     const proCard = tab.containerEl.querySelector('.tl-settings-pro-card');
     check(!!proCard, 'settings Pro card renders for free users');
-    check(proCard?.querySelector('.tl-settings-pro-purchase-panel .tl-settings-pro-purchase-note')?.textContent?.includes('爱发电'), 'settings Pro card keeps the purchase/login/license note');
+    check(!!proCard?.querySelector('.tl-settings-pro-actions button'), 'settings Pro card keeps purchase and trial actions in its compact header');
+    check(proCard?.querySelector('.tl-settings-pro-purchase-panel') === null, 'settings Pro card no longer spends a full row on purchase copy');
+    const actionLabels = [...(proCard?.querySelectorAll('.tl-settings-pro-actions button') ?? [])].map((button) => button.textContent);
+    check(actionLabels.includes('购买 Pro') && actionLabels.includes('激活 Pro'), 'purchase and activation are peer actions in the compact header');
+    check(proCard?.querySelector('.tl-settings-license-details') === null, 'activation no longer expands an input inside the plan card');
     check(proCard?.querySelector('.tl-settings-pro-trouble-note') === null, 'settings Pro card omits the blank-page recovery helper line');
     check(!proCard?.textContent?.includes('页面空白'), 'settings Pro card copy no longer contains 页面空白');
+}
+
+// Test 1bb: active trial shows purchase and activation side by side
+console.log('\nTest 1bb: trial plan card keeps purchase and activation together');
+{
+    const plugin = makePlugin(getDefaultEveningQuestions(), {
+        accessState: 'trial',
+        purchaseUrl: 'https://afdian.com/item/463307362c2f11f1b39d52540025c377',
+    });
+    const tab = new TideLogSettingTab({}, plugin);
+    tab.display();
+
+    const actions = tab.containerEl.querySelector('.tl-settings-pro-actions');
+    const labels = [...actions.querySelectorAll('button')].map((button) => button.textContent);
+    check(labels.join('|') === '购买 Pro|激活 Pro', 'trial card places Buy Pro and Activate Pro in one action group');
+    check(tab.containerEl.querySelector('.tl-settings-license-details') === null, 'trial card has no extra activation row');
+}
+
+// Test 1bc: activation opens a focused small flow instead of expanding Settings
+console.log('\nTest 1bc: activation modal accepts and submits a code');
+{
+    const plugin = makePlugin(getDefaultEveningQuestions(), { isPro: false });
+    let submittedKey = '';
+    let refreshed = 0;
+    plugin.licenseManager.activate = async (key) => {
+        submittedKey = key;
+        return { success: true, message: '已激活' };
+    };
+    const modal = new LicenseActivationModal({}, plugin, () => { refreshed++; });
+    modal.open();
+    const input = modal.contentEl.querySelector('input');
+    const button = modal.contentEl.querySelector('button');
+    check(modal.contentEl.textContent.includes('激活 TideLog Pro'), 'activation modal explains the focused action');
+    check(button.disabled === true, 'activation starts disabled until a code is entered');
+    fireInput(input, '  TL-TEST-CODE  ');
+    check(button.disabled === false, 'activation enables after a non-empty code');
+    click(button);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    check(submittedKey === 'TL-TEST-CODE' && refreshed === 1, 'activation trims the code and refreshes Settings after success');
+}
+
+// Test 1bd: quick guide opens only on its first Settings visit
+console.log('\nTest 1bd: quick guide first-visit default');
+{
+    const plugin = makePlugin(getDefaultEveningQuestions());
+    plugin.settings.quickGuideSeen = false;
+    let saves = 0;
+    plugin.saveSettings = async () => { saves++; };
+
+    const firstTab = new TideLogSettingTab({}, plugin);
+    firstTab.display();
+    const firstGuide = firstTab.containerEl.querySelector('.tl-settings-quick-guide');
+    check(firstGuide.open === true, 'quick guide is open on the first Settings visit');
+    check(plugin.settings.quickGuideSeen === true && saves >= 1, 'first visit is persisted without waiting for a manual toggle');
+    check(firstGuide.textContent.includes('你') && firstGuide.textContent.includes('AI'), 'each stage distinguishes the user action from the AI contribution');
+    check(firstGuide.textContent.includes('下一周期的计划建议') && firstGuide.textContent.includes('记录—反馈—调整'), 'the guide closes the Plan–Review–Insights loop');
+    check(firstGuide.querySelector('.tl-settings-quick-guide-help') === null, 'redundant onboarding helper sentence is removed');
+
+    const nextTab = new TideLogSettingTab({}, plugin);
+    nextTab.display();
+    const nextGuide = nextTab.containerEl.querySelector('.tl-settings-quick-guide');
+    check(nextGuide.open === false, 'quick guide defaults to collapsed after the first visit');
+    nextGuide.open = true;
+    check(nextGuide.open === true, 'the user can manually expand the guide again');
 }
 
 // Test 1c: legacy import card refreshes immediately after API configuration changes
@@ -275,14 +404,15 @@ console.log('\nTest 1c: legacy import card updates after API is configured');
     const tab = new TideLogSettingTab({}, plugin);
     tab.display();
 
-    const legacyCard = tab.containerEl.querySelector('.tl-settings-legacy-import');
+    const legacyCard = [...tab.containerEl.querySelectorAll('.setting-item')]
+        .find((item) => item.querySelector('.setting-item-name')?.textContent === '导入旧日记');
     const legacyButton = legacyCard?.querySelector('button');
-    check(!legacyCard?.textContent?.includes('先配置 API'), 'legacy import card no longer asks for API configuration (AI is provided by TideLog)');
+    check(!legacyCard?.textContent?.includes('先配置 API'), 'legacy import row no longer asks for API configuration');
 
     plugin.settings.providers.siliconflow.apiKey = 'sk-test';
     tab.refreshLegacyImportEntryState();
 
-    check(legacyCard?.textContent?.includes('导入旧日记并建立画像'), 'legacy import card switches to import/profile action after API key is configured');
+    check(legacyCard?.textContent?.includes('开始导入'), 'legacy import row keeps a direct import action');
     click(legacyButton);
     await Promise.resolve();
     check(firstInsightOpened === 1, 'legacy import action opens the first insight flow after API is configured');
@@ -471,27 +601,39 @@ console.log('\nTest 7: newly added question can have its name AND content edited
     check(newNameSpan?.textContent === 'My new question', 'new row name span mirrors the edit');
 }
 
-// Test 8: deleting a question still works (regression guard)
-console.log('\nTest 8: delete still works');
+// Test 8: built-ins are protected; user-created questions can be deleted
+console.log('\nTest 8: only user-created questions can be deleted');
 {
     const questions = getDefaultEveningQuestions();
     const initialCount = questions.length;
+    questions.push({
+        type: 'free_writing',
+        sectionName: 'Custom question',
+        initialMessage: 'Custom content',
+        required: false,
+        enabled: true,
+        custom: true,
+    });
     const plugin = makePlugin(questions);
     const tab = new TideLogSettingTab({}, plugin);
     tab.display();
 
-    const firstDelete = tab.containerEl.querySelector('.tl-q-row .tl-q-icon-delete');
-    click(firstDelete);
+    const rows = tab.containerEl.querySelectorAll('.tl-q-row');
+    check(rows[0].querySelector('.tl-q-icon-delete') === null, 'built-in question has no delete action');
+    const customDelete = rows[rows.length - 1].querySelector('.tl-q-icon-delete');
+    check(!!customDelete, 'user-created question has a delete action');
+    click(customDelete);
     await new Promise(r => setTimeout(r, 0));
 
-    check(plugin.settings.eveningQuestions.length === initialCount - 1, `first question deleted (got ${plugin.settings.eveningQuestions.length})`);
+    check(plugin.settings.eveningQuestions.length === initialCount, `custom question deleted (got ${plugin.settings.eveningQuestions.length})`);
 }
 
-// Test 9: first-run onboarding renders and actions persist the completion flag
-console.log('\nTest 9: onboarding modal renders and completes');
+// Test 9: path selection never pretends that first value has been delivered
+console.log('\nTest 9: onboarding modal routes without premature completion');
 {
     let completedCount = 0;
-    let reviewStarted = false;
+    let startedFlow = '';
+    let settingsClosed = 0;
     const openedViews = [];
     const plugin = {
         settings: { ...DEFAULT_SETTINGS, onboardingCompleted: false },
@@ -502,32 +644,42 @@ console.log('\nTest 9: onboarding modal renders and completes');
             completedCount++;
         },
         activateChatView: async (type) => {
-            if (type === 'evening') reviewStarted = true;
+            startedFlow = type;
         },
         openView: async (viewType) => { openedViews.push(viewType); },
         openFirstInsight: async () => {},
+        legacyImportService: { listVaultFolders: () => ['我的日记', 'Attachments'] },
     };
-    const app = {};
+    const app = { setting: { close: () => { settingsClosed++; } } };
 
     const modal = new OnboardingModal(app, plugin);
     modal.open();
 
-    check(modal.contentEl.querySelectorAll('.tl-onboarding-step').length === 3, 'onboarding shows three setup steps');
-    check(modal.contentEl.querySelectorAll('.tl-onboarding-method-card').length === 3, 'onboarding explains product philosophy, method, and Pro value');
+    // 引导重做后是一屏两路径：不再有三步骤 / 方法卡 / 试用条款。
+    check(!modal.contentEl.querySelector('.tl-onboarding-step'), 'the three-step group is gone');
+    check(!modal.contentEl.querySelector('.tl-onboarding-method-card'), 'the method cards are gone');
     check(!modal.contentEl.querySelector('.tl-onboarding-pro-link'), 'onboarding does not ask users to purchase before value');
-    check(modal.contentEl.querySelector('.tl-onboarding-trial-intro')?.textContent?.includes('7 天'), 'onboarding explains the seven-day trial in the first viewport');
+    check(!modal.contentEl.querySelector('.tl-onboarding-trial-intro'), 'trial terms moved to the paywall');
+    check(modal.contentEl.querySelectorAll('.tl-onboarding-path-button').length === 2, 'exactly two path CTAs remain');
+    check(!modal.contentEl.querySelector('.tl-onboarding-folder-value'), 'folder choice is not shown before path choice');
 
+    click(modal.contentEl.querySelector('.tl-onboarding-has-journals'));
+    check(!!modal.contentEl.querySelector('.tl-onboarding-folder-tree'), 'past-journal path reveals the vault folder tree');
+    check(!modal.contentEl.querySelector('input[type="text"]'), 'past-journal path never requires manual folder typing');
     click(modal.contentEl.querySelector('.tl-onboarding-primary'));
-    check(plugin.settings.onboardingCompleted === true, 'start action marks onboarding completed');
-    check(openedViews[0] === 'tl-kanban-view', 'primary CTA opens the Plan view instead of settings');
-    check(completedCount >= 1, 'completion handler called');
+    check(plugin.settings.onboardingCompleted === false, 'opening profile generation does not mark onboarding completed');
+    check(openedViews.length === 0, 'the primary CTA is the profile path, not a view switch');
+    check(completedCount === 0, 'completion handler is not called before profile save');
 
-    plugin.settings.onboardingCompleted = false;
     const modal2 = new OnboardingModal(app, plugin);
     modal2.open();
-    click(modal2.contentEl.querySelector('.tl-onboarding-buttons .tl-onboarding-secondary'));
-    check(plugin.settings.onboardingCompleted === true, 'review action marks onboarding completed');
-    check(reviewStarted === true, 'review action starts daily review');
+    click(modal2.contentEl.querySelector('.tl-onboarding-no-journals'));
+    check(!!modal2.contentEl.querySelector('.tl-onboarding-start-flow'), 'no-journal path explains the fresh-start loop before leaving onboarding');
+    check(startedFlow === '', 'choosing the no-journal path does not launch an invisible action behind Settings');
+    click(modal2.contentEl.querySelector('.tl-onboarding-start-plan'));
+    check(plugin.settings.onboardingCompleted === false, 'opening Plan does not mark onboarding completed');
+    check(startedFlow === 'morning', 'explicit Plan action starts today\'s plan');
+    check(settingsClosed === 1, 'explicit Plan action closes Settings before revealing TideLog');
 }
 
 // Test 10: settings regressions requested in the polish pass
@@ -550,34 +702,33 @@ console.log('\nTest 10: settings polish regression guards');
         readAsset('README.md'),
     ].join('\n');
 
-    check(settingsSrc.includes('setLimits(0, 8, 1)'), 'day boundary slider is limited to 0–8');
-    check(settingsSrc.includes('slider.sliderEl.after(valueEl)'), 'day boundary label is placed beside the slider');
+    check(settingsSrc.includes('for (let hour = 0; hour <= 8; hour += 1)'), 'day boundary dropdown is limited to 00:00–08:00');
+    check(!settingsSrc.includes('addSlider((slider)'), 'day boundary no longer shows a duplicate raw slider value');
     check(settingsSrc.includes('getBoundaryExampleTime'), 'day boundary examples are computed from the selected hour');
     check(settingsSrc.includes('refreshQuestionLimitBadges'), 'question Pro badges refresh immediately after enable toggles');
     check(!zhSrc.includes('Pro 中生效') && zhSrc.includes('Pro 生效中') && zhSrc.includes('需 Pro'), 'review question badges distinguish Pro active vs Pro required');
     check(settingsSrc.includes('saveSettingsPreservingScroll'), 'rerenders preserve current scroll position');
     check(!settingsSrc.includes('renderInlineTestConnection'), 'AI test-connection UI is removed (AI is now provided by TideLog)');
     const settingsOrder = [
-        'this.renderGettingStarted(containerEl)',
-        'this.renderAISettings(containerEl)',
-        'this.renderLegacyImportEntry(containerEl)',
         'this.renderProLicense(containerEl)',
+        'this.renderGettingStarted(containerEl)',
         'this.renderEveningQuestions(containerEl)',
         'this.renderFolderSettings(containerEl)',
         'this.renderDayBoundarySetting(containerEl)',
+        'this.renderLegacyImportEntry(containerEl)',
         'this.renderLanguageSetting(containerEl)',
     ].map(snippet => settingsSrc.indexOf(snippet));
-    check(settingsOrder.every(index => index >= 0) && settingsOrder.every((index, i, arr) => i === 0 || arr[i - 1] < index), 'settings sections follow Start, AI, old journals, Pro, review, folders, date, preferences order');
+    check(settingsOrder.every(index => index >= 0) && settingsOrder.every((index, i, arr) => i === 0 || arr[i - 1] < index), 'settings sections prioritize plan and quick guide before Daily Review, files/dates, import, and language');
     check(!settingsSrc.includes('renderAISetupGuide') && !settingsSrc.includes('tl-ai-config-fields'), 'AI provider/key/model configuration UI is removed');
-    check(settingsSrc.includes('tl-ai-managed-card') && settingsSrc.includes('settings.aiManagedTitle'), 'settings shows a managed-AI notice instead of provider configuration');
+    check(!settingsSrc.includes('renderAISettings') && !settingsSrc.includes('tl-ai-managed-card'), 'static managed-AI card is removed from Settings');
     check(!settingsSrc.includes("t('settings.aiProvider')"), 'AI provider picker no longer exists');
-    check(settingsSrc.includes('guideEl.open = !this.plugin.settings.onboardingCompleted'), 'getting-started guide collapses after onboarding is completed');
+    check(settingsSrc.includes("createEl('details', { cls: 'tl-settings-quick-guide' })") && settingsSrc.includes('quickGuideSeen'), 'getting started is a first-open, then-collapsed product guide');
     check(!settingsSrc.includes('aiSetupUseSiliconFlow') && !settingsSrc.includes('aiSetupOpenSiliconFlow'), 'API setup removes redundant example preset buttons');
     check(DEFAULT_SETTINGS.activeProvider === 'siliconflow' && DEFAULT_SETTINGS.providers.siliconflow.model === 'deepseek-ai/DeepSeek-V3.2' && DEFAULT_SETTINGS.providers.siliconflow.baseUrl === 'https://api.siliconflow.cn/v1', 'new users start from the current SiliconFlow base URL and model');
     check(DEFAULT_SETTINGS.providers.custom.baseUrl === 'https://api.siliconflow.cn/v1' && migrationSrc.includes("version: 3") && migrationSrc.includes("https://api.siliconflow.cn/v1"), 'custom-compatible API Base URL defaults and migrates to SiliconFlow');
     check(migrationSrc.includes("deepseek-ai/DeepSeek-V3.2-Exp") && migrationSrc.includes("deepseek-ai/DeepSeek-V3.2"), 'settings migration upgrades old SiliconFlow V3.2 Exp model IDs');
     check(migrationSrc.includes('updateInactiveProviderDefault') && migrationSrc.includes('gpt-5.4-mini'), 'settings migration refreshes inactive stale provider defaults without overriding the active provider');
-    check(zhSrc.includes('AI 由 TideLog 提供，无需配置') && !zhSrc.includes('粘贴 API Key') && !zhSrc.includes('测试连接'), 'Chinese settings copy describes managed AI and drops the provider/key/test flow');
+    check(!zhSrc.includes('AI 由 TideLog 提供，无需配置') && !zhSrc.includes('粘贴 API Key') && !zhSrc.includes('测试连接'), 'Chinese settings copy removes both managed-AI marketing and provider/key/test controls');
     check(!zhSrc.includes('大陆用户建议') && !enSrc.includes('mainland China users'), 'AI setup guide no longer makes a direct region-based recommendation');
     check(!enSrc.includes('Paste API key') && !enSrc.includes('Test connection'), 'English settings copy drops the provider/key/test flow');
     check(!settingsSrc.includes('tl-ai-setup-meta') && !cssSrc.includes('tl-ai-setup-pill'), 'AI setup guide no longer renders extra bottom hint tags');
@@ -585,11 +736,19 @@ console.log('\nTest 10: settings polish regression guards');
     check(cssSrc.includes('tl-ai-setup-guide') && cssSrc.includes('tl-ai-setup-flow-number') && cssSrc.includes('tl-ai-config-fields') && cssSrc.includes('tl-ai-help-card'), 'AI setup guide has dedicated compact visual hierarchy styles');
     check(!settingsSrc.includes('manageDevicesBtn'), 'settings no longer shows a device-management CTA after activation');
     check(!zhSrc.includes('管理设备绑定') && !enSrc.includes('Manage device bindings'), 'device-management copy is removed from settings strings');
-    check(cssSrc.includes('tl-settings-guide-main'), 'getting-started guide uses a full-width consistent settings layout');
+    check(cssSrc.includes('tl-settings-hero-compact'), 'settings uses a compact branded header');
     check(!settingsSrc.includes('tl-settings-workflow-card') && !zhSrc.includes('新版工作流') && !enSrc.includes('New workflow'), 'settings page merges workflow explanation into quick start instead of a separate new-workflow card');
-    check(zhSrc.includes('第一次怎么用 TideLog') && zhSrc.includes('有旧日记：先建立一份带证据的初始画像') && enSrc.includes('How to use TideLog the first time'), 'settings quick start follows a new-user path from value to old journals to today');
-    check(zhSrc.includes("'settings.sectionFolders': '文件位置'") && zhSrc.includes("'settings.sectionDayBoundary': '日期归属'") && zhSrc.includes("'settings.sectionPro': 'Pro 权益'"), 'settings section names use a consistent user-facing taxonomy');
-    check(zhSrc.includes('settings.aiManagedDesc') || zhSrc.includes('聊天、复盘与洞察'), 'settings copy explains which features use the managed AI');
+    check(zhSrc.includes('重新查看新手引导') && enSrc.includes('Review getting started'), 'settings provides a permanent way to reopen onboarding');
+    check(zhSrc.includes('计划 → 复盘 → 洞察 → 下一步计划') && settingsSrc.includes('settings.quickGuideInsightsAI'), 'settings explains the full Plan, Review, Insights, and next-plan loop');
+    check(zhSrc.includes('今天该聚焦什么、计划是否现实') && zhSrc.includes('下一日／周／月建议'), 'Plan guide states the current assessment and post-review value in user language');
+    check(zhSrc.includes('不只总结你写了什么') && zhSrc.includes('进展、卡点和情绪') && !zhSrc.includes('对照原计划追问偏差'), 'Review guide describes the implemented feedback in user language without unsupported follow-up claims');
+    check(zhSrc.includes('反复出现的模式') && zhSrc.includes('用证据告诉你') && zhSrc.includes('下一步该怎么调'), 'Insights guide describes evidence-bound value in user language');
+    check(settingsSrc.includes("stepEl.addClass(`is-${phase}`)") && cssSrc.includes('.tl-settings-quick-guide-step.is-plan') && cssSrc.includes('.tl-settings-quick-guide-step.is-review') && cssSrc.includes('.tl-settings-quick-guide-step.is-insights'), 'Plan, Review, and Insights use distinct points on the brand gradient');
+    check(onboardingSrc.includes('renderNoJournalStep') && onboardingSrc.includes("startTodayFlow('evening')"), 'no-journal onboarding explains the loop and supports both Plan and Review');
+    check(onboardingSrc.includes('app?.setting?.close?.()'), 'onboarding closes Settings before revealing a selected TideLog flow');
+    check(zhSrc.includes("'settings.sectionFolders': '文件与日期'") && zhSrc.includes("'settings.sectionPro': '当前方案'"), 'settings section names reflect user tasks instead of internal product taxonomy');
+    check(settingsSrc.includes('VaultFolderSuggestModal') && settingsSrc.includes('renderFolderPickerSetting'), 'folder settings use a vault folder picker');
+    check(!settingsSrc.includes('.addText((text)'), 'folder settings no longer require manual path typing');
     check(zhSrc.includes('settings.enableMorning') && zhSrc.includes('启用计划流程'), 'settings old Morning switch copy is renamed to the plan flow');
     check(zhSrc.includes('settings.enableEvening') && zhSrc.includes('启用复盘流程'), 'settings old Evening switch copy is renamed to the review flow');
     check(!settingsSrc.includes('proFeatureDashboard') && !zhSrc.includes('settings.proFeatureDashboard') && !enSrc.includes('settings.proFeatureDashboard'), 'settings Pro copy no longer uses old dashboard feature wording');
@@ -598,15 +757,24 @@ console.log('\nTest 10: settings polish regression guards');
     check(!publicProductCopy.includes('Four product surfaces') && !publicProductCopy.includes('Dashboard, Calendar heatmap, and Kanban'), 'public product assets no longer present old four-surface dashboard positioning');
     check(!publicProductCopy.includes('完整 5+4') && !publicProductCopy.includes('完整晚间复盘'), 'public Pro copy no longer markets the old 5+4 evening-review packaging');
     check(publicProductCopy.includes('AI 眼中的你') && publicProductCopy.includes('报告预览'), 'public product copy mentions AI profile and report preview');
-    check(cssSrc.includes('tl-settings-redeem-inline'), 'license redeem UI is compact and inline with Pro card');
-    check(zhSrc.includes('把日记变成行动闭环') && enSrc.includes('Turn notes into an action loop'), 'settings hero uses a concise action-loop slogan');
-    check(zhSrc.includes("'settings.openGettingStarted': '查看完整说明'") && enSrc.includes("'settings.openGettingStarted': 'View details'"), 'getting-started action uses user-facing detail wording');
-    check(!zhSrc.includes("'settings.openGettingStarted': '打开引导'") && !enSrc.includes("'settings.openGettingStarted': 'Open guide'"), 'getting-started action avoids clumsy open-guide wording');
-    check(cssSrc.includes('tl-onboarding-trial-intro') && !onboardingSrc.includes('tl-onboarding-pro-link') && !onboardingSrc.includes('renderProPurchaseGuidance'), 'onboarding explains trial timing without an early purchase CTA');
+    check(settingsSrc.includes('LicenseActivationModal') && !settingsSrc.includes('tl-settings-license-details'), 'activation code input opens in a focused modal from the plan actions');
+    check(zhSrc.includes("'settings.heroTitle': 'TideLog 设置'") && enSrc.includes("'settings.heroTitle': 'TideLog settings'"), 'settings hero identifies the control surface directly');
+    check(zhSrc.includes('让每天的计划和复盘，变成更懂你的下一步。'), 'settings hero uses the product slogan instead of an administrative description');
+    check(zhSrc.includes("'settings.openGettingStarted': '重新查看新手引导'") && enSrc.includes("'settings.openGettingStarted': 'Review getting started'"), 'getting-started action clearly reopens the guide');
+    check(!settingsSrc.includes('settings.gettingStartedDesc') && !zhSrc.includes('错过或关闭引导时'), 'redundant copy before reopening onboarding is removed');
+    check(settingsSrc.includes('question.custom === true'), 'built-in review questions cannot be deleted');
+    check(!onboardingSrc.includes('tl-onboarding-pro-link') && !onboardingSrc.includes('renderProPurchaseGuidance'), 'onboarding carries no purchase CTA');
+    check(cssSrc.includes('tl-pro-trial-promises'), 'the four trial promises are styled at the paywall, where they now live');
     check(settingsSrc.includes('reviewProRequiredNotice'), 'free users get a Pro requirement notice when enabling extra review questions');
-    check(cssSrc.includes('tl-onboarding-method-grid'), 'onboarding includes richer method/value cards');
+    check(!onboardingSrc.includes('tl-onboarding-method-grid'), 'the duplicated method cards are gone from onboarding');
     check(cssSrc.includes('color: #071417') || cssSrc.includes('color: #0B1B1F'), 'settings hero copy uses dark readable text on the light hero background');
-    check(cssSrc.includes('overflow-y: auto') && cssSrc.includes('max-height: min(760px, calc(100vh - 96px))'), 'onboarding modal can scroll when content is taller than the viewport');
+    // 一屏读完，不再强制常驻滚动条；极小视口下仍可按需滚动。
+    const onboardingRule = cssSrc.slice(
+        cssSrc.indexOf('.tl-onboarding-modal:not(.tl-unused-scope) {'),
+    ).split('}')[0];
+    check(!onboardingRule.includes('overflow-y: scroll'), 'the onboarding modal no longer forces an always-on scrollbar');
+    check(!onboardingRule.includes('scrollbar-gutter'), 'the onboarding modal no longer reserves scrollbar gutter space');
+    check(cssSrc.includes('tl-onboarding-folder-guess-hint'), 'the folder guess hint is styled');
     check(cssSrc.includes('.tl-settings-logo-mark::before') && cssSrc.includes('box-shadow:') && cssSrc.includes('tl-settings-logo-line'), 'settings logo uses the current note-lines plus tide-curve visual language');
     check(cssSrc.includes('.tl-settings-boundary-note') && cssSrc.includes('font-weight: 500'), 'day boundary helper note is visually demoted');
 }

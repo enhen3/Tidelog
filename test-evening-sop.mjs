@@ -121,7 +121,7 @@ function assertContains(text, needle, label) {
 // ---------------------------------------------------------------------------
 
 function makePlugin(eveningQuestions, opts = {}) {
-    const state = { yamlUpdates: [], appendedSections: [] };
+    const state = { yamlUpdates: [], appendedSections: [], aiCalls: [], onboardingCompletions: 0, offers: [] };
     return {
         __state: state,
         settings: {
@@ -150,9 +150,15 @@ function makePlugin(eveningQuestions, opts = {}) {
             metadataCache: { getFileCache: () => null },
         },
         getAIProvider: () => ({
-            sendMessage: async () => '好的，我看到了',
+            sendMessage: async (_m, _sp, onChunk, feature, sessionId) => {
+                state.aiCalls.push({ feature, sessionId });
+                if (opts.emitChunks) onChunk('好的，我看到了');
+                return '好的，我看到了';
+            },
         }),
         kanbanService: null,
+        completeOnboarding: async () => { state.onboardingCompletions++; },
+        showTrialOfferOnce: async (feature) => { state.offers.push(feature); },
     };
 }
 
@@ -328,7 +334,79 @@ console.log('\nTest 8: final mood score does not overwrite joy/emotion answer');
     assertEqual(plugin.__state.yamlUpdates.at(-1)?.emotion_score, 7, 'plain number mood score is written to YAML');
 }
 
+
+// ---------------------------------------------------------------------------
+// 回归：一次复盘 = 一个配额单位
+//
+// 曾经的 P0-b：配额按 AI 请求计数，而免费档 daily_insight 恰为 3 次/月。
+// 免费用户保留 2 个问题，每题一次调用 + 收尾一次 = 3 次，一次复盘刚好用光整月额度，
+// 随后 refreshAfterDailyReview 并发的三条计划建议必然全部失败。
+// ---------------------------------------------------------------------------
+console.log('\nTest: 一次复盘的所有 AI 调用共用一个配额单位');
+{
+    const userQuestions = [
+        { type: 'success_diary',  sectionName: '亮点', initialMessage: '【Q1】今天亮点？', required: true, enabled: true },
+        { type: 'goal_alignment', sectionName: '目标', initialMessage: '【Q2】目标完成？', required: true, enabled: true },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true });
+    const sop = new EveningSOP(plugin);
+
+    const out = [];
+    const ctx = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx, (m) => out.push(m));
+    await sop.handleResponse('做完了项目报告', ctx, (m) => out.push(m));
+    await sop.handleResponse('基本达成', ctx, (m) => out.push(m));
+
+    const calls = plugin.__state.aiCalls;
+    const sessions = new Set(calls.map(c => c.sessionId));
+    assertEqual(calls.length > 1, true, `本次复盘发出了多次 AI 调用（${calls.length} 次）`);
+    assertEqual(sessions.size, 1, `多次调用只对应一个配额单位（实际 ${sessions.size} 个）`);
+    assertEqual([...sessions][0] !== undefined, true, '配额单位标识不为空');
+    assertEqual(calls.every(c => c.feature === 'daily_insight'), true, '复盘调用统一标记为 daily_insight');
+}
+
+console.log('\nTest: 不同复盘之间使用不同的配额单位');
+{
+    const userQuestions = [
+        { type: 'success_diary', sectionName: '亮点', initialMessage: '【Q1】今天亮点？', required: true, enabled: true },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true });
+    const sop = new EveningSOP(plugin);
+
+    const ctx1 = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx1, () => {});
+    await sop.handleResponse('第一次复盘', ctx1, () => {});
+    const first = new Set(plugin.__state.aiCalls.map(c => c.sessionId));
+
+    const ctx2 = { type: 'evening', currentStep: 0, responses: {} };
+    await sop.start(ctx2, () => {});
+    await sop.handleResponse('第二次复盘', ctx2, () => {});
+    const all = new Set(plugin.__state.aiCalls.map(c => c.sessionId));
+
+    assertEqual(all.size > first.size, true, '第二次复盘产生了新的配额单位（否则会永远只扣一次）');
+}
+
+console.log('\nTest: 从复盘开始的新用户只在写入并收到 AI 反馈后完成 onboarding');
+{
+    const userQuestions = [
+        { type: 'goal_alignment', sectionName: '目标', initialMessage: '【Q1】目标完成？', required: true, enabled: true },
+    ];
+    const plugin = makePlugin(userQuestions, { pro: true, emitChunks: true });
+    const sop = new EveningSOP(plugin);
+    const ctx = { type: 'evening', currentStep: 0, responses: {} };
+
+    await sop.start(ctx, () => {});
+    assertEqual(plugin.__state.onboardingCompletions, 0, '只打开复盘不会完成 onboarding');
+    await sop.handleResponse('完成了主要任务，但开始得有点晚', ctx, () => {});
+    assertEqual(plugin.__state.appendedSections.length, 1, '第一条复盘回答先写入日记');
+    assertEqual(plugin.__state.onboardingCompletions, 0, '收到单条反馈但尚未完成复盘时不提前完成 onboarding');
+    await sop.handleResponse('7', ctx, () => {});
+    assertEqual(plugin.__state.onboardingCompletions, 1, '成功完成复盘后标记 onboarding 已完成');
+    assertEqual(plugin.__state.offers.length, 1, '首次价值完成后才触发试用邀请');
+}
+
 console.log(`\n=== Results: ${pass} passed, ${fail} failed ===\n`);
+
 
 // cleanup the mock file
 try { fs.unlinkSync(path.join(__dirname, 'obsidian-mock.cjs')); } catch {}

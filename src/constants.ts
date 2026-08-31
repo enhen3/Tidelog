@@ -97,7 +97,9 @@ export const DEFAULT_SETTINGS: TideLogSettings = {
     trial: {},
     language: 'zh',
     onboardingCompleted: false,
+    quickGuideSeen: false,
     firstInsightCompleted: false,
+    firstInsightHintShownAt: null,
     activeProvider: 'siliconflow',
     providers: {
         openrouter: {

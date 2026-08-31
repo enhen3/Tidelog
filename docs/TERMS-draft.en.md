@@ -30,10 +30,12 @@ The AI usage quota for each tier is subject to the information displayed in the 
 | Tier | Daily Insights | Weekly Reports / Monthly Reports / Profiles | AI Chat |
 |---|---|---|---|
 | Free | 3 times per month | Not available | Not available |
-| Trial (7 days) | Unlimited | Unlimited | 20 times per day |
-| Pro | Unlimited | Unlimited | 200 times per month |
+| Trial (7 days) | Not separately metered* | Not separately metered* | 20 times per day |
+| Pro | Not separately metered* | Not separately metered* | 200 times per month |
 
-We reserve the right to adjust the quota with prior notice. **The quota for a purchased license that remains within its validity period will not be reduced.**
+\* “Not separately metered” does not mean unlimited compute. To prevent automation, forged feature labels, and abnormal cost, a cross-feature fair-use guardrail also applies: Free, 250,000 input / 100,000 output tokens per calendar month; 7-day Trial, 750,000 / 250,000 tokens over the trial; Pro, 4,000,000 / 800,000 tokens per calendar month. Each generation is limited to 4,096 output tokens. Once the guardrail is reached, AI requests pause until the displayed reset time.
+
+We reserve the right to adjust quotas with prior notice; an adjustment will not retroactively shorten the validity period of a purchased License.
 
 ## 3. Subscription and Payment
 
@@ -85,7 +87,7 @@ which we will then forward to the large language model service provider for proc
 We record only the information necessary for service operation. This **does not include the body text of your notes, nor the body text of AI responses**:
 
 - **Pro users**: your License Key and the identifiers of activated devices
-- **Free / Trial users**: a hash anchor derived from your device identifier and your IP address (**the raw IP address is never stored**)
+- **Free / Trial users**: separate salted HMAC anchors derived from the device identifier and the IP address. The device anchor identifies the same free subject; the IP anchor is used only for quota abuse prevention (**neither the raw device identifier nor the original IP address is stored**)
 - **All users**: time of invocation, feature type, billing period, invocation count, and token count
 
 This information is used solely for quota calculation, abuse prevention, and troubleshooting.

@@ -49,8 +49,8 @@ const KNOWN_DEEPSEEK_MODELS = new Set([
 const MAX_INPUT_TOKENS = 32_000;
 const MAX_AI_BODY_BYTES = 512 * 1024;
 const MAX_CONTROL_BODY_BYTES = 64 * 1024;
-/** 报告/画像正常输出约 1.2K-2K；硬上限防止伪造 feature 后制造 384K 超长输出。 */
-const MAX_OUTPUT_TOKENS = 4_096;
+/** 首次画像同时包含可见报告和完整画像；8K 留出完整正文空间，同时挡住 384K 超长输出。 */
+const MAX_OUTPUT_TOKENS = 8_192;
 
 interface TokenBudget {
 	input: number;
@@ -488,6 +488,10 @@ class DeepSeekProvider implements AIProvider {
 			body: JSON.stringify({
 				model: this.model,
 				messages: request.messages,
+				// V4 默认开启思考模式。TideLog 过去使用的 deepseek-chat 是非思考模式；
+				// 若迁移模型名却不显式关闭，4096 token 可能全耗在 reasoning_content，
+				// 最终 message.content 为空，客户端只能看到 TL-5002。
+				thinking: { type: 'disabled' },
 				max_tokens: MAX_OUTPUT_TOKENS,
 				stream: request.stream,
 				...(request.stream ? { stream_options: { include_usage: true } } : {}),
@@ -1050,13 +1054,28 @@ export async function handleAIGenerate(
 		return proxyStream(upstream, env.DB, reservation.id, estimatedInputTokens, ctx);
 	}
 
-	const text = await upstream.text();
+	let text: string;
+	try {
+		text = await upstream.text();
+	} catch (providerError) {
+		console.error('[TideLog AI API] DeepSeek buffered response interrupted', providerError);
+		await releaseReservation(env.DB, reservation.id);
+		return apiJson({ error: 'provider_unavailable' }, 502);
+	}
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(text);
 	} catch {
 		await releaseReservation(env.DB, reservation.id);
 		return apiJson({ error: 'provider_invalid_response' }, 502);
+	}
+	const completion = parsed && typeof parsed === 'object'
+		? (parsed as { choices?: Array<{ message?: { content?: unknown } }> })
+			.choices?.[0]?.message?.content
+		: undefined;
+	if (typeof completion !== 'string' || !completion.trim()) {
+		await releaseReservation(env.DB, reservation.id);
+		return apiJson({ error: 'provider_empty_response' }, 502);
 	}
 	const usage = parseUsage(
 		parsed && typeof parsed === 'object' ? (parsed as { usage?: unknown }).usage : undefined,
@@ -1065,7 +1084,15 @@ export async function handleAIGenerate(
 			output: 0,
 		},
 	);
-	await finalizeUsage(env.DB, reservation.id, usage);
+	try {
+		await finalizeUsage(env.DB, reservation.id, usage);
+	} catch (accountingError) {
+		console.error('[TideLog AI API] Failed to finalize buffered usage', accountingError);
+		await releaseReservation(env.DB, reservation.id).catch((releaseError) => {
+			console.error('[TideLog AI API] Failed to release buffered usage', releaseError);
+		});
+		return apiJson({ error: 'usage_finalize_failed' }, 503);
+	}
 	return apiJson(parsed);
 }
 

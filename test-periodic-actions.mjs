@@ -154,6 +154,8 @@ export { PeriodicRenderer } from ${JSON.stringify(path.join(__dirname, 'src/view
 export { ChatView } from ${JSON.stringify(path.join(__dirname, 'src/views/chat-view.ts'))};
 export { InsightsRenderer } from ${JSON.stringify(path.join(__dirname, 'src/views/insights-renderer.ts'))};
 export { formatGeneratedInsightDocument } from ${JSON.stringify(path.join(__dirname, 'src/utils/document-format.ts'))};
+export { extractInsightSummaryItems } from ${JSON.stringify(path.join(__dirname, 'src/utils/md.ts'))};
+export { weeklyInsightFileNames } from ${JSON.stringify(path.join(__dirname, 'src/utils/insight-files.ts'))};
 `);
 
 const bundled = await esbuild.build({
@@ -168,7 +170,14 @@ const bundled = await esbuild.build({
 });
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(mod, mod.exports, require);
-const { PeriodicRenderer, ChatView, InsightsRenderer, formatGeneratedInsightDocument } = mod.exports;
+const {
+    PeriodicRenderer,
+    ChatView,
+    InsightsRenderer,
+    formatGeneratedInsightDocument,
+    extractInsightSummaryItems,
+    weeklyInsightFileNames,
+} = mod.exports;
 
 let pass = 0;
 let fail = 0;
@@ -197,6 +206,7 @@ function readSourceFiles(dir) {
 
 function createHarness() {
     const files = new Map();
+    const opened = [];
     const captures = [];
     const suggestionCalls = [];
     const app = {
@@ -223,7 +233,7 @@ function createHarness() {
                     .map(() => ({ task: ' ' })),
             }),
         },
-        workspace: { getLeaf: () => ({ openFile: async () => {} }) },
+        workspace: { getLeaf: () => ({ openFile: async file => { opened.push(file.path); } }) },
     };
     const plugin = {
         settings: {
@@ -301,10 +311,10 @@ function createHarness() {
         view[name] = ChatView.prototype[name].bind(view);
     }
 
-    return { app, plugin, files, captures, suggestionCalls, view, renderer: new PeriodicRenderer(view) };
+    return { app, plugin, files, opened, captures, suggestionCalls, view, renderer: new PeriodicRenderer(view) };
 }
 
-function createInsightsHarness(mode = 'monthly', loopCount = 8, serviceDelayMs = 0) {
+function createInsightsHarness(mode = 'monthly', loopCount = 8, serviceDelayMs = 0, accessState = 'paid') {
     const files = new Map();
     const opened = [];
     const generated = [];
@@ -341,9 +351,10 @@ function createInsightsHarness(mode = 'monthly', loopCount = 8, serviceDelayMs =
         },
         manifest: { id: 'tidelog' },
         licenseManager: {
-            isPro: () => true,
-            getAccessState: () => 'paid',
-            getTrialDaysRemaining: () => 0,
+            isPro: () => accessState === 'paid' || accessState === 'trial',
+            getAccessState: () => accessState,
+            getTrialDaysRemaining: () => accessState === 'trial' ? 7 : 0,
+            getPurchaseUrl: () => 'https://afdian.com/item/test-pro',
         },
         hasConfiguredAI: () => true,
         openFirstInsight: async () => {},
@@ -450,9 +461,11 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     check(!source.includes('activeDocument.createEl('), 'task actions do not use nonstandard document.createEl');
     check(!source.includes('generateSuggestions(scope'), 'Plan UI does not manually trigger AI suggestion generation');
     check(!css.includes('tl-plan-suggestion-generate-btn'), 'Plan suggestion UI has no manual generate button styling');
+    // 只守顺序，不锁参数列表：真实需求是"建议先于完成消息 await"，
+    // 参数是实现细节（例如后来加入的配额 sessionId）。
+    const refreshCallIdx = eveningSource.indexOf('await this.plugin.planSuggestionService?.refreshAfterDailyReview(');
     check(
-        eveningSource.indexOf('await this.plugin.planSuggestionService?.refreshAfterDailyReview(context);') > -1
-        && eveningSource.indexOf('await this.plugin.planSuggestionService?.refreshAfterDailyReview(context);') < eveningSource.indexOf('onMessage(summary);'),
+        refreshCallIdx > -1 && refreshCallIdx < eveningSource.indexOf('onMessage(summary);'),
         'Daily Review waits for plan suggestions before sending completion message',
     );
     check(controllerSource.includes('markDailyReviewCompleted();'), 'Daily Review completion notifies the Plan view');
@@ -483,6 +496,12 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
     check(chatViewSource.includes("t('review.backfillReview')"), 'Review home renders a backfill review action for historical dates');
     check(chatViewSource.includes('tl-review-loop-day-selected'), 'Review calendar has a selected-day visual state');
     check(!chatViewSource.includes('tl-review-loop-today-label') && css.includes('.tl-review-loop-day-today::after'), 'Review calendar marks today graphically instead of visible text');
+    const completedDateLabelBlock = css.match(/\.tl-review-loop-ring-complete \.tl-review-loop-ring-label\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    check(
+        /color:\s*var\(--tl-text-primary\)/.test(completedDateLabelBlock)
+            && !/#[0-9a-f]{3,8}/i.test(completedDateLabelBlock),
+        'completed Review dates follow the Obsidian theme foreground in both light and dark mode',
+    );
     check(insightRendererSource.includes('renderReportPreview') && css.includes('.tl-insights-report-preview'), 'existing Insights reports render an inline preview');
     check(insightRendererSource.includes('await this.renderReportPreview(card, existing);'), 'AI profile also renders an inline preview when the monthly profile exists');
     check(insightRendererSource.includes("t('insights.updateProfile')") && insightRendererSource.includes('{ force: true }'), 'AI profile can refresh with newer journal records');
@@ -564,6 +583,89 @@ console.log('\n=== PERIODIC ACTION REGRESSION TESTS ===\n');
 > [!tl-report] 📊 本周深度洞察
 > 已经优化过但标题里还有旧 emoji。`);
     check(cleanedOptimized.includes('> [!tl-report] 本周深度洞察') && !cleanedOptimized.includes('[!tl-report] 📊'), 'already optimized reports still clean old callout title emoji');
+}
+
+{
+    const currentReport = `# 🧭 2026 · 第 21 周洞察报告
+
+> [!tl-meta] 报告信息
+> 周期 2026-05-18 – 2026-05-24
+
+## 1. 本周主判断
+> [!tl-report] 从忙碌转向关键路径有证据地前进
+> 把推进过程变成了可核对的链条。
+
+## 2. 关键模式
+> [!tl-pattern] 清晰边界比更多投入更能推动完成
+> 上午保留连续时间时推进最快。
+
+## 3. 下一步的小实验
+> [!tl-experiment] 连续五天固定消息处理时段
+> 每天只检查两次消息。`;
+    const items = extractInsightSummaryItems(currentReport, 3);
+    check(items.length === 3 && items[0].includes('关键路径') && items[1].includes('清晰边界') && items[2].includes('连续五天'), 'weekly summary parser reads the current TideLog callout format');
+
+    const legacyItems = extractInsightSummaryItems(`### 1. 本周概览\n- **推进**：完成核心任务。\n\n### 2. 成功模式\n- 上午更专注。`, 3);
+    check(legacyItems.length > 0 && legacyItems[0].includes('完成核心任务'), 'weekly summary parser still reads legacy heading reports');
+
+    const { renderer, view, files, opened } = createHarness();
+    view.periodicMode = 'week';
+    const reportPath = 'Archive/Insights/2026-W21-周报.md';
+    files.set(reportPath, new TFile(reportPath, currentReport));
+    const panel = document.createElement('div');
+    await renderer.render(panel);
+    check(panel.querySelectorAll('.tl-periodic-insight-item').length === 3, 'weekly plan renders a non-empty summary from the current report format');
+    const link = panel.querySelector('.tl-periodic-insight-link');
+    check(link?.textContent.includes('完整周报') && !link.textContent.includes('月报'), 'weekly summary action names the weekly report, never a monthly report');
+    link?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    check(opened.includes(reportPath), 'weekly summary action opens the same weekly file it summarized');
+}
+
+{
+    const boundary = moment('2025-12-29');
+    const candidates = weeklyInsightFileNames(boundary, 'zh');
+    check(candidates.every(name => name.startsWith('2026-W')), 'weekly report candidates use ISO week-year at the New Year boundary');
+    check(candidates.includes('2026-W1-weekly.md'), 'weekly report candidates include the other language so language changes do not hide reports');
+
+    const { renderer, view, files } = createHarness();
+    view.periodicMode = 'week';
+    view.periodicSelectedDate = boundary;
+    const reportPath = 'Archive/Insights/2026-W1-weekly.md';
+    files.set(reportPath, new TFile(reportPath, '> [!tl-report] Cross-year weekly insight\n> Evidence remains readable.'));
+    const panel = document.createElement('div');
+    await renderer.render(panel);
+    check(panel.textContent.includes('Cross-year weekly insight'), 'weekly plan finds a cross-year report created under the other UI language');
+}
+
+{
+    const { renderer, view, files } = createHarness();
+    view.periodicMode = 'week';
+    files.set('Archive/Insights/2026-W21-周报.md', new TFile('Archive/Insights/2026-W21-周报.md', '   '));
+    const panel = document.createElement('div');
+    await renderer.render(panel);
+    check(!panel.querySelector('.tl-periodic-insight-section'), 'an unreadable report never renders an empty summary shell or orphan link');
+}
+
+{
+    const { renderer } = createInsightsHarness('monthly', 8, 0, 'trial');
+    const panel = document.createElement('div');
+    await renderer.render(panel);
+    const purchaseLinks = [...panel.querySelectorAll('.tl-insights-trial-buy')];
+    check(purchaseLinks.length === 1, 'active trial centralizes the Pro purchase entry in the top status banner');
+    check(panel.textContent.includes('还剩 7 天') || panel.textContent.includes('7 days left'), 'active trial banner shows the remaining trial time');
+    check(purchaseLinks[0]?.getAttribute('href') === 'https://afdian.com/item/test-pro', 'trial purchase entry links directly to the configured purchase page');
+    check(!panel.querySelector('.tl-insights-earned-value') && !panel.textContent.includes('保持持续更新能力') && !panel.textContent.includes('下一步：更新'), 'trial content cards contain no scattered conversion blocks');
+}
+
+{
+    const { renderer } = createInsightsHarness('weekly', 8, 0, 'trial-expired');
+    const panel = document.createElement('div');
+    await renderer.render(panel);
+    const purchaseLinks = [...panel.querySelectorAll('.tl-insights-trial-buy')];
+    check(panel.textContent.includes('体验已结束') || panel.textContent.includes('trial has ended'), 'expired trial reuses the top status banner with a clear ended state');
+    check(purchaseLinks.length === 1, 'expired trial keeps a single Pro purchase entry in the top banner');
+    check(!panel.querySelector('.tl-insights-locked .tl-insights-primary-btn'), 'expired trial locked content does not repeat the purchase action');
 }
 
 {
@@ -791,7 +893,11 @@ unfinished internal tag
     check(backfillTarget === `evening:${past.format('YYYY-MM-DD')}`, 'Review backfill starts Daily Review for the selected historical date');
     check(!!view.reviewHomeEl.querySelector('.tl-review-loop-day-selected'), 'Review calendar marks selected day');
     check(!view.reviewHomeEl.textContent.includes('今天') && !view.reviewHomeEl.textContent.includes('Today'), 'Review calendar does not mark today with visible text');
-    check(!!view.reviewHomeEl.querySelector('.tl-review-loop-day-today'), 'Review calendar keeps a graphical today marker');
+    const displayedMonthContainsToday = past.isSame(moment(), 'month');
+    check(
+        Boolean(view.reviewHomeEl.querySelector('.tl-review-loop-day-today')) === displayedMonthContainsToday,
+        'Review calendar shows the graphical today marker only when the displayed month contains today',
+    );
 }
 
 {
