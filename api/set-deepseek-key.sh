@@ -40,7 +40,7 @@ fi
 
 echo "→ 验证线上 AI 链路…"
 sleep 3
-RESP=$(curl -s -X POST https://tidelog-api.mydreamchronicle.com/ai/generate \
+RESP=$(curl -s -X POST https://tidelog-api.soren.cfd/ai/generate \
   -H 'Content-Type: application/json' \
   -d "{\"feature\":\"daily_insight\",\"deviceId\":\"selfcheck-$(date +%s)\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"说一个字\"}]}")
 if echo "$RESP" | grep -q '"error"'; then

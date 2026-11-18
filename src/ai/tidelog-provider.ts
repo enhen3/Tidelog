@@ -4,6 +4,7 @@
 
 import { requestUrl } from 'obsidian';
 import type TideLogPlugin from '../main';
+import { API_BASE } from '../services/api-endpoints';
 import type { AIFeature, AIProvider, AIResponseMode, ChatMessage, StreamCallback } from '../types';
 import { getLanguage, t } from '../i18n';
 import {
@@ -12,8 +13,6 @@ import {
     ErrorCode,
     TideLogError,
 } from '../utils/error-formatter';
-
-const API_BASE = 'https://tidelog-api.mydreamchronicle.com';
 
 interface ProxyErrorBody {
     error?: string;

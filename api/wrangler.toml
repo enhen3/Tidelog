@@ -3,9 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2026-08-28"
 workers_dev = false
 
-# Custom domain route (China-accessible)
+# Keep the legacy route during the migration; both hosts use the same Worker and D1.
 routes = [
-  { pattern = "tidelog-api.mydreamchronicle.com/*", zone_name = "mydreamchronicle.com" }
+  { pattern = "tidelog-api.mydreamchronicle.com/*", zone_name = "mydreamchronicle.com" },
+  { pattern = "tidelog-api.soren.cfd", custom_domain = true }
 ]
 
 # D1 Database binding

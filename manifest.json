@@ -1,7 +1,7 @@
 {
 	"id": "tidelog",
 	"name": "TideLog",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"minAppVersion": "1.11.4",
 	"description": "Turn Daily Notes into a Plan, Review and Insights loop. Reviews answer back as you write; weekly, monthly and portrait reports build from the loops you actually complete.",
 	"author": "enhen3",

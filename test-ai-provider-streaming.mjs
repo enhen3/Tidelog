@@ -191,7 +191,7 @@ console.log('\n=== TIDELOG AI STREAMING TESTS ===\n');
         'weekly',
     );
     const requestBody = JSON.parse(requestInit?.body ?? '{}');
-    check(requestUrl.endsWith('/ai/generate'), 'TideLog provider posts to managed AI endpoint', requestUrl);
+    check(requestUrl === 'https://tidelog-api.soren.cfd/ai/generate', 'TideLog provider posts to the migrated managed AI endpoint', requestUrl);
     check(result === 'TideLog' && chunks.join('') === 'TideLog', 'TideLog provider streams SSE chunks', result);
     check(requestBody.feature === 'weekly' && requestBody.stream === true, 'managed request includes feature and stream=true');
     check(requestBody.deviceId === 'dev-test' && requestBody.licenseKey === 'TL-TEST', 'managed request includes device and optional license');
@@ -238,6 +238,7 @@ console.log('\n=== TIDELOG AI STREAMING TESTS ===\n');
     const connected = await new TideLogProvider(plugin).testConnection();
     const quotaCall = obsidianMock.__getRequestUrlCalls()[0];
     check(connected, 'quota HTTP 200 is treated as connected');
+    check(quotaCall?.url?.startsWith('https://tidelog-api.soren.cfd/ai/quota?'), 'quota checks use the migrated service origin', quotaCall?.url);
     check(quotaCall?.url?.includes('/ai/quota?deviceId=dev+test&licenseKey=TL+A%2BB'), 'quota request includes encoded device and license', quotaCall?.url);
 }
 

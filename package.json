@@ -1,6 +1,6 @@
 {
 	"name": "tidelog",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"description": "TideLog — AI-guided daily planning, review, and insight system for Markdown notes",
 	"main": "main.js",
 	"type": "module",

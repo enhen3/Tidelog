@@ -21,6 +21,7 @@ import { t } from '../i18n';
 import { bindAfdianPurchaseFlow } from '../utils/purchase-flow';
 import type { Language } from '../i18n';
 import { OnboardingModal } from '../views/onboarding-modal';
+import { PORTAL_URL } from '../services/api-endpoints';
 
 class VaultFolderSuggestModal extends FuzzySuggestModal<TFolder> {
     constructor(
@@ -116,7 +117,7 @@ export class LicenseActivationModal extends Modal {
         const portalLink = contentEl.createEl('a', {
             cls: 'tl-license-activation-lookup',
             text: t('settings.lookupLicenseInline'),
-            href: 'https://tidelog-api.mydreamchronicle.com/portal',
+            href: PORTAL_URL,
         });
         portalLink.setAttr('target', '_blank');
         window.setTimeout(() => inputEl.focus(), 0);

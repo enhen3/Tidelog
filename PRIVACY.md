@@ -1,6 +1,6 @@
 # TideLog 隐私政策 / Privacy Policy
 
-最后更新 / Last updated: 2026-08-25
+最后更新 / Last updated: 2026-11-18
 
 ## 中文版本
 
@@ -20,7 +20,7 @@ TideLog 使用 Obsidian SecretStorage 保存已激活的 Pro License Key。AI �
 
 ### AI 请求与数据流
 
-当您主动触发 AI 功能时，插件会将**该次生成所必需的提示词和笔记内容**发送至 TideLog 服务端 `https://tidelog-api.mydreamchronicle.com/ai/generate`，再由服务端转发给大模型服务商（当前为 DeepSeek）处理，并将结果返回给您。
+当您主动触发 AI 功能时，插件会将**该次生成所必需的提示词和笔记内容**发送至 TideLog 服务端 `https://tidelog-api.soren.cfd/ai/generate`，再由服务端转发给大模型服务商（当前为 DeepSeek）处理，并将结果返回给您。
 
 TideLog 服务端不存储您的提示词、笔记正文或 AI 响应正文。请求处理完毕后即丢弃，不落库、不留档。TideLog 不会将您的内容用于模型训练。
 
@@ -44,7 +44,7 @@ TideLog 服务端不存储您的提示词、笔记正文或 AI 响应正文。�
 
 ### License 校验
 
-如果您激活 TideLog Pro，插件会连接 `https://tidelog-api.mydreamchronicle.com`：
+如果您激活 TideLog Pro，插件会连接 `https://tidelog-api.soren.cfd`：
 
 - 激活、停用 License 或打开 License Portal 时会按您的操作发起请求。
 - 已激活 License 的用户每次启动 Obsidian 时，插件会在后台自动校验一次；未激活 License 的用户不会在启动时发起该请求。
@@ -94,7 +94,7 @@ Your vault content remains local unless you explicitly use an AI feature or anot
 
 ### AI requests and data flow
 
-When you explicitly trigger an AI feature, the plugin sends the prompts and note content necessary for that request to the TideLog server at `https://tidelog-api.mydreamchronicle.com/ai/generate`. The server forwards the request to the current model provider, DeepSeek, and returns the result to you.
+When you explicitly trigger an AI feature, the plugin sends the prompts and note content necessary for that request to the TideLog server at `https://tidelog-api.soren.cfd/ai/generate`. The server forwards the request to the current model provider, DeepSeek, and returns the result to you.
 
 The TideLog server does not store your prompts, note bodies, or AI response bodies. They are discarded after the request is processed and are not written to the database or archived. TideLog does not use your content to train models.
 
@@ -118,7 +118,7 @@ This information is used only for quota accounting, abuse prevention, and troubl
 
 ### License verification
 
-If you activate TideLog Pro, the plugin connects to `https://tidelog-api.mydreamchronicle.com`:
+If you activate TideLog Pro, the plugin connects to `https://tidelog-api.soren.cfd`:
 
 - Requests are made when you activate or deactivate a License or open the License Portal.
 - For users with an activated License, the plugin automatically verifies it in the background whenever Obsidian starts. No startup verification request is made when no License is activated.

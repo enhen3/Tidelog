@@ -1238,8 +1238,13 @@ body {
         );
     });
 
-    writeText(`02-Plan/Monthly/${monthKey(previousMonth)}.md`, monthlyPlan(previousMonth, false));
-    writeText(`02-Plan/Monthly/${monthKey(today)}.md`, monthlyPlan(today, true));
+    // A week containing the first demo day can begin in the preceding month.
+    // Generate that linked monthly plan as well, including across year boundaries.
+    const planMonths = new Map([previousMonth, today, ...weekStarts.values()]
+        .map(date => [monthKey(date), date]));
+    for (const [month, date] of planMonths) {
+        writeText(`02-Plan/Monthly/${month}.md`, monthlyPlan(date, month === monthKey(today)));
+    }
 
     const previousWeekInfo = isoWeekInfo(previousWeekStart);
     const currentWeekInfo = isoWeekInfo(currentWeekStart);

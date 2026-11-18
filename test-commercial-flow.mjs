@@ -238,6 +238,7 @@ console.log('Test 1: invalid license surfaces business error');
     const result = await manager.activate('TL-INVALID-0000-0000');
 
     check(calls[0]?.throw === false, 'license API requests opt out of HTTP 4xx throwing');
+    check(calls[0]?.url === 'https://tidelog-api.soren.cfd/license/activate', 'license activation uses the migrated service origin');
     check(result.success === false, 'activation fails');
     check(result.message === 'Invalid license key', 'user sees server business error');
 }
@@ -325,10 +326,12 @@ console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days')
 {
     let saveCount = 0;
     let trialStartCalls = 0;
+    let trialStartUrl = '';
     const serverStartedAt = Math.floor(Date.now() / 1000);
     const serverExpiresAt = serverStartedAt + 7 * 24 * 60 * 60;
     globalThis.__requestUrl = async (options) => {
         trialStartCalls++;
+        trialStartUrl = options.url;
         return {
             status: 200,
             json: {
@@ -353,6 +356,7 @@ console.log('\nTest 3: one-time trial unlocks Pro and expires after seven days')
     check(saveCount === 2, 'device identity is saved before the server window is cached');
     check(plugin.settings.trial.startedAt === serverStartedAt * 1000, 'client uses server start time instead of Date.now()');
     check(trialStartCalls === 1, 'click calls the dedicated trial endpoint once');
+    check(trialStartUrl === 'https://tidelog-api.soren.cfd/trial/start', 'trial requests use the migrated origin without resetting identity');
     check(await manager.startTrial() === false, 'trial cannot be started twice');
     check(trialStartCalls === 1, 'local second click does not issue another start request');
     await manager.markTrialOfferShown();

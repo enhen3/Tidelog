@@ -121,6 +121,8 @@ TideLog 适合已经在 Obsidian 里生活，并且希望记录真的影响行�
 
 ## 安装与新手开始
 
+> **服务地址更新：** 请在 2026 年 12 月 5 日前升级到 1.2.1 或更新版本，以继续使用试用、许可证验证和 AI 服务。已有许可证和数据无需迁移。详见 [1.2.1 更新说明](RELEASE_NOTES_1.2.1.md)。
+
 1. 在 Obsidian 里打开 **Settings → Community plugins**，搜索 `TideLog`，安装并启用。
 2. 打开 **Settings → TideLog**。先不要调太多参数，先完成一次 Plan → Review。
 3. 到 TideLog 主界面的 **Plan**，添加今天的 1–3 个任务，也可以把临时想法放进「灵感」。
@@ -257,6 +259,8 @@ TideLog's AI sits on each step of the loop, and it sharpens as loops accumulate:
 On day 300, TideLog is holding 300 loops of evidence about you. A chat box never is.
 
 ### Install and start
+
+> **Service address update:** Upgrade to 1.2.1 or later before December 5, 2026 to keep using trials, license verification, and AI services. Existing licenses and data stay in place. See the [1.2.1 release notes](RELEASE_NOTES_1.2.1.md).
 
 1. Install TideLog from **Obsidian Community plugins**: search for `TideLog`, install, then enable it.
 2. Open **Settings → TideLog**. Do not tune every setting first; complete one Plan → Review first.

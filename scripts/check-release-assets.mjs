@@ -10,6 +10,16 @@ for (const file of ['main.js', 'manifest.json', 'styles.css']) {
     if (!existsSync(file)) errors.push(`Missing release asset: ${file}`);
 }
 
+if (existsSync('main.js')) {
+    const bundle = readFileSync('main.js', 'utf8');
+    if (!bundle.includes('https://tidelog-api.soren.cfd')) {
+        errors.push('Release bundle is missing the current TideLog API origin.');
+    }
+    if (bundle.includes('tidelog-api.mydreamchronicle.com')) {
+        errors.push('Release bundle still depends on the retiring TideLog domain.');
+    }
+}
+
 if (packageJson.version !== manifest.version) {
     errors.push(`package.json version ${packageJson.version} does not match manifest.json version ${manifest.version}`);
 }

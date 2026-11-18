@@ -8,8 +8,8 @@ import type { LicenseInfo } from '../types';
 import { getLanguage, t } from '../i18n';
 import { bindAfdianPurchaseFlow } from '../utils/purchase-flow';
 import { renderProPurchaseGuidance } from './pro-purchase-guidance';
+import { API_BASE, PORTAL_URL } from '../services/api-endpoints';
 
-const API_BASE = 'https://tidelog-api.mydreamchronicle.com';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface QuotaFeature {
@@ -384,7 +384,7 @@ export class ProModal extends Modal {
         portalLink.createSpan({ text: t('pro.lostCode') });
         const portalAnchor = portalLink.createEl('a', {
             text: t('pro.lookupLicense'),
-            href: 'https://tidelog-api.mydreamchronicle.com/portal',
+            href: PORTAL_URL,
         });
         portalAnchor.setAttr('target', '_blank');
     }
